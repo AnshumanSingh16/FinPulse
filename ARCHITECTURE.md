@@ -265,6 +265,12 @@ can't be computed returns `None` with a quality flag — **never a default numbe
 The registry is the single catalogue used by the scoring engine, early-warning rules, the
 `/meta/metrics` endpoint, the methodology page and agent tools.
 
+> **Implemented (Phase 2a):** the analytics engine and 20 financial metrics, exposed at
+> `GET /api/v1/entities/{id}/financial-metrics`. The implemented catalogue, conventions and
+> methods are in [docs/FINANCIAL_METRICS.md](docs/FINANCIAL_METRICS.md). The codes below were the
+> initial sketch. Still to come from this section: narration-based categorisation, recurring-series
+> detection, and persisting results as analysis runs.
+
 ### 6.3 MVP metric catalogue (initial)
 
 | Family | Codes (illustrative) | Notes |

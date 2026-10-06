@@ -1,6 +1,76 @@
 {
   "components": {
     "schemas": {
+      "DataCoverage": {
+        "properties": {
+          "bill_count": {
+            "title": "Bill Count",
+            "type": "integer"
+          },
+          "complete_months": {
+            "description": "Calendar months fully covered by the data",
+            "title": "Complete Months",
+            "type": "integer"
+          },
+          "counter_sale_days": {
+            "title": "Counter Sale Days",
+            "type": "integer"
+          },
+          "first_transaction_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Transaction On"
+          },
+          "invoice_count": {
+            "title": "Invoice Count",
+            "type": "integer"
+          },
+          "last_transaction_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Transaction On"
+          },
+          "loan_count": {
+            "title": "Loan Count",
+            "type": "integer"
+          },
+          "transaction_count": {
+            "title": "Transaction Count",
+            "type": "integer"
+          },
+          "uncategorised_transactions": {
+            "title": "Uncategorised Transactions",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "first_transaction_on",
+          "last_transaction_on",
+          "complete_months",
+          "transaction_count",
+          "invoice_count",
+          "bill_count",
+          "loan_count",
+          "counter_sale_days",
+          "uncategorised_transactions"
+        ],
+        "title": "DataCoverage",
+        "type": "object"
+      },
       "DependencyCheck": {
         "properties": {
           "detail": {
@@ -46,6 +116,81 @@
         "title": "DependencyCheck",
         "type": "object"
       },
+      "EntityRef": {
+        "properties": {
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "segment": {
+            "title": "Segment",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "display_name",
+          "kind",
+          "segment"
+        ],
+        "title": "EntityRef",
+        "type": "object"
+      },
+      "EntitySummary": {
+        "description": "A person or business FinPulse holds financial data for.",
+        "properties": {
+          "data_origin": {
+            "title": "Data Origin",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "business",
+                  "individual"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Kind"
+          },
+          "segment": {
+            "title": "Segment",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "display_name",
+          "kind",
+          "segment",
+          "data_origin"
+        ],
+        "title": "EntitySummary",
+        "type": "object"
+      },
       "FieldError": {
         "properties": {
           "loc": {
@@ -77,6 +222,54 @@
           "type"
         ],
         "title": "FieldError",
+        "type": "object"
+      },
+      "FinancialMetricsReport": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "coverage": {
+            "$ref": "#/components/schemas/DataCoverage"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "engine_version": {
+            "title": "Engine Version",
+            "type": "string"
+          },
+          "entity": {
+            "$ref": "#/components/schemas/EntityRef"
+          },
+          "metrics": {
+            "items": {
+              "$ref": "#/components/schemas/Metric"
+            },
+            "title": "Metrics",
+            "type": "array"
+          },
+          "series": {
+            "items": {
+              "$ref": "#/components/schemas/MetricSeries"
+            },
+            "title": "Series",
+            "type": "array"
+          }
+        },
+        "required": [
+          "entity",
+          "as_of",
+          "currency",
+          "engine_version",
+          "coverage",
+          "metrics",
+          "series"
+        ],
+        "title": "FinancialMetricsReport",
         "type": "object"
       },
       "HealthResponse": {
@@ -113,6 +306,247 @@
           "timestamp"
         ],
         "title": "HealthResponse",
+        "type": "object"
+      },
+      "Metric": {
+        "properties": {
+          "availability": {
+            "enum": [
+              "available",
+              "insufficient_data",
+              "not_applicable"
+            ],
+            "title": "Availability",
+            "type": "string"
+          },
+          "code": {
+            "description": "Stable identifier, e.g. \"receivables.days\"",
+            "title": "Code",
+            "type": "string"
+          },
+          "components": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "description": "Intermediate values and breakdowns",
+            "title": "Components",
+            "type": "object"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How much of the intended window and inputs the value rests on",
+            "title": "Confidence"
+          },
+          "family": {
+            "title": "Family",
+            "type": "string"
+          },
+          "method": {
+            "description": "How the value is calculated",
+            "title": "Method",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "period": {
+            "$ref": "#/components/schemas/Period"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceRef"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "unit": {
+            "enum": [
+              "INR",
+              "ratio",
+              "days",
+              "months",
+              "score",
+              "count"
+            ],
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null unless availability is 'available'. INR values are rupees, exact to the paisa; ratios are fractions (0.25 = 25%).",
+            "title": "Value"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "family",
+          "value",
+          "unit",
+          "period",
+          "availability",
+          "confidence",
+          "method",
+          "version"
+        ],
+        "title": "Metric",
+        "type": "object"
+      },
+      "MetricDefinitionOut": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "family": {
+            "title": "Family",
+            "type": "string"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "unit": {
+            "enum": [
+              "INR",
+              "ratio",
+              "days",
+              "months",
+              "score",
+              "count"
+            ],
+            "title": "Unit",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "family",
+          "unit",
+          "version",
+          "method"
+        ],
+        "title": "MetricDefinitionOut",
+        "type": "object"
+      },
+      "MetricSeries": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/SeriesPoint"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "unit": {
+            "enum": [
+              "INR",
+              "ratio",
+              "days",
+              "months",
+              "score",
+              "count"
+            ],
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "unit",
+          "points"
+        ],
+        "title": "MetricSeries",
+        "type": "object"
+      },
+      "Period": {
+        "properties": {
+          "end": {
+            "format": "date",
+            "title": "End",
+            "type": "string"
+          },
+          "label": {
+            "description": "e.g. \"2026-09\", \"trailing_3_months\", \"as_of\"",
+            "title": "Label",
+            "type": "string"
+          },
+          "start": {
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "label"
+        ],
+        "title": "Period",
         "type": "object"
       },
       "ProblemDetails": {
@@ -205,6 +639,75 @@
         ],
         "title": "ReadinessResponse",
         "type": "object"
+      },
+      "SeriesPoint": {
+        "properties": {
+          "period": {
+            "$ref": "#/components/schemas/Period"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "period",
+          "value"
+        ],
+        "title": "SeriesPoint",
+        "type": "object"
+      },
+      "SourceRef": {
+        "description": "Which records a value was computed from.",
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "record_count": {
+            "title": "Record Count",
+            "type": "integer"
+          },
+          "sample_ids": {
+            "description": "Up to five contributing record ids, for drill-down",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Sample Ids",
+            "type": "array"
+          },
+          "table": {
+            "enum": [
+              "transactions",
+              "invoices",
+              "invoice_payments",
+              "bills",
+              "bill_payments",
+              "loans",
+              "loan_installments",
+              "counter_sales",
+              "accounts"
+            ],
+            "title": "Table",
+            "type": "string"
+          }
+        },
+        "required": [
+          "table",
+          "record_count",
+          "description"
+        ],
+        "title": "SourceRef",
+        "type": "object"
       }
     }
   },
@@ -215,6 +718,215 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/entities": {
+      "get": {
+        "operationId": "list_entities_api_v1_entities_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EntitySummary"
+                  },
+                  "title": "Response List Entities Api V1 Entities Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (application/problem+json)"
+          }
+        },
+        "summary": "List Entities",
+        "tags": [
+          "entities"
+        ]
+      }
+    },
+    "/api/v1/entities/{entity_id}/financial-metrics": {
+      "get": {
+        "operationId": "financial_metrics_api_v1_entities__entity_id__financial_metrics_get",
+        "parameters": [
+          {
+            "description": "Entity (subject) id",
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "description": "Entity (subject) id",
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Calculate as at the end of this day. Defaults to the end of the data.",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Calculate as at the end of this day. Defaults to the end of the data.",
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinancialMetricsReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (application/problem+json)"
+          }
+        },
+        "summary": "All financial metrics for an entity",
+        "tags": [
+          "analytics"
+        ]
+      }
+    },
+    "/api/v1/entities/{entity_id}/financial-metrics/{metric_code}": {
+      "get": {
+        "operationId": "financial_metric_api_v1_entities__entity_id__financial_metrics__metric_code__get",
+        "parameters": [
+          {
+            "description": "Entity (subject) id",
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "description": "Entity (subject) id",
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "e.g. \"receivables.days\"",
+            "in": "path",
+            "name": "metric_code",
+            "required": true,
+            "schema": {
+              "description": "e.g. \"receivables.days\"",
+              "title": "Metric Code",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Calculate as at the end of this day. Defaults to the end of the data.",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Calculate as at the end of this day. Defaults to the end of the data.",
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Metric"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (application/problem+json)"
+          }
+        },
+        "summary": "One financial metric for an entity",
+        "tags": [
+          "analytics"
+        ]
+      }
+    },
+    "/api/v1/meta/financial-metrics": {
+      "get": {
+        "operationId": "metric_catalogue_api_v1_meta_financial_metrics_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MetricDefinitionOut"
+                  },
+                  "title": "Response Metric Catalogue Api V1 Meta Financial Metrics Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (application/problem+json)"
+          }
+        },
+        "summary": "Definitions of every financial metric (methodology)",
+        "tags": [
+          "meta"
+        ]
+      }
+    },
     "/health": {
       "get": {
         "operationId": "health_health_get",

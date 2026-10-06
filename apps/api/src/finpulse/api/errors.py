@@ -14,6 +14,7 @@ from fastapi import FastAPI, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import InterfaceError, OperationalError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from finpulse.api.schemas.errors import FieldError, ProblemDetails
@@ -112,7 +113,22 @@ async def _handle_http_exception(request: Request, exc: Exception) -> JSONRespon
     )
 
 
+async def _handle_database_unavailable(request: Request, exc: Exception) -> JSONResponse:
+    # Driver messages can include host names; log the type only and keep the response generic.
+    log.warning("database_unavailable", error=type(exc).__name__)
+    return problem_response(
+        status=503,
+        code="database_unavailable",
+        title="Database unavailable",
+        detail="The database could not be reached. Try again shortly.",
+        request_id=_request_id(request),
+        headers={"Retry-After": "5"},
+    )
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(AppError, _handle_app_error)
     app.add_exception_handler(RequestValidationError, _handle_validation_error)
     app.add_exception_handler(StarletteHTTPException, _handle_http_exception)
+    app.add_exception_handler(OperationalError, _handle_database_unavailable)
+    app.add_exception_handler(InterfaceError, _handle_database_unavailable)

@@ -69,12 +69,14 @@ apps/api/
 │   │   ├── transfers.py
 │   │   └── recurring.py          # series detection + obligation events
 │   │
-│   ├── analytics/                # PURE: metric registry and metrics
-│   │   ├── registry.py           # @metric decorator, MetricContext, catalogue
-│   │   ├── stats.py              # robust stats helpers (median/MAD, Theil–Sen, CV, HHI)
-│   │   └── metrics/
-│   │       ├── income.py · cashflow.py · liquidity.py · obligations.py
-│   │       ├── spending.py · business.py · trend.py · data_quality.py
+│   ├── analytics/                # PURE: financial metrics (see docs/FINANCIAL_METRICS.md)
+│   │   ├── inputs.py             # FinancialData: the read-only snapshot the engine consumes
+│   │   ├── classify.py           # how transaction categories group into receipts/expenses/…
+│   │   ├── context.py            # months, balances, receivables: computed once per report
+│   │   ├── registry.py           # metric definitions (catalogue), value & output helpers
+│   │   ├── metrics.py            # the 20 metric functions
+│   │   ├── engine.py             # compute_report(data, as_of) → FinancialMetricsReport
+│   │   └── schemas.py            # Pydantic outputs (also the API response models)
 │   │
 │   ├── scoring/                  # PURE: Financial Passport
 │   │   ├── models/passport_v1.yaml
@@ -131,7 +133,7 @@ apps/api/
 │   │   ├── db.py                 # async engine/session
 │   │   ├── models.py             # SQLAlchemy ORM (split per DATA_MODEL section as it grows)
 │   │   ├── seed.py               # load synthetic datasets (idempotent)
-│   │   ├── repositories/         # org-scoped data access; the only place SQL lives
+│   │   ├── repositories/         # org-scoped data access (financial_data.py → FinancialData)
 │   │   └── registry_sync.py      # sync code registries → reference tables
 │   │
 │   ├── jobs/

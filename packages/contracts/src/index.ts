@@ -15,4 +15,11 @@ export type DependencyCheck = Schemas["DependencyCheck"];
 export type ProblemDetails = Schemas["ProblemDetails"];
 export type FieldError = Schemas["FieldError"];
 
+export type EntitySummary = Schemas["EntitySummary"];
+export type FinancialMetricsReport = Schemas["FinancialMetricsReport"];
+export type Metric = Schemas["Metric"];
+export type MetricSeries = Schemas["MetricSeries"];
+export type MetricDefinition = Schemas["MetricDefinitionOut"];
+export type DataCoverage = Schemas["DataCoverage"];
+
 export type ApiPath = keyof paths;

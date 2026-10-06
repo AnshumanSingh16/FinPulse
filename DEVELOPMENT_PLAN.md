@@ -118,6 +118,18 @@ golden snapshots per persona; queue concurrency test (two workers, no double exe
 **Exit criteria**: analysis run on every persona succeeds; metrics reproducible bit-for-bit;
 failed stage reporting verified by fault-injection test.
 
+**Progress**
+- Done (2a): pure analytics engine (`finpulse.analytics`) with 20 versioned metrics — revenue,
+  expenses, net cash flow, growth, volatility, cash balance, runway, receivables, receivable and
+  payable days, debt outstanding, debt-service burden, customer and supplier concentration,
+  income stability, payment consistency, liquidity ratio, financial buffer, transaction
+  consistency. Each has a typed value, unit, period, availability, confidence, components and
+  source references. Exposed via `GET /api/v1/entities`, `/entities/{id}/financial-metrics[/{code}]`
+  and `/meta/financial-metrics`. Tests: hand-checked unit cases, no-look-ahead property,
+  reconciliation with the synthetic books, archetype behaviour, and a Postgres round trip.
+- Remaining (2b): rule-based categorisation from narrations, transfer pairing, recurring-series
+  detection, and persisted analysis runs (`analysis_runs`, `metric_values`) via the job queue.
+
 ## Phase 3 — Scoring engine (Financial Passport)
 
 **Build**

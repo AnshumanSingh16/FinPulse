@@ -4,6 +4,74 @@
  */
 
 export interface paths {
+    "/api/v1/entities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Entities */
+        get: operations["list_entities_api_v1_entities_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/entities/{entity_id}/financial-metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** All financial metrics for an entity */
+        get: operations["financial_metrics_api_v1_entities__entity_id__financial_metrics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/entities/{entity_id}/financial-metrics/{metric_code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One financial metric for an entity */
+        get: operations["financial_metric_api_v1_entities__entity_id__financial_metrics__metric_code__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/meta/financial-metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Definitions of every financial metric (methodology) */
+        get: operations["metric_catalogue_api_v1_meta_financial_metrics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -42,6 +110,30 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** DataCoverage */
+        DataCoverage: {
+            /** Bill Count */
+            bill_count: number;
+            /**
+             * Complete Months
+             * @description Calendar months fully covered by the data
+             */
+            complete_months: number;
+            /** Counter Sale Days */
+            counter_sale_days: number;
+            /** First Transaction On */
+            first_transaction_on: string | null;
+            /** Invoice Count */
+            invoice_count: number;
+            /** Last Transaction On */
+            last_transaction_on: string | null;
+            /** Loan Count */
+            loan_count: number;
+            /** Transaction Count */
+            transaction_count: number;
+            /** Uncategorised Transactions */
+            uncategorised_transactions: number;
+        };
         /** DependencyCheck */
         DependencyCheck: {
             /**
@@ -59,6 +151,39 @@ export interface components {
              */
             status: "ok" | "failed";
         };
+        /** EntityRef */
+        EntityRef: {
+            /** Display Name */
+            display_name: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Segment */
+            segment: string;
+        };
+        /**
+         * EntitySummary
+         * @description A person or business FinPulse holds financial data for.
+         */
+        EntitySummary: {
+            /** Data Origin */
+            data_origin: string;
+            /** Display Name */
+            display_name: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Kind */
+            kind: ("business" | "individual") | string;
+            /** Segment */
+            segment: string;
+        };
         /** FieldError */
         FieldError: {
             /** Loc */
@@ -67,6 +192,24 @@ export interface components {
             msg: string;
             /** Type */
             type: string;
+        };
+        /** FinancialMetricsReport */
+        FinancialMetricsReport: {
+            /**
+             * As Of
+             * Format: date
+             */
+            as_of: string;
+            coverage: components["schemas"]["DataCoverage"];
+            /** Currency */
+            currency: string;
+            /** Engine Version */
+            engine_version: string;
+            entity: components["schemas"]["EntityRef"];
+            /** Metrics */
+            metrics: components["schemas"]["Metric"][];
+            /** Series */
+            series: components["schemas"]["MetricSeries"][];
         };
         /**
          * HealthResponse
@@ -89,6 +232,107 @@ export interface components {
             timestamp: string;
             /** Version */
             version: string;
+        };
+        /** Metric */
+        Metric: {
+            /**
+             * Availability
+             * @enum {string}
+             */
+            availability: "available" | "insufficient_data" | "not_applicable";
+            /**
+             * Code
+             * @description Stable identifier, e.g. "receivables.days"
+             */
+            code: string;
+            /**
+             * Components
+             * @description Intermediate values and breakdowns
+             */
+            components?: {
+                [key: string]: string | number | null;
+            };
+            /**
+             * Confidence
+             * @description How much of the intended window and inputs the value rests on
+             */
+            confidence: ("high" | "medium" | "low") | null;
+            /** Family */
+            family: string;
+            /**
+             * Method
+             * @description How the value is calculated
+             */
+            method: string;
+            /** Name */
+            name: string;
+            /** Notes */
+            notes?: string[];
+            period: components["schemas"]["Period"];
+            /** Sources */
+            sources?: components["schemas"]["SourceRef"][];
+            /**
+             * Unit
+             * @enum {string}
+             */
+            unit: "INR" | "ratio" | "days" | "months" | "score" | "count";
+            /**
+             * Value
+             * @description Null unless availability is 'available'. INR values are rupees, exact to the paisa; ratios are fractions (0.25 = 25%).
+             */
+            value: string | null;
+            /** Version */
+            version: number;
+        };
+        /** MetricDefinitionOut */
+        MetricDefinitionOut: {
+            /** Code */
+            code: string;
+            /** Family */
+            family: string;
+            /** Method */
+            method: string;
+            /** Name */
+            name: string;
+            /**
+             * Unit
+             * @enum {string}
+             */
+            unit: "INR" | "ratio" | "days" | "months" | "score" | "count";
+            /** Version */
+            version: number;
+        };
+        /** MetricSeries */
+        MetricSeries: {
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+            /** Points */
+            points: components["schemas"]["SeriesPoint"][];
+            /**
+             * Unit
+             * @enum {string}
+             */
+            unit: "INR" | "ratio" | "days" | "months" | "score" | "count";
+        };
+        /** Period */
+        Period: {
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+            /**
+             * Label
+             * @description e.g. "2026-09", "trailing_3_months", "as_of"
+             */
+            label: string;
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
         };
         /**
          * ProblemDetails
@@ -133,6 +377,32 @@ export interface components {
              */
             status: "ready" | "not_ready";
         };
+        /** SeriesPoint */
+        SeriesPoint: {
+            period: components["schemas"]["Period"];
+            /** Value */
+            value: string | null;
+        };
+        /**
+         * SourceRef
+         * @description Which records a value was computed from.
+         */
+        SourceRef: {
+            /** Description */
+            description: string;
+            /** Record Count */
+            record_count: number;
+            /**
+             * Sample Ids
+             * @description Up to five contributing record ids, for drill-down
+             */
+            sample_ids?: string[];
+            /**
+             * Table
+             * @enum {string}
+             */
+            table: "transactions" | "invoices" | "invoice_payments" | "bills" | "bill_payments" | "loans" | "loan_installments" | "counter_sales" | "accounts";
+        };
     };
     responses: never;
     parameters: never;
@@ -142,6 +412,136 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    list_entities_api_v1_entities_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntitySummary"][];
+                };
+            };
+            /** @description Error (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    financial_metrics_api_v1_entities__entity_id__financial_metrics_get: {
+        parameters: {
+            query?: {
+                /** @description Calculate as at the end of this day. Defaults to the end of the data. */
+                as_of?: string | null;
+            };
+            header?: never;
+            path: {
+                /** @description Entity (subject) id */
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinancialMetricsReport"];
+                };
+            };
+            /** @description Error (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    financial_metric_api_v1_entities__entity_id__financial_metrics__metric_code__get: {
+        parameters: {
+            query?: {
+                /** @description Calculate as at the end of this day. Defaults to the end of the data. */
+                as_of?: string | null;
+            };
+            header?: never;
+            path: {
+                /** @description Entity (subject) id */
+                entity_id: string;
+                /** @description e.g. "receivables.days" */
+                metric_code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Metric"];
+                };
+            };
+            /** @description Error (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    metric_catalogue_api_v1_meta_financial_metrics_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetricDefinitionOut"][];
+                };
+            };
+            /** @description Error (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     health_health_get: {
         parameters: {
             query?: never;

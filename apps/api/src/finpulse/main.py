@@ -15,7 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from finpulse import __version__
 from finpulse.api.errors import register_exception_handlers
 from finpulse.api.middleware import REQUEST_ID_HEADER, RequestContextMiddleware
-from finpulse.api.routers import system
+from finpulse.api.routers import entities, system
 from finpulse.api.schemas.errors import ProblemDetails
 from finpulse.config import Settings, get_settings
 from finpulse.observability.logging import configure_logging, get_logger
@@ -68,6 +68,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
 
     app.include_router(system.router)
-    # Versioned business routers are mounted under /api/v1 as each phase lands.
+    app.include_router(entities.router)  # /api/v1/...
 
     return app

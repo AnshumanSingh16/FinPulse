@@ -30,8 +30,9 @@ Browser ──▶ Next.js (apps/web) ──▶ FastAPI /api/v1 ──▶ engines
 - **Content type:** `application/json; charset=utf-8`. Errors: `application/problem+json`.
 - **IDs:** UUID strings.
 - **Money:** `{ "amount_minor": 1234500, "currency": "INR" }` — integer minor units. Never floats.
-- **Metric values:** `value` is a decimal **string** (`"0.731200"`) to preserve precision, plus
-  `unit`. `null` with `quality: "insufficient_data"` when not computable.
+- **Metric values:** `value` is a decimal **string** to preserve precision, plus `unit`. INR
+  metric values are rupees exact to the paisa (`"589345.00"`); ratios are fractions. `null` with
+  `availability: "insufficient_data" | "not_applicable"` when not computable.
 - **Dates:** `YYYY-MM-DD` for business dates; RFC 3339 UTC for timestamps.
 - **Pagination:** cursor-based. `?limit=50&cursor=<opaque>`; response
   `{ "data": [...], "next_cursor": "..." | null }`. Max `limit` 200.
@@ -132,6 +133,25 @@ Browser ──▶ Next.js (apps/web) ──▶ FastAPI /api/v1 ──▶ engines
 ```json
 { "id": "…", "status": "queued", "subject_id": "…", "job_id": "…" }
 ```
+
+### 4.3a Entities and financial metrics *(implemented)*
+
+"Entity" is the API name for a subject (a person or business). These routes are live; the full
+metric definitions are in [docs/FINANCIAL_METRICS.md](docs/FINANCIAL_METRICS.md).
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/entities` | Entities in the caller's organisation: `id`, `display_name`, `kind`, `segment`, `data_origin` |
+| GET | `/entities/{entity_id}/financial-metrics` | Full report: `entity`, `as_of`, `currency`, `engine_version`, `coverage`, `metrics[]` (20), `series[]` (monthly revenue, expenses, net cash flow, month-end balance). Optional `?as_of=YYYY-MM-DD` (default: end of the data). |
+| GET | `/entities/{entity_id}/financial-metrics/{metric_code}` | One metric |
+| GET | `/meta/financial-metrics` | Metric definitions: code, name, family, unit, version, method |
+
+Errors: `404 entity_not_found` · `404 metric_not_found` (lists known codes in `extra.known`) ·
+`422 insufficient_history` (no data on or before `as_of`) · `422 validation_error` (malformed
+id or date) · `503 database_unavailable` (with `Retry-After`).
+
+Metrics are computed at request time from stored records. Persisted analysis runs (§4.5) come
+later; until authentication exists, every request is scoped to the demo organisation.
 
 ### 4.4 Raw data
 

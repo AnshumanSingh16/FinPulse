@@ -7,10 +7,11 @@ history.
 > trustworthy, and detect if their financial health is deteriorating before a traditional credit
 > system would?
 
-**Status: Phase 1 (synthetic data).** The platform foundation is in place, and a deterministic
-synthetic-data layer produces 12–18 months of consistent financial history for five fictional
-entities, led by the demo business **Sharma Electricals**. No financial analytics, scoring or AI
-agents exist yet — see [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md).
+**Status: Phase 2a (financial analytics).** On top of the platform foundation and a
+deterministic synthetic-data layer (five fictional entities, led by the demo business **Sharma
+Electricals**), a deterministic analytics engine calculates 20 financial metrics and serves them
+over the API. Scoring, early warnings, stress tests and AI agents are not built yet — see
+[DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md).
 
 ## Core principle
 
@@ -27,7 +28,7 @@ apps/web/             Next.js frontend (TypeScript, Tailwind, shadcn/ui)
 packages/contracts/   Shared API contract: OpenAPI exported from FastAPI + generated TS types
 infra/                docker-compose for local PostgreSQL
 scripts/              dev helpers (run API + web together, db init/seed/reset)
-docs/                 SYNTHETIC_DATA.md — the synthetic dataset
+docs/                 SYNTHETIC_DATA.md · FINANCIAL_METRICS.md
 ```
 
 Details: [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md).
@@ -100,6 +101,20 @@ loans with repayment schedules, and cash balances that reconcile with one anothe
 truth and a simulated bureau record for evaluation. See
 [docs/SYNTHETIC_DATA.md](docs/SYNTHETIC_DATA.md) for the structure, the guarantees, and how to add
 scenarios.
+
+## Financial analytics
+
+```
+GET /api/v1/entities
+GET /api/v1/entities/{entity_id}/financial-metrics[?as_of=YYYY-MM-DD]
+GET /api/v1/entities/{entity_id}/financial-metrics/{metric_code}
+GET /api/v1/meta/financial-metrics
+```
+
+Twenty metrics, from monthly revenue and cash runway to receivable days, debt-service burden and
+payment consistency. Each comes with its value, unit, period, availability, confidence, method,
+breakdown and source records. All are calculated in plain Python (no LLM) and covered by
+hand-checked tests. See [docs/FINANCIAL_METRICS.md](docs/FINANCIAL_METRICS.md).
 
 ## How the frontend talks to the backend
 
