@@ -7,11 +7,16 @@ history.
 > trustworthy, and detect if their financial health is deteriorating before a traditional credit
 > system would?
 
-**Status: Phase 5 (stress testing).** On top of the platform foundation, a deterministic
-synthetic-data layer (five fictional entities, led by the demo business **Sharma Electricals**),
-an analytics engine with 25 financial metrics and the **Financial Passport** (six dimensions and a
-prototype Financial Health score), the **stress-testing engine** projects cash under ten
-scenarios. Early warnings and AI agents are not built yet — see [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md).
+**Status: deterministic core complete.** The platform foundation is in place, along with:
+
+- a deterministic synthetic-data layer: five fictional entities, led by the demo business
+  **Sharma Electricals**;
+- an analytics engine with 25 financial metrics;
+- the **Financial Passport**: six dimensions and a prototype Financial Health score;
+- the **early-warning engine**: 18 configurable rules that detect deterioration;
+- the **stress-testing engine**: cash projections under ten scenarios.
+
+AI agents are not built yet — see [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md).
 
 ## Core principle
 
@@ -29,7 +34,7 @@ packages/contracts/   Shared API contract: OpenAPI exported from FastAPI + gener
 infra/                docker-compose for local PostgreSQL
 scripts/              dev helpers (run API + web together, db init/seed/reset)
 docs/                 SYNTHETIC_DATA.md · FINANCIAL_METRICS.md · FINANCIAL_PASSPORT.md ·
-                      STRESS_TESTING.md
+                      EARLY_WARNING.md · STRESS_TESTING.md
 ```
 
 Details: [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md).
@@ -138,6 +143,39 @@ Sharma Electricals, 30 Sep 2026 — Financial Health 50.6/100 (Watch)
 Scores come from a versioned TOML configuration, applied deterministically. Every point traces
 to a metric, changes are attributed to the factors that moved, and history is tracked month by
 month. See [docs/FINANCIAL_PASSPORT.md](docs/FINANCIAL_PASSPORT.md).
+
+## Early warnings
+
+> Deterministic rules on synthetic data. Warnings flag changes to investigate; they are not
+> predictions or a credit assessment.
+
+```
+GET /api/v1/entities/{entity_id}/warnings[?as_of=&min_severity=&category=]
+GET /api/v1/entities/{entity_id}/risk-summary[?as_of=]
+GET /api/v1/meta/early-warning-rules
+```
+
+Eighteen rules compare each entity with its own earlier state. They cover:
+
+- revenue decline and accelerating expenses;
+- falling cash, overdraft reliance, liquidity and runway;
+- receivables growth, collection days and late payments;
+- debt burden, loan stacking and bounced instalments;
+- customer and supplier concentration, and loss of a major customer;
+- unusual transactions and volatility.
+
+Every threshold is in one TOML file. No LLM decides whether a warning exists.
+
+```
+EARLY WARNING — HIGH   Sharma Electricals, 31 Dec 2025
+Receivables growing faster than sales.
+Receivables increased +59% against their typical level (₹6,89,747) to ₹10,97,992, while
+invoiced sales changed 0%. Average collection time: 31 → 48 days.
+```
+
+Sharma Electricals reaches **high** risk in Dec 2025, a month after its hidden decline begins,
+and 8–9 months before its loan auto-debits bounce; its credit-bureau record stays clean
+throughout. See [docs/EARLY_WARNING.md](docs/EARLY_WARNING.md).
 
 ## Stress testing
 

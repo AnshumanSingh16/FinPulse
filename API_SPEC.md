@@ -244,6 +244,17 @@ persisted.
 
 ### 4.8 Early warnings
 
+**Implemented (Phase 4, first part), computed per request:**
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/entities/{entity_id}/warnings` | Warnings detected by the deterministic rules. Each has `id`, `category`, `severity`, `title`, `description`, `evidence`, `affected_metric`, `current_value`, `previous_value`, `threshold` and `detected_at`, plus trend, status and `first_detected_on`. Also the state of every rule. Filters: `as_of`, `min_severity`, `category`. |
+| GET | `/entities/{entity_id}/risk-summary` | Risk level and 0–100 early-warning index, categories, top warnings, trend against 3 months earlier, and a 12-month timeline. Optional `?as_of=`. |
+| GET | `/meta/early-warning-rules` | Every rule with its configured tiers and windows, plus the summary points and levels |
+
+Methodology: [docs/EARLY_WARNING.md](docs/EARLY_WARNING.md). No LLM decides whether a warning
+exists. The persisted signals, alerts and lifecycle below follow later.
+
 | Method | Path | Description |
 |---|---|---|
 | GET | `/analyses/{run_id}/signals` | Signals detected in a run |

@@ -176,6 +176,21 @@ false-alarm rate on stable personas ≤ 10%).
 **Exit criteria**: backtest report produced for the full persona cohort; numbers recorded in
 `docs/methodology/early-warning-evaluation.md` with their synthetic-data caveats.
 
+**Progress**
+- Done:
+  - 18 deterministic rules covering revenue, expenses, cash, liquidity, receivables and
+    collections, debt, concentration, unusual transactions and volatility. Each compares the
+    entity with itself at earlier dates, with no look-ahead.
+  - All thresholds are in a strictly validated TOML file. Shared grading has a persistence
+    downgrade and volatility-scaled tiers.
+  - Stable warning IDs, streaks and status.
+  - A risk summary with an index, trend and 12-month timeline.
+  - Endpoints `GET /entities/{id}/warnings`, `/risk-summary` and `/meta/early-warning-rules`.
+  - Tests: hand-checked rules, config validation, entity stories and invariants. See
+    [docs/EARLY_WARNING.md](docs/EARLY_WARNING.md).
+- Deferred: statistical detectors (CUSUM, robust z), persisted signals and the alert lifecycle,
+  and the backtest harness with evaluation gates.
+
 ## Phase 5 — Stress-testing engine
 
 **Build**

@@ -28,6 +28,14 @@ export type DimensionScore = Schemas["DimensionScore"];
 export type FactorScore = Schemas["FactorScore"];
 export type ScoreChange = Schemas["ScoreChange"];
 
+export type WarningsReport = Schemas["WarningsReport"];
+export type EarlyWarning = Schemas["EarlyWarning"];
+export type WarningEvidence = Schemas["WarningEvidence"];
+export type WarningThreshold = Schemas["Threshold"];
+export type RiskSummary = Schemas["RiskSummary"];
+export type RiskTimelinePoint = Schemas["TimelinePoint"];
+export type EarlyWarningRuleCatalogue = Schemas["RuleCatalogue"];
+
 export type StressTestRequest = Schemas["StressTestRequest"];
 export type StressTestResult = Schemas["StressTestResult"];
 export type StressProjection = Schemas["Projection"];

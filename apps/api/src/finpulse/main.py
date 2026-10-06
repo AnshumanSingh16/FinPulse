@@ -15,7 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from finpulse import __version__
 from finpulse.api.errors import register_exception_handlers
 from finpulse.api.middleware import REQUEST_ID_HEADER, RequestContextMiddleware
-from finpulse.api.routers import entities, passport, stress, system
+from finpulse.api.routers import entities, passport, stress, system, warnings
 from finpulse.api.schemas.errors import ProblemDetails
 from finpulse.config import Settings, get_settings
 from finpulse.observability.logging import configure_logging, get_logger
@@ -71,5 +71,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(entities.router)  # /api/v1/...
     app.include_router(passport.router)
     app.include_router(stress.router)
+    app.include_router(warnings.router)
 
     return app

@@ -89,6 +89,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/entities/{entity_id}/risk-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Overall early-warning risk: level, index, categories, trend and 12-month timeline */
+        get: operations["summary_api_v1_entities__entity_id__risk_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/entities/{entity_id}/stress-test": {
         parameters: {
             query?: never;
@@ -103,6 +120,40 @@ export interface paths {
          * @description Give either a `preset` (see `GET /api/v1/meta/stress-scenarios`) or a list of `shocks`, each `{type, ...parameters}`. Shocks are applied together.
          */
         post: operations["stress_test_api_v1_entities__entity_id__stress_test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/entities/{entity_id}/warnings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Early-warning signals detected by deterministic rules */
+        get: operations["warnings_api_v1_entities__entity_id__warnings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/meta/early-warning-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The early-warning rules and their configured thresholds */
+        get: operations["rule_catalogue_api_v1_meta_early_warning_rules_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -234,6 +285,25 @@ export interface components {
             /** Min Score */
             min_score: string;
         };
+        /** CategoryRisk */
+        CategoryRisk: {
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "revenue" | "expenses" | "cash" | "liquidity" | "receivables" | "debt" | "concentration" | "transactions" | "volatility";
+            /** Label */
+            label: string;
+            /** Rules */
+            rules: string[];
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "low" | "medium" | "high" | "critical";
+            /** Warnings */
+            warnings: number;
+        };
         /** ChangeDriver */
         ChangeDriver: {
             /** Dimension */
@@ -296,6 +366,15 @@ export interface components {
             medium: string;
             /** Provisional Below */
             provisional_below: string;
+        };
+        /** ConfigRef */
+        ConfigRef: {
+            /** Id */
+            id: string;
+            /** Sha256 */
+            sha256: string;
+            /** Version */
+            version: number;
         };
         /** DataCoverage */
         DataCoverage: {
@@ -410,6 +489,74 @@ export interface components {
             metric_code: string;
             /** Text */
             text: string;
+        };
+        /** EarlyWarning */
+        EarlyWarning: {
+            affected_metric: components["schemas"]["MetricRef"];
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "revenue" | "expenses" | "cash" | "liquidity" | "receivables" | "debt" | "concentration" | "transactions" | "volatility";
+            /**
+             * Change
+             * @description current − previous, in the metric's unit
+             */
+            change: string | null;
+            /**
+             * Change Pct
+             * @description (current − previous) ÷ |previous|
+             */
+            change_pct: string | null;
+            current_period: components["schemas"]["Period"];
+            /** Current Value */
+            current_value: string | null;
+            /** Description */
+            description: string;
+            /**
+             * Detected At
+             * Format: date-time
+             * @description Data time of detection: the end of the as_of day (IST). Deterministic — the same data always gives the same timestamp
+             */
+            detected_at: string;
+            /** Evidence */
+            evidence: components["schemas"]["WarningEvidence"][];
+            /**
+             * First Detected On
+             * Format: date
+             * @description Start of the current unbroken run of month-ends with this warning
+             */
+            first_detected_on: string;
+            /**
+             * Id
+             * @description Stable while the condition persists: rule + entity + onset
+             */
+            id: string;
+            previous_period: components["schemas"]["Period"] | null;
+            /** Previous Value */
+            previous_value: string | null;
+            /** Rule */
+            rule: string;
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "low" | "medium" | "high" | "critical";
+            /**
+             * Status
+             * @description Compared with the previous month-end
+             * @enum {string}
+             */
+            status: "new" | "ongoing" | "escalated" | "easing";
+            threshold: components["schemas"]["Threshold"];
+            /** Title */
+            title: string;
+            /**
+             * Trend
+             * @description persistent = the condition is present but not getting worse; such warnings are one severity lower than their tier
+             * @enum {string}
+             */
+            trend: "deteriorating" | "persistent";
         };
         /** EntityRef */
         EntityRef: {
@@ -738,6 +885,23 @@ export interface components {
             /** Version */
             version: number;
         };
+        /** MetricRef */
+        MetricRef: {
+            /** Code */
+            code: string;
+            /**
+             * Derived
+             * @description True when the value is computed by the rule itself rather than taken from the financial-metrics catalogue
+             */
+            derived: boolean;
+            /** Name */
+            name: string;
+            /**
+             * Unit
+             * @enum {string}
+             */
+            unit: "INR" | "ratio" | "days" | "months" | "score" | "count";
+        };
         /** MetricSeries */
         MetricSeries: {
             /** Code */
@@ -1007,6 +1171,131 @@ export interface components {
             /** Summary */
             summary: string;
         };
+        /** RiskSummary */
+        RiskSummary: {
+            /**
+             * As Of
+             * Format: date
+             */
+            as_of: string;
+            /** Categories */
+            categories: components["schemas"]["CategoryRisk"][];
+            config: components["schemas"]["ConfigRef"];
+            counts: components["schemas"]["SeverityCounts"];
+            /** Disclaimer */
+            disclaimer: string;
+            /**
+             * Early Warning Index
+             * @description Sum of configured points per warning severity, capped at 100
+             */
+            early_warning_index: number;
+            /** Engine Version */
+            engine_version: string;
+            entity: components["schemas"]["EntityRef"];
+            /**
+             * First Warning On
+             * @description Start of the current unbroken run of month-ends with at least one warning
+             */
+            first_warning_on: string | null;
+            /** Headline */
+            headline: string;
+            /**
+             * Risk Level
+             * @enum {string}
+             */
+            risk_level: "none" | "low" | "medium" | "high" | "critical";
+            /** Rules Evaluated */
+            rules_evaluated: number;
+            /** Rules Triggered */
+            rules_triggered: number;
+            /** Timeline */
+            timeline: components["schemas"]["TimelinePoint"][];
+            /** Top Warnings */
+            top_warnings: components["schemas"]["WarningBrief"][];
+            trend: components["schemas"]["RiskTrend"];
+        };
+        /** RiskTrend */
+        RiskTrend: {
+            /** Compared With */
+            compared_with: string | null;
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "worsening" | "improving" | "stable" | "unknown";
+            /** Eased */
+            eased: string[];
+            /** Escalated */
+            escalated: string[];
+            /** New */
+            new: string[];
+            /** Previous Index */
+            previous_index: number | null;
+            /** Previous Level */
+            previous_level: ("none" | "low" | "medium" | "high" | "critical") | null;
+            /** Resolved */
+            resolved: string[];
+        };
+        /** RuleCatalogue */
+        RuleCatalogue: {
+            config: components["schemas"]["ConfigRef"];
+            /** Disclaimer */
+            disclaimer: string;
+            /** Name */
+            name: string;
+            /** Risk Levels */
+            risk_levels: {
+                [key: string]: string;
+            };
+            /** Rules */
+            rules: components["schemas"]["RuleInfo"][];
+            /** Severity Points */
+            severity_points: {
+                [key: string]: number;
+            };
+        };
+        /** RuleInfo */
+        RuleInfo: {
+            /** About */
+            about: string;
+            affected_metric: components["schemas"]["MetricRef"];
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "revenue" | "expenses" | "cash" | "liquidity" | "receivables" | "debt" | "concentration" | "transactions" | "volatility";
+            /** Code */
+            code: string;
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "above" | "below";
+            /**
+             * Parameters
+             * @description The configured thresholds and windows
+             */
+            parameters: {
+                [key: string]: unknown;
+            };
+        };
+        /** RuleOutcome */
+        RuleOutcome: {
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "revenue" | "expenses" | "cash" | "liquidity" | "receivables" | "debt" | "concentration" | "transactions" | "volatility";
+            /** Reason */
+            reason?: string | null;
+            /** Rule */
+            rule: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "triggered" | "clear" | "insufficient_data" | "not_applicable" | "disabled";
+        };
         /** ScenarioCatalogue */
         ScenarioCatalogue: {
             /** Presets */
@@ -1076,6 +1365,34 @@ export interface components {
             period: components["schemas"]["Period"];
             /** Value */
             value: string | null;
+        };
+        /** SeverityCounts */
+        SeverityCounts: {
+            /**
+             * Critical
+             * @default 0
+             */
+            critical: number;
+            /**
+             * High
+             * @default 0
+             */
+            high: number;
+            /**
+             * Low
+             * @default 0
+             */
+            low: number;
+            /**
+             * Medium
+             * @default 0
+             */
+            medium: number;
+            /**
+             * Total
+             * @default 0
+             */
+            total: number;
         };
         /** ShockTypeOut */
         ShockTypeOut: {
@@ -1163,6 +1480,133 @@ export interface components {
             risk_change: components["schemas"]["RiskChange"];
             scenario: components["schemas"]["ScenarioInfo"];
             stressed: components["schemas"]["Projection"];
+        };
+        /**
+         * Threshold
+         * @description The configured limit this warning crossed, and all the rule's tiers for context.
+         */
+        Threshold: {
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "above" | "below";
+            /**
+             * Measure
+             * @description What is compared with the tiers
+             */
+            measure: string;
+            /** Observed */
+            observed: string;
+            /**
+             * Operator
+             * @enum {string}
+             */
+            operator: ">=" | "<=";
+            /**
+             * Scale
+             * @description Tiers are multiplied by this (≥ 1) for entities whose revenue normally varies more than the configured norm; 1 = no scaling
+             */
+            scale: string;
+            /**
+             * Tier
+             * @description Severity of the crossed tier before any trend downgrade
+             * @enum {string}
+             */
+            tier: "low" | "medium" | "high" | "critical";
+            /**
+             * Tiers
+             * @description The configured tiers, before scaling
+             */
+            tiers: {
+                [key: string]: string;
+            };
+            /**
+             * Unit
+             * @enum {string}
+             */
+            unit: "INR" | "ratio" | "days" | "months" | "score" | "count";
+            /**
+             * Value
+             * @description The tier that was crossed
+             */
+            value: string;
+        };
+        /** TimelinePoint */
+        TimelinePoint: {
+            /**
+             * As Of
+             * Format: date
+             */
+            as_of: string;
+            counts: components["schemas"]["SeverityCounts"];
+            /** Index */
+            index: number;
+            /**
+             * Level
+             * @enum {string}
+             */
+            level: "none" | "low" | "medium" | "high" | "critical";
+            /** Rules */
+            rules: string[];
+        };
+        /** WarningBrief */
+        WarningBrief: {
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "revenue" | "expenses" | "cash" | "liquidity" | "receivables" | "debt" | "concentration" | "transactions" | "volatility";
+            /**
+             * First Detected On
+             * Format: date
+             */
+            first_detected_on: string;
+            /** Id */
+            id: string;
+            /** Rule */
+            rule: string;
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "low" | "medium" | "high" | "critical";
+            /** Title */
+            title: string;
+        };
+        /** WarningEvidence */
+        WarningEvidence: {
+            /** Id */
+            id: string;
+            /** Metric Codes */
+            metric_codes?: string[];
+            period?: components["schemas"]["Period"] | null;
+            /** Sources */
+            sources?: components["schemas"]["SourceRef"][];
+            /** Text */
+            text: string;
+            /** Values */
+            values?: {
+                [key: string]: string | number | null;
+            };
+        };
+        /** WarningsReport */
+        WarningsReport: {
+            /**
+             * As Of
+             * Format: date
+             */
+            as_of: string;
+            config: components["schemas"]["ConfigRef"];
+            /** Disclaimer */
+            disclaimer: string;
+            /** Engine Version */
+            engine_version: string;
+            entity: components["schemas"]["EntityRef"];
+            /** Rules */
+            rules: components["schemas"]["RuleOutcome"][];
+            /** Warnings */
+            warnings: components["schemas"]["EarlyWarning"][];
         };
         /** Params */
         finpulse__stress__shocks__CustomerPaymentStop__Params: {
@@ -1509,6 +1953,41 @@ export interface operations {
             };
         };
     };
+    summary_api_v1_entities__entity_id__risk_summary_get: {
+        parameters: {
+            query?: {
+                /** @description Calculate as at the end of this day. Defaults to the end of the data. */
+                as_of?: string | null;
+            };
+            header?: never;
+            path: {
+                /** @description Entity (subject) id */
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RiskSummary"];
+                };
+            };
+            /** @description Error (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     stress_test_api_v1_entities__entity_id__stress_test_post: {
         parameters: {
             query?: never;
@@ -1532,6 +2011,74 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StressTestResult"];
+                };
+            };
+            /** @description Error (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    warnings_api_v1_entities__entity_id__warnings_get: {
+        parameters: {
+            query?: {
+                /** @description Calculate as at the end of this day. Defaults to the end of the data. */
+                as_of?: string | null;
+                /** @description Only warnings at least this severe */
+                min_severity?: ("low" | "medium" | "high" | "critical") | null;
+                /** @description Only this category */
+                category?: ("revenue" | "expenses" | "cash" | "liquidity" | "receivables" | "debt" | "concentration" | "transactions" | "volatility") | null;
+            };
+            header?: never;
+            path: {
+                /** @description Entity (subject) id */
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WarningsReport"];
+                };
+            };
+            /** @description Error (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    rule_catalogue_api_v1_meta_early_warning_rules_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleCatalogue"];
                 };
             };
             /** @description Error (application/problem+json) */

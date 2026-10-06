@@ -381,6 +381,16 @@ same service, are persisted, and are referenced by ID.
 
 ## 9. Early-warning engine (`early_warning/`)
 
+> **As built (Phase 4, first part)** — see [docs/EARLY_WARNING.md](docs/EARLY_WARNING.md).
+>
+> - **Rules.** 18 rules with readable codes (e.g. `receivables_growth`). Each computes one
+>   measure from historical comparisons: the same entity at earlier dates, or month-end medians.
+> - **Configuration.** Thresholds live in `config/early_warning_v1.toml`, not in code.
+> - **Grading.** Severity comes from configured tiers. A condition that is not worsening is
+>   reported one step lower.
+> - **Detectors.** The statistical detectors, persisted signals and alert lifecycle described
+>   below are not built yet.
+
 ### 9.1 Detectors
 
 Two families, both deterministic:

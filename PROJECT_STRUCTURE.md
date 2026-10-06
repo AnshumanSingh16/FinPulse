@@ -86,13 +86,13 @@ apps/api/
 │   │   ├── methodology.py        # renders the config into the methodology document
 │   │   ├── format.py · schemas.py
 │   │
-│   ├── early_warning/            # PURE
-│   │   ├── rules/                # one module per rule family
-│   │   ├── detectors/            # cusum.py, robust_z.py, slope_change.py
-│   │   ├── engine.py             # detect(...) → list[Signal]
-│   │   ├── alerts.py             # lifecycle transitions (pure state machine)
-│   │   ├── deterioration_index.py
-│   │   └── backtest.py           # replay + lead-time metrics
+│   ├── early_warning/            # PURE: early warnings (see docs/EARLY_WARNING.md)
+│   │   ├── config/early_warning_v1.toml  # every threshold, window and weight
+│   │   ├── config.py             # strict loader: each rule section validated by its Params
+│   │   ├── snapshots.py          # memoised per-date analytics contexts; month-end medians
+│   │   ├── rules.py              # Rule / LevelRule / VolatilityRule, @register'd rules, grading
+│   │   ├── engine.py             # detect_warnings(), risk_summary(): streaks, IDs, timeline
+│   │   └── schemas.py            # EarlyWarning, WarningsReport, RiskSummary
 │   │
 │   ├── stress/                   # PURE: stress tests (see docs/STRESS_TESTING.md)
 │   │   ├── baseline.py           # 3-month baseline + loan schedules from the analytics context

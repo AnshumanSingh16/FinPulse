@@ -84,6 +84,59 @@
         "title": "BandConfig",
         "type": "object"
       },
+      "CategoryRisk": {
+        "properties": {
+          "category": {
+            "enum": [
+              "revenue",
+              "expenses",
+              "cash",
+              "liquidity",
+              "receivables",
+              "debt",
+              "concentration",
+              "transactions",
+              "volatility"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "rules": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Rules",
+            "type": "array"
+          },
+          "severity": {
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "warnings": {
+            "title": "Warnings",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "category",
+          "label",
+          "severity",
+          "warnings",
+          "rules"
+        ],
+        "title": "CategoryRisk",
+        "type": "object"
+      },
       "ChangeDriver": {
         "properties": {
           "dimension": {
@@ -295,6 +348,29 @@
           "provisional_below"
         ],
         "title": "ConfidenceConfig",
+        "type": "object"
+      },
+      "ConfigRef": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "sha256"
+        ],
+        "title": "ConfigRef",
         "type": "object"
       },
       "DataCoverage": {
@@ -609,6 +685,183 @@
           "text"
         ],
         "title": "Driver",
+        "type": "object"
+      },
+      "EarlyWarning": {
+        "properties": {
+          "affected_metric": {
+            "$ref": "#/components/schemas/MetricRef"
+          },
+          "category": {
+            "enum": [
+              "revenue",
+              "expenses",
+              "cash",
+              "liquidity",
+              "receivables",
+              "debt",
+              "concentration",
+              "transactions",
+              "volatility"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "change": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "current \u2212 previous, in the metric's unit",
+            "title": "Change"
+          },
+          "change_pct": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "(current \u2212 previous) \u00f7 |previous|",
+            "title": "Change Pct"
+          },
+          "current_period": {
+            "$ref": "#/components/schemas/Period"
+          },
+          "current_value": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Value"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "detected_at": {
+            "description": "Data time of detection: the end of the as_of day (IST). Deterministic \u2014 the same data always gives the same timestamp",
+            "format": "date-time",
+            "title": "Detected At",
+            "type": "string"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/WarningEvidence"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "first_detected_on": {
+            "description": "Start of the current unbroken run of month-ends with this warning",
+            "format": "date",
+            "title": "First Detected On",
+            "type": "string"
+          },
+          "id": {
+            "description": "Stable while the condition persists: rule + entity + onset",
+            "title": "Id",
+            "type": "string"
+          },
+          "previous_period": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Period"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "previous_value": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Value"
+          },
+          "rule": {
+            "title": "Rule",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "status": {
+            "description": "Compared with the previous month-end",
+            "enum": [
+              "new",
+              "ongoing",
+              "escalated",
+              "easing"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "threshold": {
+            "$ref": "#/components/schemas/Threshold"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "trend": {
+            "description": "persistent = the condition is present but not getting worse; such warnings are one severity lower than their tier",
+            "enum": [
+              "deteriorating",
+              "persistent"
+            ],
+            "title": "Trend",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "rule",
+          "category",
+          "severity",
+          "title",
+          "description",
+          "affected_metric",
+          "current_value",
+          "previous_value",
+          "change",
+          "change_pct",
+          "current_period",
+          "previous_period",
+          "threshold",
+          "trend",
+          "status",
+          "first_detected_on",
+          "detected_at",
+          "evidence"
+        ],
+        "title": "EarlyWarning",
         "type": "object"
       },
       "EntityRef": {
@@ -1488,6 +1741,43 @@
         "title": "MetricDefinitionOut",
         "type": "object"
       },
+      "MetricRef": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "derived": {
+            "description": "True when the value is computed by the rule itself rather than taken from the financial-metrics catalogue",
+            "title": "Derived",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "unit": {
+            "enum": [
+              "INR",
+              "ratio",
+              "days",
+              "months",
+              "score",
+              "count"
+            ],
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "unit",
+          "derived"
+        ],
+        "title": "MetricRef",
+        "type": "object"
+      },
       "MetricSeries": {
         "properties": {
           "code": {
@@ -2137,6 +2427,367 @@
         "title": "RiskChange",
         "type": "object"
       },
+      "RiskSummary": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/CategoryRisk"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "config": {
+            "$ref": "#/components/schemas/ConfigRef"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/SeverityCounts"
+          },
+          "disclaimer": {
+            "title": "Disclaimer",
+            "type": "string"
+          },
+          "early_warning_index": {
+            "description": "Sum of configured points per warning severity, capped at 100",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Early Warning Index",
+            "type": "integer"
+          },
+          "engine_version": {
+            "title": "Engine Version",
+            "type": "string"
+          },
+          "entity": {
+            "$ref": "#/components/schemas/EntityRef"
+          },
+          "first_warning_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Start of the current unbroken run of month-ends with at least one warning",
+            "title": "First Warning On"
+          },
+          "headline": {
+            "title": "Headline",
+            "type": "string"
+          },
+          "risk_level": {
+            "enum": [
+              "none",
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ],
+            "title": "Risk Level",
+            "type": "string"
+          },
+          "rules_evaluated": {
+            "title": "Rules Evaluated",
+            "type": "integer"
+          },
+          "rules_triggered": {
+            "title": "Rules Triggered",
+            "type": "integer"
+          },
+          "timeline": {
+            "items": {
+              "$ref": "#/components/schemas/TimelinePoint"
+            },
+            "title": "Timeline",
+            "type": "array"
+          },
+          "top_warnings": {
+            "items": {
+              "$ref": "#/components/schemas/WarningBrief"
+            },
+            "title": "Top Warnings",
+            "type": "array"
+          },
+          "trend": {
+            "$ref": "#/components/schemas/RiskTrend"
+          }
+        },
+        "required": [
+          "entity",
+          "as_of",
+          "engine_version",
+          "config",
+          "risk_level",
+          "early_warning_index",
+          "headline",
+          "counts",
+          "categories",
+          "top_warnings",
+          "trend",
+          "first_warning_on",
+          "timeline",
+          "rules_evaluated",
+          "rules_triggered",
+          "disclaimer"
+        ],
+        "title": "RiskSummary",
+        "type": "object"
+      },
+      "RiskTrend": {
+        "properties": {
+          "compared_with": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Compared With"
+          },
+          "direction": {
+            "enum": [
+              "worsening",
+              "improving",
+              "stable",
+              "unknown"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "eased": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Eased",
+            "type": "array"
+          },
+          "escalated": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Escalated",
+            "type": "array"
+          },
+          "new": {
+            "items": {
+              "type": "string"
+            },
+            "title": "New",
+            "type": "array"
+          },
+          "previous_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Index"
+          },
+          "previous_level": {
+            "anyOf": [
+              {
+                "enum": [
+                  "none",
+                  "low",
+                  "medium",
+                  "high",
+                  "critical"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Level"
+          },
+          "resolved": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Resolved",
+            "type": "array"
+          }
+        },
+        "required": [
+          "compared_with",
+          "previous_level",
+          "previous_index",
+          "direction",
+          "new",
+          "resolved",
+          "escalated",
+          "eased"
+        ],
+        "title": "RiskTrend",
+        "type": "object"
+      },
+      "RuleCatalogue": {
+        "properties": {
+          "config": {
+            "$ref": "#/components/schemas/ConfigRef"
+          },
+          "disclaimer": {
+            "title": "Disclaimer",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "risk_levels": {
+            "additionalProperties": {
+              "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+              "type": "string"
+            },
+            "title": "Risk Levels",
+            "type": "object"
+          },
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/RuleInfo"
+            },
+            "title": "Rules",
+            "type": "array"
+          },
+          "severity_points": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Severity Points",
+            "type": "object"
+          }
+        },
+        "required": [
+          "config",
+          "name",
+          "disclaimer",
+          "severity_points",
+          "risk_levels",
+          "rules"
+        ],
+        "title": "RuleCatalogue",
+        "type": "object"
+      },
+      "RuleInfo": {
+        "properties": {
+          "about": {
+            "title": "About",
+            "type": "string"
+          },
+          "affected_metric": {
+            "$ref": "#/components/schemas/MetricRef"
+          },
+          "category": {
+            "enum": [
+              "revenue",
+              "expenses",
+              "cash",
+              "liquidity",
+              "receivables",
+              "debt",
+              "concentration",
+              "transactions",
+              "volatility"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "direction": {
+            "enum": [
+              "above",
+              "below"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "parameters": {
+            "additionalProperties": true,
+            "description": "The configured thresholds and windows",
+            "title": "Parameters",
+            "type": "object"
+          }
+        },
+        "required": [
+          "code",
+          "category",
+          "about",
+          "affected_metric",
+          "direction",
+          "parameters"
+        ],
+        "title": "RuleInfo",
+        "type": "object"
+      },
+      "RuleOutcome": {
+        "properties": {
+          "category": {
+            "enum": [
+              "revenue",
+              "expenses",
+              "cash",
+              "liquidity",
+              "receivables",
+              "debt",
+              "concentration",
+              "transactions",
+              "volatility"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "rule": {
+            "title": "Rule",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "triggered",
+              "clear",
+              "insufficient_data",
+              "not_applicable",
+              "disabled"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rule",
+          "category",
+          "state"
+        ],
+        "title": "RuleOutcome",
+        "type": "object"
+      },
       "ScenarioCatalogue": {
         "properties": {
           "presets": {
@@ -2325,6 +2976,37 @@
           "value"
         ],
         "title": "SeriesPoint",
+        "type": "object"
+      },
+      "SeverityCounts": {
+        "properties": {
+          "critical": {
+            "default": 0,
+            "title": "Critical",
+            "type": "integer"
+          },
+          "high": {
+            "default": 0,
+            "title": "High",
+            "type": "integer"
+          },
+          "low": {
+            "default": 0,
+            "title": "Low",
+            "type": "integer"
+          },
+          "medium": {
+            "default": 0,
+            "title": "Medium",
+            "type": "integer"
+          },
+          "total": {
+            "default": 0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "title": "SeverityCounts",
         "type": "object"
       },
       "ShockTypeOut": {
@@ -2571,6 +3253,304 @@
           "disclaimer"
         ],
         "title": "StressTestResult",
+        "type": "object"
+      },
+      "Threshold": {
+        "description": "The configured limit this warning crossed, and all the rule's tiers for context.",
+        "properties": {
+          "direction": {
+            "enum": [
+              "above",
+              "below"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "measure": {
+            "description": "What is compared with the tiers",
+            "title": "Measure",
+            "type": "string"
+          },
+          "observed": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Observed",
+            "type": "string"
+          },
+          "operator": {
+            "enum": [
+              ">=",
+              "<="
+            ],
+            "title": "Operator",
+            "type": "string"
+          },
+          "scale": {
+            "description": "Tiers are multiplied by this (\u2265 1) for entities whose revenue normally varies more than the configured norm; 1 = no scaling",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Scale",
+            "type": "string"
+          },
+          "tier": {
+            "description": "Severity of the crossed tier before any trend downgrade",
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ],
+            "title": "Tier",
+            "type": "string"
+          },
+          "tiers": {
+            "additionalProperties": {
+              "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+              "type": "string"
+            },
+            "description": "The configured tiers, before scaling",
+            "title": "Tiers",
+            "type": "object"
+          },
+          "unit": {
+            "enum": [
+              "INR",
+              "ratio",
+              "days",
+              "months",
+              "score",
+              "count"
+            ],
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "description": "The tier that was crossed",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "measure",
+          "observed",
+          "operator",
+          "value",
+          "unit",
+          "tier",
+          "tiers",
+          "scale",
+          "direction"
+        ],
+        "title": "Threshold",
+        "type": "object"
+      },
+      "TimelinePoint": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/SeverityCounts"
+          },
+          "index": {
+            "title": "Index",
+            "type": "integer"
+          },
+          "level": {
+            "enum": [
+              "none",
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ],
+            "title": "Level",
+            "type": "string"
+          },
+          "rules": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Rules",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "level",
+          "index",
+          "counts",
+          "rules"
+        ],
+        "title": "TimelinePoint",
+        "type": "object"
+      },
+      "WarningBrief": {
+        "properties": {
+          "category": {
+            "enum": [
+              "revenue",
+              "expenses",
+              "cash",
+              "liquidity",
+              "receivables",
+              "debt",
+              "concentration",
+              "transactions",
+              "volatility"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "first_detected_on": {
+            "format": "date",
+            "title": "First Detected On",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "rule": {
+            "title": "Rule",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "rule",
+          "category",
+          "severity",
+          "title",
+          "first_detected_on"
+        ],
+        "title": "WarningBrief",
+        "type": "object"
+      },
+      "WarningEvidence": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "metric_codes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Metric Codes",
+            "type": "array"
+          },
+          "period": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Period"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceRef"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "values": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Values",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "text"
+        ],
+        "title": "WarningEvidence",
+        "type": "object"
+      },
+      "WarningsReport": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "config": {
+            "$ref": "#/components/schemas/ConfigRef"
+          },
+          "disclaimer": {
+            "title": "Disclaimer",
+            "type": "string"
+          },
+          "engine_version": {
+            "title": "Engine Version",
+            "type": "string"
+          },
+          "entity": {
+            "$ref": "#/components/schemas/EntityRef"
+          },
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/RuleOutcome"
+            },
+            "title": "Rules",
+            "type": "array"
+          },
+          "warnings": {
+            "items": {
+              "$ref": "#/components/schemas/EarlyWarning"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "entity",
+          "as_of",
+          "engine_version",
+          "config",
+          "warnings",
+          "rules",
+          "disclaimer"
+        ],
+        "title": "WarningsReport",
         "type": "object"
       },
       "finpulse__stress__shocks__CustomerPaymentStop__Params": {
@@ -3223,6 +4203,70 @@
         ]
       }
     },
+    "/api/v1/entities/{entity_id}/risk-summary": {
+      "get": {
+        "operationId": "summary_api_v1_entities__entity_id__risk_summary_get",
+        "parameters": [
+          {
+            "description": "Entity (subject) id",
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "description": "Entity (subject) id",
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Calculate as at the end of this day. Defaults to the end of the data.",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Calculate as at the end of this day. Defaults to the end of the data.",
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RiskSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (application/problem+json)"
+          }
+        },
+        "summary": "Overall early-warning risk: level, index, categories, trend and 12-month timeline",
+        "tags": [
+          "early-warning"
+        ]
+      }
+    },
     "/api/v1/entities/{entity_id}/stress-test": {
       "post": {
         "description": "Give either a `preset` (see `GET /api/v1/meta/stress-scenarios`) or a list of `shocks`, each `{type, ...parameters}`. Shocks are applied together.",
@@ -3276,6 +4320,155 @@
         "summary": "Run a stress test: baseline vs. scenario projection",
         "tags": [
           "stress testing"
+        ]
+      }
+    },
+    "/api/v1/entities/{entity_id}/warnings": {
+      "get": {
+        "operationId": "warnings_api_v1_entities__entity_id__warnings_get",
+        "parameters": [
+          {
+            "description": "Entity (subject) id",
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "description": "Entity (subject) id",
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Calculate as at the end of this day. Defaults to the end of the data.",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Calculate as at the end of this day. Defaults to the end of the data.",
+              "title": "As Of"
+            }
+          },
+          {
+            "description": "Only warnings at least this severe",
+            "in": "query",
+            "name": "min_severity",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "low",
+                    "medium",
+                    "high",
+                    "critical"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only warnings at least this severe",
+              "title": "Min Severity"
+            }
+          },
+          {
+            "description": "Only this category",
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "revenue",
+                    "expenses",
+                    "cash",
+                    "liquidity",
+                    "receivables",
+                    "debt",
+                    "concentration",
+                    "transactions",
+                    "volatility"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only this category",
+              "title": "Category"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WarningsReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (application/problem+json)"
+          }
+        },
+        "summary": "Early-warning signals detected by deterministic rules",
+        "tags": [
+          "early-warning"
+        ]
+      }
+    },
+    "/api/v1/meta/early-warning-rules": {
+      "get": {
+        "operationId": "rule_catalogue_api_v1_meta_early_warning_rules_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleCatalogue"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (application/problem+json)"
+          }
+        },
+        "summary": "The early-warning rules and their configured thresholds",
+        "tags": [
+          "early-warning",
+          "meta"
         ]
       }
     },

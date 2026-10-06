@@ -1,0 +1,209 @@
+# FinPulse Early Warning Engine — configuration, version 1.
+#
+# Every threshold, window and weight the early-warning rules use lives here; the rules in
+# early_warning/rules.py contain logic only. The file is validated strictly on load: each rule
+# section must match that rule's parameters exactly, and tiers must be ordered.
+#
+# How a warning's severity is set (see docs/EARLY_WARNING.md):
+#   1. The rule computes one measure and compares it with `tiers` (the value at which each
+#      severity starts; for "below" rules, lower is worse).
+#   2. If the condition is present but not getting worse, the warning is reported one severity
+#      lower (trend = "persistent"); below `low`, the rule is clear.
+# Changing anything here changes warnings: bump `version`.
+#
+# PROTOTYPE on synthetic data. Thresholds are judgement-based starting points, not calibrated
+# against real outcomes.
+
+[config]
+id = "finpulse-early-warning"
+version = 1
+name = "FinPulse Early Warning rules (prototype)"
+disclaimer = """Prototype early-warning signals calculated from synthetic data by documented, \
+deterministic rules. Warnings flag changes worth investigating; they are not predictions, not a \
+credit assessment, and must not be used for lending or any other regulated decision."""
+
+[summary]
+# Early-warning index = sum of these points over current warnings, capped at 100.
+points = { low = 2, medium = 8, high = 20, critical = 40 }
+# Index at which each overall risk level starts. The overall level is also never lower than the
+# most severe single warning.
+levels = { low = 1, medium = 15, high = 40, critical = 75 }
+timeline_months = 12   # month-ends shown in the risk timeline (including as_of)
+compare_months = 3     # trend: compare with the month-end this many months earlier
+top_warnings = 5
+streak_months = 12     # how far back to look for when a warning first appeared
+
+# --- revenue & expenses -----------------------------------------------------------------------
+
+[rules.revenue_decline]
+# Revenue in the last 3 complete months vs the 3 before (ratio; −0.20 = a 20% fall).
+enabled = true
+tiers = { low = -0.10, medium = -0.20, high = -0.30, critical = -0.45 }
+# With 15+ months of history, compare with the same months last year: if revenue is up by more
+# than the tolerance year on year, the fall is treated as seasonal (persistent, one step lower).
+seasonal_check = true
+seasonal_tolerance = 0.0
+# Entities whose revenue normally varies more (e.g. freelancers with project income) need a
+# larger fall to warn: tiers × (revenue volatility before the period ÷ normal_volatility),
+# between 1 and max_scale.
+scale_by_volatility = true
+normal_volatility = 0.15
+max_scale = 3.0
+
+[rules.expense_acceleration]
+# Expense growth minus revenue growth (3 months vs the 3 before), in ratio points.
+enabled = true
+tiers = { low = 0.05, medium = 0.10, high = 0.20, critical = 0.35 }
+min_expense_growth = 0.10   # ignore unless expenses grew at least this much
+lookback_months = 3         # "accelerating" = expense growth higher than this long ago
+scale_by_volatility = true  # the revenue side of the gap is noisy for volatile earners
+normal_volatility = 0.15
+max_scale = 3.0
+
+# --- cash & liquidity ------------------------------------------------------------------------
+
+[rules.cash_decline]
+# Fall in the average daily balance ÷ average monthly outgoings (months of outgoings lost).
+enabled = true
+tiers = { low = 0.25, medium = 0.5, high = 1.0, critical = 1.5 }
+lookback_months = 3
+average_days = 30
+outflow_months = 3
+
+[rules.overdraft_reliance]
+# Average overdraft utilisation over 90 days.
+enabled = true
+tiers = { low = 0.25, medium = 0.5, high = 0.75, critical = 0.9 }
+lookback_months = 3
+min_change = 0.10
+change_basis = "absolute"
+
+[rules.liquidity_decline]
+# Liquidity ratio (current assets ÷ current liabilities); lower is worse.
+enabled = true
+tiers = { low = 1.0, medium = 0.8, high = 0.6, critical = 0.4 }
+lookback_months = 3
+min_change = 0.10           # a fall of at least 10% of the earlier value
+change_basis = "relative"
+
+[rules.runway_shrinking]
+# Cash runway in months; lower is worse. Not burning cash = clear.
+enabled = true
+tiers = { low = 9, medium = 6, high = 3, critical = 1 }
+lookback_months = 3
+min_change = 0.20
+change_basis = "relative"
+
+# --- receivables ------------------------------------------------------------------------------
+
+[rules.receivables_growth]
+# Growth in receivables outstanding over the lookback (ratio).
+enabled = true
+tiers = { low = 0.20, medium = 0.30, high = 0.50, critical = 0.80 }
+lookback_months = 2         # compare with ≈ 60 days ago…
+baseline_months = 3         # …as the median of 3 month-ends (2–4 months back), resisting spikes
+min_previous = 10000        # rupees; smaller balances are too small to compare
+min_receivable_days = 30    # customers paying within this many days on average never warn
+min_days_increase = 5       # worsening only if receivable days also rose this much (i.e. receivables
+                            # outgrew sales); otherwise reported as persistent
+scale_by_volatility = true  # lumpy invoicing makes lumpy receivables (see revenue_decline)
+normal_volatility = 0.15
+max_scale = 3.0
+
+[rules.receivable_days_increase]
+# Receivable days now minus the median of earlier month-ends (days).
+enabled = true
+tiers = { low = 7, medium = 10, high = 20, critical = 30 }
+lookback_months = 2
+baseline_months = 6
+min_current = 30            # days; shorter collection periods never warn
+
+[rules.delayed_collections]
+# Increase in amount-weighted average days late on customer payments (days).
+enabled = true
+tiers = { low = 5, medium = 10, high = 15, critical = 25 }
+window_days = 90
+lookback_months = 3
+min_current = 5             # days late; below this, never warns
+
+# --- debt -------------------------------------------------------------------------------------
+
+[rules.debt_service_burden]
+# Instalments due ÷ operating receipts over 3 months.
+enabled = true
+tiers = { low = 0.15, medium = 0.25, high = 0.35, critical = 0.50 }
+lookback_months = 3
+min_change = 0.02
+change_basis = "absolute"
+
+[rules.new_borrowing]
+# Loans disbursed in the last 6 months; worsening if total debt outstanding rose.
+enabled = true
+tiers = { medium = 2, high = 3, critical = 4 }
+lookback_months = 6
+
+[rules.repayment_slippage]
+# Instalments due in the window that bounced, were paid late or are unpaid.
+enabled = true
+tiers = { low = 1, medium = 2, high = 3, critical = 5 }
+window_days = 90
+
+# --- concentration ----------------------------------------------------------------------------
+
+[rules.customer_concentration]
+# Largest customer's share of revenue over 6 months.
+enabled = true
+tiers = { low = 0.30, medium = 0.45, high = 0.60, critical = 0.75 }
+lookback_months = 6
+min_change = 0.05
+change_basis = "absolute"
+
+[rules.major_customer_loss]
+# Sales lost from customers that were ≥ min_share of revenue ÷ baseline monthly revenue.
+enabled = true
+tiers = { low = 0.05, medium = 0.10, high = 0.20, critical = 0.30 }
+recent_months = 3
+baseline_months = 6
+min_share = 0.10
+scale_by_volatility = true  # as for revenue_decline
+normal_volatility = 0.15
+max_scale = 3.0
+
+[rules.supplier_concentration]
+# Largest supplier's share of purchases over 6 months.
+enabled = true
+tiers = { low = 0.50, medium = 0.70, high = 0.85, critical = 0.95 }
+lookback_months = 6
+min_change = 0.05
+change_basis = "absolute"
+
+# --- transactions -----------------------------------------------------------------------------
+
+[rules.unusual_transactions]
+# Total unusual outgoing payments in the recent window ÷ average monthly outgoings.
+enabled = true
+tiers = { low = 0.05, medium = 0.15, high = 0.30, critical = 0.50 }
+recent_days = 30
+reference_days = 180
+outlier_multiple = 2.0      # unusual if larger than this × the category's largest earlier payment
+min_amount = 25000          # rupees; smaller payments are never outliers
+outflow_months = 3
+exclude_categories = ["debt.emi", "tax.gst", "tax.advance_tax"]
+watch_categories = ["personal.betting", "bank.bounce_charge"]
+watch_severity = "medium"   # any watch-listed payment makes the warning at least this severe
+
+# --- volatility -------------------------------------------------------------------------------
+
+[rules.revenue_volatility]
+# Coefficient of variation of monthly revenue over the last `months`, vs the `months` before.
+enabled = true
+tiers = { low = 0.15, medium = 0.25, high = 0.40, critical = 0.60 }
+months = 6
+min_change_ratio = 1.25     # worsening if at least 25% higher than the previous `months`
+
+[rules.cash_flow_volatility]
+# Std of monthly net cash flow (before borrowing) ÷ average monthly receipts, over `months`.
+enabled = true
+tiers = { low = 0.15, medium = 0.25, high = 0.40, critical = 0.60 }
+months = 6
+min_change_ratio = 1.25     # worsening if at least 25% higher than the previous `months`
