@@ -28,4 +28,15 @@ export type DimensionScore = Schemas["DimensionScore"];
 export type FactorScore = Schemas["FactorScore"];
 export type ScoreChange = Schemas["ScoreChange"];
 
+export type StressTestRequest = Schemas["StressTestRequest"];
+export type StressTestResult = Schemas["StressTestResult"];
+export type StressProjection = Schemas["Projection"];
+export type ProjectedMonth = Schemas["ProjectedMonth"];
+export type StressComparison = Schemas["Comparison"];
+export type RiskChange = Schemas["RiskChange"];
+export type FailurePoint = Schemas["FailurePoint"];
+export type HealthImpact = Schemas["HealthImpact"];
+export type StressEvidence = Schemas["Evidence"];
+export type ScenarioCatalogue = Schemas["ScenarioCatalogue"];
+
 export type ApiPath = keyof paths;

@@ -94,11 +94,14 @@ apps/api/
 │   │   ├── deterioration_index.py
 │   │   └── backtest.py           # replay + lead-time metrics
 │   │
-│   ├── stress/                   # PURE
-│   │   ├── scenarios/            # one module per scenario + params schema
-│   │   ├── projection.py         # baseline projection
-│   │   ├── simulator.py          # seeded Monte Carlo
-│   │   └── engine.py             # run(baseline, scenario, params, seed) → StressResult
+│   ├── stress/                   # PURE: stress tests (see docs/STRESS_TESTING.md)
+│   │   ├── baseline.py           # 3-month baseline + loan schedules from the analytics context
+│   │   ├── shocks.py             # Levers, @register'd shock types + typed Params, ShockSpec
+│   │   ├── presets.py            # the named scenarios (data)
+│   │   ├── projection.py         # simulate(levers): month-by-month cash, failure point
+│   │   ├── risk.py · health.py   # risk levels; projected metrics → stressed passport
+│   │   ├── engine.py             # run_stress_test(data, as_of, request, model)
+│   │   └── schemas.py
 │   │
 │   ├── evidence/                 # PURE: evidence pack builder (canonical JSON + hash)
 │   │   └── pack.py

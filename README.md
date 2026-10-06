@@ -7,11 +7,11 @@ history.
 > trustworthy, and detect if their financial health is deteriorating before a traditional credit
 > system would?
 
-**Status: Phase 3 (Financial Passport).** On top of the platform foundation, a deterministic
-synthetic-data layer (five fictional entities, led by the demo business **Sharma Electricals**)
-and an analytics engine with 25 financial metrics, the **Financial Passport** scores six
-financial-health dimensions and a prototype Financial Health score. Early warnings, stress tests
-and AI agents are not built yet — see [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md).
+**Status: Phase 5 (stress testing).** On top of the platform foundation, a deterministic
+synthetic-data layer (five fictional entities, led by the demo business **Sharma Electricals**),
+an analytics engine with 25 financial metrics and the **Financial Passport** (six dimensions and a
+prototype Financial Health score), the **stress-testing engine** projects cash under ten
+scenarios. Early warnings and AI agents are not built yet — see [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md).
 
 ## Core principle
 
@@ -28,7 +28,8 @@ apps/web/             Next.js frontend (TypeScript, Tailwind, shadcn/ui)
 packages/contracts/   Shared API contract: OpenAPI exported from FastAPI + generated TS types
 infra/                docker-compose for local PostgreSQL
 scripts/              dev helpers (run API + web together, db init/seed/reset)
-docs/                 SYNTHETIC_DATA.md · FINANCIAL_METRICS.md · FINANCIAL_PASSPORT.md
+docs/                 SYNTHETIC_DATA.md · FINANCIAL_METRICS.md · FINANCIAL_PASSPORT.md ·
+                      STRESS_TESTING.md
 ```
 
 Details: [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md).
@@ -137,6 +138,29 @@ Sharma Electricals, 30 Sep 2026 — Financial Health 50.6/100 (Watch)
 Scores come from a versioned TOML configuration, applied deterministically. Every point traces
 to a metric, changes are attributed to the factors that moved, and history is tracked month by
 month. See [docs/FINANCIAL_PASSPORT.md](docs/FINANCIAL_PASSPORT.md).
+
+## Stress testing
+
+> Hypothetical scenarios on synthetic data, not forecasts.
+
+```
+POST /api/v1/entities/{entity_id}/stress-test     {"preset": "revenue_down_20"} or {"shocks": [...]}
+GET  /api/v1/meta/stress-scenarios
+```
+
+Ten presets: revenue −10/20/30%, the largest customer stops paying for 30/60/90 days, operating
+costs +15%, new debt, interest rates +300 bps and the largest supplier +10%. Custom shocks can be
+combined. Each run projects the baseline and the scenario month by month, with the actual loan
+schedules and overdraft. It reports revenue, expenses, cash flow, cash balance, liquidity, runway,
+the Financial Health impact, the risk level and the failure point, with numbered evidence.
+
+```
+Sharma Electricals, revenue −20%, 6 months from 30 Sep 2026
+  Risk: Critical → Critical (funds incl. overdraft run out ~10 Oct, vs ~13 Oct in the baseline)
+  Cash at Mar 2027: −₹6,20,028 → −₹7,97,120 · Projected Financial Health 55.4 → 51.1
+```
+
+See [docs/STRESS_TESTING.md](docs/STRESS_TESTING.md) for the methodology and how to add scenarios.
 
 ## How the frontend talks to the backend
 

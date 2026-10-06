@@ -191,6 +191,16 @@ subject on CI hardware).
 
 **Exit criteria**: stress lab runs on every persona; Resilience dimension populated and versioned.
 
+**Progress**
+- Done: a deterministic projection engine (3-month baseline, actual loan schedules, overdraft
+  interest, failure point); six registered shock types with typed parameters; ten presets;
+  comparisons, risk levels, a stressed passport (health impact isolated from baseline drift) and
+  evidence; `POST /entities/{id}/stress-test` and `/meta/stress-scenarios`. Tests cover
+  hand-checked arithmetic, every preset on every entity, monotonicity, determinism and
+  no-look-ahead. See [docs/STRESS_TESTING.md](docs/STRESS_TESTING.md).
+- Deferred: Monte Carlo paths, persistence of runs, and feeding stress results into the
+  Resilience dimension.
+
 ## Phase 6 — Frontend: deterministic product
 
 Built incrementally alongside Phases 2–5.

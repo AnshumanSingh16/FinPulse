@@ -1,6 +1,36 @@
 {
   "components": {
     "schemas": {
+      "AppliedShock": {
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "parameters": {
+            "additionalProperties": true,
+            "description": "As applied, defaults resolved",
+            "title": "Parameters",
+            "type": "object"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "name",
+          "parameters",
+          "description"
+        ],
+        "title": "AppliedShock",
+        "type": "object"
+      },
       "Band": {
         "properties": {
           "code": {
@@ -139,6 +169,99 @@
           "text"
         ],
         "title": "ChangeDriver",
+        "type": "object"
+      },
+      "Comparison": {
+        "properties": {
+          "absolute_change": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Absolute Change"
+          },
+          "baseline": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline"
+          },
+          "direction": {
+            "enum": [
+              "better",
+              "worse",
+              "unchanged",
+              "n/a"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "percentage_change": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Change \u00f7 |baseline|, as a fraction; null when baseline is zero or missing",
+            "title": "Percentage Change"
+          },
+          "scenario": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scenario"
+          },
+          "unit": {
+            "enum": [
+              "INR",
+              "ratio",
+              "months",
+              "score"
+            ],
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "unit",
+          "baseline",
+          "scenario",
+          "absolute_change",
+          "percentage_change",
+          "direction"
+        ],
+        "title": "Comparison",
         "type": "object"
       },
       "ConfidenceConfig": {
@@ -563,6 +686,70 @@
         "title": "EntitySummary",
         "type": "object"
       },
+      "Evidence": {
+        "description": "A citable fact: every number an explanation may use, with where it came from.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "baseline",
+              "shock",
+              "outcome"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "metric_codes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Metric Codes",
+            "type": "array"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceRef"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "values": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Values",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "text"
+        ],
+        "title": "Evidence",
+        "type": "object"
+      },
       "FactorConfig": {
         "additionalProperties": false,
         "properties": {
@@ -758,6 +945,39 @@
         "title": "FactorScore",
         "type": "object"
       },
+      "FailurePoint": {
+        "properties": {
+          "date": {
+            "description": "Estimated day available funds run out (flows spread evenly)",
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "month": {
+            "title": "Month",
+            "type": "string"
+          },
+          "months_from_as_of": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Months From As Of",
+            "type": "string"
+          },
+          "shortfall_at_month_end": {
+            "description": "Amount beyond the overdraft limit",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Shortfall At Month End",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "month",
+          "months_from_as_of",
+          "shortfall_at_month_end"
+        ],
+        "title": "FailurePoint",
+        "type": "object"
+      },
       "FieldError": {
         "properties": {
           "loc": {
@@ -882,6 +1102,112 @@
           "series"
         ],
         "title": "FinancialMetricsReport",
+        "type": "object"
+      },
+      "HealthImpact": {
+        "properties": {
+          "baseline_band": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Band"
+          },
+          "baseline_projected_score": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Projected Score"
+          },
+          "change": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change"
+          },
+          "current_score": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Today's passport from actual data",
+            "title": "Current Score"
+          },
+          "dimensions": {
+            "items": {
+              "$ref": "#/components/schemas/DimensionChange"
+            },
+            "title": "Dimensions",
+            "type": "array"
+          },
+          "drivers": {
+            "items": {
+              "$ref": "#/components/schemas/ChangeDriver"
+            },
+            "title": "Drivers",
+            "type": "array"
+          },
+          "scenario_band": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scenario Band"
+          },
+          "scenario_score": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scenario Score"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "current_score",
+          "baseline_projected_score",
+          "scenario_score",
+          "change",
+          "baseline_band",
+          "scenario_band",
+          "dimensions",
+          "drivers",
+          "summary"
+        ],
+        "title": "HealthImpact",
         "type": "object"
       },
       "HealthResponse": {
@@ -1399,6 +1725,33 @@
         "title": "Period",
         "type": "object"
       },
+      "PresetOut": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "shocks": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Shocks",
+            "type": "array"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "shocks"
+        ],
+        "title": "PresetOut",
+        "type": "object"
+      },
       "ProblemDetails": {
         "description": "RFC 7807 error body, returned with ``Content-Type: application/problem+json``.",
         "properties": {
@@ -1464,6 +1817,222 @@
         "title": "ProblemDetails",
         "type": "object"
       },
+      "ProjectedMonth": {
+        "properties": {
+          "available_funds": {
+            "description": "Closing balance + overdraft limit",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Available Funds",
+            "type": "string"
+          },
+          "closing_balance": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Closing Balance",
+            "type": "string"
+          },
+          "debt_service": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Debt Service",
+            "type": "string"
+          },
+          "expenses": {
+            "description": "Purchases excluding GST + operating costs (accrual)",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Expenses",
+            "type": "string"
+          },
+          "funds_exhausted": {
+            "title": "Funds Exhausted",
+            "type": "boolean"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "money_in": {
+            "description": "All cash in, including any new loan",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Money In",
+            "type": "string"
+          },
+          "money_out": {
+            "description": "All cash out",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Money Out",
+            "type": "string"
+          },
+          "month": {
+            "format": "date",
+            "title": "Month",
+            "type": "string"
+          },
+          "net_cash_flow": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Net Cash Flow",
+            "type": "string"
+          },
+          "overdraft_interest": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Overdraft Interest",
+            "type": "string"
+          },
+          "revenue": {
+            "description": "Sales excluding GST (accrual)",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Revenue",
+            "type": "string"
+          }
+        },
+        "required": [
+          "month",
+          "label",
+          "revenue",
+          "expenses",
+          "money_in",
+          "money_out",
+          "debt_service",
+          "overdraft_interest",
+          "net_cash_flow",
+          "closing_balance",
+          "available_funds",
+          "funds_exhausted"
+        ],
+        "title": "ProjectedMonth",
+        "type": "object"
+      },
+      "Projection": {
+        "description": "One simulated path: the baseline (no shock) or the scenario.",
+        "properties": {
+          "cash_runway_months": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Available funds at as_of \u00f7 average monthly net outflow; null when not burning",
+            "title": "Cash Runway Months"
+          },
+          "closing_balance": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Closing Balance",
+            "type": "string"
+          },
+          "expenses": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Expenses",
+            "type": "string"
+          },
+          "failure_point": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FailurePoint"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "financial_health_band": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Financial Health Band"
+          },
+          "financial_health_score": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Financial Health Score"
+          },
+          "liquidity_ratio": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Liquidity Ratio"
+          },
+          "minimum_balance": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Minimum Balance",
+            "type": "string"
+          },
+          "minimum_balance_month": {
+            "title": "Minimum Balance Month",
+            "type": "string"
+          },
+          "months": {
+            "items": {
+              "$ref": "#/components/schemas/ProjectedMonth"
+            },
+            "title": "Months",
+            "type": "array"
+          },
+          "net_cash_flow": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Net Cash Flow",
+            "type": "string"
+          },
+          "peak_overdraft_utilisation": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Peak Overdraft Utilisation"
+          },
+          "revenue": {
+            "description": "Total over the horizon",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Revenue",
+            "type": "string"
+          },
+          "risk": {
+            "$ref": "#/components/schemas/RiskAssessment"
+          }
+        },
+        "required": [
+          "revenue",
+          "expenses",
+          "net_cash_flow",
+          "closing_balance",
+          "minimum_balance",
+          "minimum_balance_month",
+          "liquidity_ratio",
+          "cash_runway_months",
+          "peak_overdraft_utilisation",
+          "financial_health_score",
+          "financial_health_band",
+          "risk",
+          "failure_point",
+          "months"
+        ],
+        "title": "Projection",
+        "type": "object"
+      },
       "ReadinessResponse": {
         "description": "Readiness: whether the service can do useful work right now.",
         "properties": {
@@ -1488,6 +2057,141 @@
           "checks"
         ],
         "title": "ReadinessResponse",
+        "type": "object"
+      },
+      "RiskAssessment": {
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "level": {
+            "enum": [
+              "low",
+              "elevated",
+              "high",
+              "critical"
+            ],
+            "title": "Level",
+            "type": "string"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          }
+        },
+        "required": [
+          "level",
+          "label",
+          "reasons"
+        ],
+        "title": "RiskAssessment",
+        "type": "object"
+      },
+      "RiskChange": {
+        "properties": {
+          "baseline": {
+            "enum": [
+              "low",
+              "elevated",
+              "high",
+              "critical"
+            ],
+            "title": "Baseline",
+            "type": "string"
+          },
+          "escalated": {
+            "title": "Escalated",
+            "type": "boolean"
+          },
+          "scenario": {
+            "enum": [
+              "low",
+              "elevated",
+              "high",
+              "critical"
+            ],
+            "title": "Scenario",
+            "type": "string"
+          },
+          "steps": {
+            "description": "Levels moved: + worse, \u2212 better",
+            "title": "Steps",
+            "type": "integer"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "baseline",
+          "scenario",
+          "steps",
+          "escalated",
+          "summary"
+        ],
+        "title": "RiskChange",
+        "type": "object"
+      },
+      "ScenarioCatalogue": {
+        "properties": {
+          "presets": {
+            "items": {
+              "$ref": "#/components/schemas/PresetOut"
+            },
+            "title": "Presets",
+            "type": "array"
+          },
+          "shock_types": {
+            "items": {
+              "$ref": "#/components/schemas/ShockTypeOut"
+            },
+            "title": "Shock Types",
+            "type": "array"
+          }
+        },
+        "required": [
+          "shock_types",
+          "presets"
+        ],
+        "title": "ScenarioCatalogue",
+        "type": "object"
+      },
+      "ScenarioInfo": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "preset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preset"
+          },
+          "shocks": {
+            "items": {
+              "$ref": "#/components/schemas/AppliedShock"
+            },
+            "title": "Shocks",
+            "type": "array"
+          }
+        },
+        "required": [
+          "preset",
+          "name",
+          "shocks"
+        ],
+        "title": "ScenarioInfo",
         "type": "object"
       },
       "ScoreChange": {
@@ -1623,6 +2327,35 @@
         "title": "SeriesPoint",
         "type": "object"
       },
+      "ShockTypeOut": {
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "parameters_schema": {
+            "additionalProperties": true,
+            "title": "Parameters Schema",
+            "type": "object"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "name",
+          "description",
+          "parameters_schema"
+        ],
+        "title": "ShockTypeOut",
+        "type": "object"
+      },
       "SourceRef": {
         "description": "Which records a value was computed from.",
         "properties": {
@@ -1665,6 +2398,504 @@
           "description"
         ],
         "title": "SourceRef",
+        "type": "object"
+      },
+      "StressTestRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "horizon_months": {
+            "default": 6,
+            "maximum": 24.0,
+            "minimum": 1.0,
+            "title": "Horizon Months",
+            "type": "integer"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Label for a custom scenario",
+            "title": "Name"
+          },
+          "preset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A named scenario; see /meta/stress-scenarios",
+            "title": "Preset"
+          },
+          "shocks": {
+            "anyOf": [
+              {
+                "items": {
+                  "discriminator": {
+                    "mapping": {
+                      "customer_payment_stop": "#/components/schemas/finpulse__stress__shocks__CustomerPaymentStop__Params",
+                      "interest_rate_increase": "#/components/schemas/finpulse__stress__shocks__InterestRateIncrease__Params",
+                      "new_debt": "#/components/schemas/finpulse__stress__shocks__NewDebt__Params",
+                      "operating_expense_increase": "#/components/schemas/finpulse__stress__shocks__OperatingExpenseIncrease__Params",
+                      "revenue_decline": "#/components/schemas/finpulse__stress__shocks__RevenueDecline__Params",
+                      "supplier_cost_increase": "#/components/schemas/finpulse__stress__shocks__SupplierCostIncrease__Params"
+                    },
+                    "propertyName": "type"
+                  },
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/finpulse__stress__shocks__RevenueDecline__Params"
+                    },
+                    {
+                      "$ref": "#/components/schemas/finpulse__stress__shocks__CustomerPaymentStop__Params"
+                    },
+                    {
+                      "$ref": "#/components/schemas/finpulse__stress__shocks__OperatingExpenseIncrease__Params"
+                    },
+                    {
+                      "$ref": "#/components/schemas/finpulse__stress__shocks__NewDebt__Params"
+                    },
+                    {
+                      "$ref": "#/components/schemas/finpulse__stress__shocks__InterestRateIncrease__Params"
+                    },
+                    {
+                      "$ref": "#/components/schemas/finpulse__stress__shocks__SupplierCostIncrease__Params"
+                    }
+                  ]
+                },
+                "maxItems": 10,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Shocks applied together, in order",
+            "title": "Shocks"
+          }
+        },
+        "title": "StressTestRequest",
+        "type": "object"
+      },
+      "StressTestResult": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "baseline": {
+            "$ref": "#/components/schemas/Projection"
+          },
+          "comparisons": {
+            "items": {
+              "$ref": "#/components/schemas/Comparison"
+            },
+            "title": "Comparisons",
+            "type": "array"
+          },
+          "disclaimer": {
+            "title": "Disclaimer",
+            "type": "string"
+          },
+          "engine_version": {
+            "title": "Engine Version",
+            "type": "string"
+          },
+          "entity": {
+            "$ref": "#/components/schemas/EntityRef"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/Evidence"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "health_impact": {
+            "$ref": "#/components/schemas/HealthImpact"
+          },
+          "horizon_months": {
+            "title": "Horizon Months",
+            "type": "integer"
+          },
+          "projection_start": {
+            "format": "date",
+            "title": "Projection Start",
+            "type": "string"
+          },
+          "risk_change": {
+            "$ref": "#/components/schemas/RiskChange"
+          },
+          "scenario": {
+            "$ref": "#/components/schemas/ScenarioInfo"
+          },
+          "stressed": {
+            "$ref": "#/components/schemas/Projection"
+          }
+        },
+        "required": [
+          "entity",
+          "as_of",
+          "horizon_months",
+          "projection_start",
+          "scenario",
+          "baseline",
+          "stressed",
+          "comparisons",
+          "risk_change",
+          "health_impact",
+          "evidence",
+          "engine_version",
+          "disclaimer"
+        ],
+        "title": "StressTestResult",
+        "type": "object"
+      },
+      "finpulse__stress__shocks__CustomerPaymentStop__Params": {
+        "additionalProperties": false,
+        "properties": {
+          "customer_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Default: the largest payer",
+            "title": "Customer Id"
+          },
+          "days": {
+            "maximum": 365.0,
+            "minimum": 1.0,
+            "title": "Days",
+            "type": "integer"
+          },
+          "recovered": {
+            "default": true,
+            "description": "Withheld payments are eventually received",
+            "title": "Recovered",
+            "type": "boolean"
+          },
+          "start_month": {
+            "default": 1,
+            "description": "First projected month affected (1 = next)",
+            "maximum": 24.0,
+            "minimum": 1.0,
+            "title": "Start Month",
+            "type": "integer"
+          },
+          "type": {
+            "const": "customer_payment_stop",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "days"
+        ],
+        "title": "Params",
+        "type": "object"
+      },
+      "finpulse__stress__shocks__InterestRateIncrease__Params": {
+        "additionalProperties": false,
+        "properties": {
+          "applies_to_overdraft": {
+            "default": true,
+            "title": "Applies To Overdraft",
+            "type": "boolean"
+          },
+          "increase_bps": {
+            "description": "200 = +2 percentage points",
+            "maximum": 2000.0,
+            "minimum": 1.0,
+            "title": "Increase Bps",
+            "type": "integer"
+          },
+          "start_month": {
+            "default": 1,
+            "description": "First projected month affected (1 = next)",
+            "maximum": 24.0,
+            "minimum": 1.0,
+            "title": "Start Month",
+            "type": "integer"
+          },
+          "type": {
+            "const": "interest_rate_increase",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "increase_bps"
+        ],
+        "title": "Params",
+        "type": "object"
+      },
+      "finpulse__stress__shocks__NewDebt__Params": {
+        "additionalProperties": false,
+        "properties": {
+          "annual_rate": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 1.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "default": "0.18",
+            "title": "Annual Rate"
+          },
+          "principal": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Rupees; default: 2 \u00d7 monthly receipts",
+            "title": "Principal"
+          },
+          "start_month": {
+            "default": 1,
+            "description": "First projected month affected (1 = next)",
+            "maximum": 24.0,
+            "minimum": 1.0,
+            "title": "Start Month",
+            "type": "integer"
+          },
+          "tenor_months": {
+            "default": 24,
+            "maximum": 360.0,
+            "minimum": 1.0,
+            "title": "Tenor Months",
+            "type": "integer"
+          },
+          "type": {
+            "const": "new_debt",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "Params",
+        "type": "object"
+      },
+      "finpulse__stress__shocks__OperatingExpenseIncrease__Params": {
+        "additionalProperties": false,
+        "properties": {
+          "duration_months": {
+            "anyOf": [
+              {
+                "maximum": 24.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How long it lasts; default: to the end of the horizon",
+            "title": "Duration Months"
+          },
+          "increase_pct": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 5.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "description": "0.15 = costs rise by 15%",
+            "title": "Increase Pct"
+          },
+          "start_month": {
+            "default": 1,
+            "description": "First projected month affected (1 = next)",
+            "maximum": 24.0,
+            "minimum": 1.0,
+            "title": "Start Month",
+            "type": "integer"
+          },
+          "type": {
+            "const": "operating_expense_increase",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "increase_pct"
+        ],
+        "title": "Params",
+        "type": "object"
+      },
+      "finpulse__stress__shocks__RevenueDecline__Params": {
+        "additionalProperties": false,
+        "properties": {
+          "costs_follow_revenue": {
+            "default": true,
+            "description": "Purchases fall with sales (variable costs)",
+            "title": "Costs Follow Revenue",
+            "type": "boolean"
+          },
+          "decline_pct": {
+            "anyOf": [
+              {
+                "exclusiveMaximum": 1.0,
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "description": "0.2 = revenue falls by 20%",
+            "title": "Decline Pct"
+          },
+          "duration_months": {
+            "anyOf": [
+              {
+                "maximum": 24.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How long it lasts; default: to the end of the horizon",
+            "title": "Duration Months"
+          },
+          "start_month": {
+            "default": 1,
+            "description": "First projected month affected (1 = next)",
+            "maximum": 24.0,
+            "minimum": 1.0,
+            "title": "Start Month",
+            "type": "integer"
+          },
+          "type": {
+            "const": "revenue_decline",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "decline_pct"
+        ],
+        "title": "Params",
+        "type": "object"
+      },
+      "finpulse__stress__shocks__SupplierCostIncrease__Params": {
+        "additionalProperties": false,
+        "properties": {
+          "duration_months": {
+            "anyOf": [
+              {
+                "maximum": 24.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How long it lasts; default: to the end of the horizon",
+            "title": "Duration Months"
+          },
+          "increase_pct": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 5.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "description": "0.1 = prices rise by 10%",
+            "title": "Increase Pct"
+          },
+          "start_month": {
+            "default": 1,
+            "description": "First projected month affected (1 = next)",
+            "maximum": 24.0,
+            "minimum": 1.0,
+            "title": "Start Month",
+            "type": "integer"
+          },
+          "supplier_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Default: the largest supplier",
+            "title": "Supplier Id"
+          },
+          "type": {
+            "const": "supplier_cost_increase",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "increase_pct"
+        ],
+        "title": "Params",
         "type": "object"
       }
     }
@@ -1992,6 +3223,62 @@
         ]
       }
     },
+    "/api/v1/entities/{entity_id}/stress-test": {
+      "post": {
+        "description": "Give either a `preset` (see `GET /api/v1/meta/stress-scenarios`) or a list of `shocks`, each `{type, ...parameters}`. Shocks are applied together.",
+        "operationId": "stress_test_api_v1_entities__entity_id__stress_test_post",
+        "parameters": [
+          {
+            "description": "Entity (subject) id",
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "description": "Entity (subject) id",
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StressTestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StressTestResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (application/problem+json)"
+          }
+        },
+        "summary": "Run a stress test: baseline vs. scenario projection",
+        "tags": [
+          "stress testing"
+        ]
+      }
+    },
     "/api/v1/meta/financial-metrics": {
       "get": {
         "operationId": "metric_catalogue_api_v1_meta_financial_metrics_get",
@@ -2055,6 +3342,38 @@
         "summary": "The scoring configuration: dimensions, weights, curves, bands, disclaimer",
         "tags": [
           "passport",
+          "meta"
+        ]
+      }
+    },
+    "/api/v1/meta/stress-scenarios": {
+      "get": {
+        "operationId": "stress_scenarios_api_v1_meta_stress_scenarios_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioCatalogue"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (application/problem+json)"
+          }
+        },
+        "summary": "Shock types (with parameter schemas) and preset scenarios",
+        "tags": [
+          "stress testing",
           "meta"
         ]
       }

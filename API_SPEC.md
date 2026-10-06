@@ -254,6 +254,33 @@ persisted.
 
 ### 4.9 Stress testing
 
+**Implemented (Phase 5), computed per request:**
+
+| Method | Path | Description |
+|---|---|---|
+| POST | `/entities/{entity_id}/stress-test` | Run a preset or custom shocks. Returns the baseline and stressed projections, comparisons (absolute and % change), risk change, health impact and evidence |
+| GET | `/meta/stress-scenarios` | The six shock types with their parameter JSON Schemas, and the ten presets |
+
+```json
+{ "preset": "revenue_down_20" }
+{
+  "shocks": [
+    { "type": "customer_payment_stop", "days": 45 },
+    { "type": "new_debt", "principal": "200000", "annual_rate": "0.2", "tenor_months": 12 }
+  ],
+  "horizon_months": 9,
+  "as_of": "2026-06-30"
+}
+```
+
+The request takes exactly one of `preset` or `shocks` (1–10, applied in order). `horizon_months`
+is 1–24 (default 6). Unknown presets, types or fields, and out-of-range parameters return `422
+validation_error`. A shock that cannot apply (no suppliers, unknown `customer_id`, start beyond
+the horizon) returns `422 scenario_not_applicable`. An unknown entity returns `404`.
+Methodology: [docs/STRESS_TESTING.md](docs/STRESS_TESTING.md).
+
+The run-based design below (persisted runs, Monte Carlo paths) follows later.
+
 | Method | Path | Description |
 |---|---|---|
 | POST | `/subjects/{id}/stress-tests` | Run a scenario against the latest (or given) analysis run |

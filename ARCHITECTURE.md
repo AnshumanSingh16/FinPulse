@@ -299,8 +299,9 @@ Exact formulas, windows and edge-case rules are written in the metric docstring 
 > - **Explanations** are strengths and concerns plus factor-level change attribution, instead
 >   of reason codes.
 > - **History** is recomputed per month-end rather than stored.
-> - **Resilience** comes from buffer, runway and liquidity metrics until the stress engine
->   (Phase 5) exists.
+> - **Resilience** comes from buffer, runway and liquidity metrics. The stress engine (Phase 5,
+>   [docs/STRESS_TESTING.md](docs/STRESS_TESTING.md)) re-scores the passport on projected
+>   metrics to show a scenario's health impact. It is deterministic and has no Monte Carlo yet.
 
 ### 7.1 Shape
 

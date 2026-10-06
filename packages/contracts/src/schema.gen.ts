@@ -89,6 +89,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/entities/{entity_id}/stress-test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run a stress test: baseline vs. scenario projection
+         * @description Give either a `preset` (see `GET /api/v1/meta/stress-scenarios`) or a list of `shocks`, each `{type, ...parameters}`. Shocks are applied together.
+         */
+        post: operations["stress_test_api_v1_entities__entity_id__stress_test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/meta/financial-metrics": {
         parameters: {
             query?: never;
@@ -115,6 +135,23 @@ export interface paths {
         };
         /** The scoring configuration: dimensions, weights, curves, bands, disclaimer */
         get: operations["passport_model_api_v1_meta_passport_model_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/meta/stress-scenarios": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Shock types (with parameter schemas) and preset scenarios */
+        get: operations["stress_scenarios_api_v1_meta_stress_scenarios_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -161,6 +198,22 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AppliedShock */
+        AppliedShock: {
+            /** Description */
+            description: string;
+            /** Name */
+            name: string;
+            /**
+             * Parameters
+             * @description As applied, defaults resolved
+             */
+            parameters: {
+                [key: string]: unknown;
+            };
+            /** Type */
+            type: string;
+        };
         /** Band */
         Band: {
             /** Code */
@@ -204,6 +257,34 @@ export interface components {
             to_points: string | null;
             /** To Value */
             to_value: string | null;
+        };
+        /** Comparison */
+        Comparison: {
+            /** Absolute Change */
+            absolute_change: string | null;
+            /** Baseline */
+            baseline: string | null;
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "better" | "worse" | "unchanged" | "n/a";
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /**
+             * Percentage Change
+             * @description Change ÷ |baseline|, as a fraction; null when baseline is zero or missing
+             */
+            percentage_change: string | null;
+            /** Scenario */
+            scenario: string | null;
+            /**
+             * Unit
+             * @enum {string}
+             */
+            unit: "INR" | "ratio" | "months" | "score";
         };
         /** ConfidenceConfig */
         ConfidenceConfig: {
@@ -363,6 +444,29 @@ export interface components {
             /** Segment */
             segment: string;
         };
+        /**
+         * Evidence
+         * @description A citable fact: every number an explanation may use, with where it came from.
+         */
+        Evidence: {
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "baseline" | "shock" | "outcome";
+            /** Metric Codes */
+            metric_codes?: string[];
+            /** Sources */
+            sources?: components["schemas"]["SourceRef"][];
+            /** Text */
+            text: string;
+            /** Values */
+            values?: {
+                [key: string]: string | number | null;
+            };
+        };
         /** FactorConfig */
         FactorConfig: {
             /** Breakpoints */
@@ -438,6 +542,24 @@ export interface components {
              */
             weight: string;
         };
+        /** FailurePoint */
+        FailurePoint: {
+            /**
+             * Date
+             * Format: date
+             * @description Estimated day available funds run out (flows spread evenly)
+             */
+            date: string;
+            /** Month */
+            month: string;
+            /** Months From As Of */
+            months_from_as_of: string;
+            /**
+             * Shortfall At Month End
+             * @description Amount beyond the overdraft limit
+             */
+            shortfall_at_month_end: string;
+        };
         /** FieldError */
         FieldError: {
             /** Loc */
@@ -480,6 +602,30 @@ export interface components {
             metrics: components["schemas"]["Metric"][];
             /** Series */
             series: components["schemas"]["MetricSeries"][];
+        };
+        /** HealthImpact */
+        HealthImpact: {
+            /** Baseline Band */
+            baseline_band: string | null;
+            /** Baseline Projected Score */
+            baseline_projected_score: string | null;
+            /** Change */
+            change: string | null;
+            /**
+             * Current Score
+             * @description Today's passport from actual data
+             */
+            current_score: string | null;
+            /** Dimensions */
+            dimensions: components["schemas"]["DimensionChange"][];
+            /** Drivers */
+            drivers: components["schemas"]["ChangeDriver"][];
+            /** Scenario Band */
+            scenario_band: string | null;
+            /** Scenario Score */
+            scenario_score: string | null;
+            /** Summary */
+            summary: string;
         };
         /**
          * HealthResponse
@@ -690,6 +836,17 @@ export interface components {
              */
             start: string;
         };
+        /** PresetOut */
+        PresetOut: {
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+            /** Shocks */
+            shocks: {
+                [key: string]: unknown;
+            }[];
+        };
         /**
          * ProblemDetails
          * @description RFC 7807 error body, returned with ``Content-Type: application/problem+json``.
@@ -720,6 +877,89 @@ export interface components {
              */
             type: string;
         };
+        /** ProjectedMonth */
+        ProjectedMonth: {
+            /**
+             * Available Funds
+             * @description Closing balance + overdraft limit
+             */
+            available_funds: string;
+            /** Closing Balance */
+            closing_balance: string;
+            /** Debt Service */
+            debt_service: string;
+            /**
+             * Expenses
+             * @description Purchases excluding GST + operating costs (accrual)
+             */
+            expenses: string;
+            /** Funds Exhausted */
+            funds_exhausted: boolean;
+            /** Label */
+            label: string;
+            /**
+             * Money In
+             * @description All cash in, including any new loan
+             */
+            money_in: string;
+            /**
+             * Money Out
+             * @description All cash out
+             */
+            money_out: string;
+            /**
+             * Month
+             * Format: date
+             */
+            month: string;
+            /** Net Cash Flow */
+            net_cash_flow: string;
+            /** Overdraft Interest */
+            overdraft_interest: string;
+            /**
+             * Revenue
+             * @description Sales excluding GST (accrual)
+             */
+            revenue: string;
+        };
+        /**
+         * Projection
+         * @description One simulated path: the baseline (no shock) or the scenario.
+         */
+        Projection: {
+            /**
+             * Cash Runway Months
+             * @description Available funds at as_of ÷ average monthly net outflow; null when not burning
+             */
+            cash_runway_months: string | null;
+            /** Closing Balance */
+            closing_balance: string;
+            /** Expenses */
+            expenses: string;
+            failure_point: components["schemas"]["FailurePoint"] | null;
+            /** Financial Health Band */
+            financial_health_band: string | null;
+            /** Financial Health Score */
+            financial_health_score: string | null;
+            /** Liquidity Ratio */
+            liquidity_ratio: string | null;
+            /** Minimum Balance */
+            minimum_balance: string;
+            /** Minimum Balance Month */
+            minimum_balance_month: string;
+            /** Months */
+            months: components["schemas"]["ProjectedMonth"][];
+            /** Net Cash Flow */
+            net_cash_flow: string;
+            /** Peak Overdraft Utilisation */
+            peak_overdraft_utilisation: string | null;
+            /**
+             * Revenue
+             * @description Total over the horizon
+             */
+            revenue: string;
+            risk: components["schemas"]["RiskAssessment"];
+        };
         /**
          * ReadinessResponse
          * @description Readiness: whether the service can do useful work right now.
@@ -732,6 +972,56 @@ export interface components {
              * @enum {string}
              */
             status: "ready" | "not_ready";
+        };
+        /** RiskAssessment */
+        RiskAssessment: {
+            /** Label */
+            label: string;
+            /**
+             * Level
+             * @enum {string}
+             */
+            level: "low" | "elevated" | "high" | "critical";
+            /** Reasons */
+            reasons: string[];
+        };
+        /** RiskChange */
+        RiskChange: {
+            /**
+             * Baseline
+             * @enum {string}
+             */
+            baseline: "low" | "elevated" | "high" | "critical";
+            /** Escalated */
+            escalated: boolean;
+            /**
+             * Scenario
+             * @enum {string}
+             */
+            scenario: "low" | "elevated" | "high" | "critical";
+            /**
+             * Steps
+             * @description Levels moved: + worse, − better
+             */
+            steps: number;
+            /** Summary */
+            summary: string;
+        };
+        /** ScenarioCatalogue */
+        ScenarioCatalogue: {
+            /** Presets */
+            presets: components["schemas"]["PresetOut"][];
+            /** Shock Types */
+            shock_types: components["schemas"]["ShockTypeOut"][];
+        };
+        /** ScenarioInfo */
+        ScenarioInfo: {
+            /** Name */
+            name: string;
+            /** Preset */
+            preset: string | null;
+            /** Shocks */
+            shocks: components["schemas"]["AppliedShock"][];
         };
         /** ScoreChange */
         ScoreChange: {
@@ -787,6 +1077,19 @@ export interface components {
             /** Value */
             value: string | null;
         };
+        /** ShockTypeOut */
+        ShockTypeOut: {
+            /** Description */
+            description: string;
+            /** Name */
+            name: string;
+            /** Parameters Schema */
+            parameters_schema: {
+                [key: string]: unknown;
+            };
+            /** Type */
+            type: string;
+        };
         /**
          * SourceRef
          * @description Which records a value was computed from.
@@ -806,6 +1109,223 @@ export interface components {
              * @enum {string}
              */
             table: "transactions" | "invoices" | "invoice_payments" | "bills" | "bill_payments" | "loans" | "loan_installments" | "counter_sales" | "accounts";
+        };
+        /** StressTestRequest */
+        StressTestRequest: {
+            /** As Of */
+            as_of?: string | null;
+            /**
+             * Horizon Months
+             * @default 6
+             */
+            horizon_months: number;
+            /**
+             * Name
+             * @description Label for a custom scenario
+             */
+            name?: string | null;
+            /**
+             * Preset
+             * @description A named scenario; see /meta/stress-scenarios
+             */
+            preset?: string | null;
+            /**
+             * Shocks
+             * @description Shocks applied together, in order
+             */
+            shocks?: (components["schemas"]["finpulse__stress__shocks__RevenueDecline__Params"] | components["schemas"]["finpulse__stress__shocks__CustomerPaymentStop__Params"] | components["schemas"]["finpulse__stress__shocks__OperatingExpenseIncrease__Params"] | components["schemas"]["finpulse__stress__shocks__NewDebt__Params"] | components["schemas"]["finpulse__stress__shocks__InterestRateIncrease__Params"] | components["schemas"]["finpulse__stress__shocks__SupplierCostIncrease__Params"])[] | null;
+        };
+        /** StressTestResult */
+        StressTestResult: {
+            /**
+             * As Of
+             * Format: date
+             */
+            as_of: string;
+            baseline: components["schemas"]["Projection"];
+            /** Comparisons */
+            comparisons: components["schemas"]["Comparison"][];
+            /** Disclaimer */
+            disclaimer: string;
+            /** Engine Version */
+            engine_version: string;
+            entity: components["schemas"]["EntityRef"];
+            /** Evidence */
+            evidence: components["schemas"]["Evidence"][];
+            health_impact: components["schemas"]["HealthImpact"];
+            /** Horizon Months */
+            horizon_months: number;
+            /**
+             * Projection Start
+             * Format: date
+             */
+            projection_start: string;
+            risk_change: components["schemas"]["RiskChange"];
+            scenario: components["schemas"]["ScenarioInfo"];
+            stressed: components["schemas"]["Projection"];
+        };
+        /** Params */
+        finpulse__stress__shocks__CustomerPaymentStop__Params: {
+            /**
+             * Customer Id
+             * @description Default: the largest payer
+             */
+            customer_id?: string | null;
+            /** Days */
+            days: number;
+            /**
+             * Recovered
+             * @description Withheld payments are eventually received
+             * @default true
+             */
+            recovered: boolean;
+            /**
+             * Start Month
+             * @description First projected month affected (1 = next)
+             * @default 1
+             */
+            start_month: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "customer_payment_stop";
+        };
+        /** Params */
+        finpulse__stress__shocks__InterestRateIncrease__Params: {
+            /**
+             * Applies To Overdraft
+             * @default true
+             */
+            applies_to_overdraft: boolean;
+            /**
+             * Increase Bps
+             * @description 200 = +2 percentage points
+             */
+            increase_bps: number;
+            /**
+             * Start Month
+             * @description First projected month affected (1 = next)
+             * @default 1
+             */
+            start_month: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "interest_rate_increase";
+        };
+        /** Params */
+        finpulse__stress__shocks__NewDebt__Params: {
+            /**
+             * Annual Rate
+             * @default 0.18
+             */
+            annual_rate: number | string;
+            /**
+             * Principal
+             * @description Rupees; default: 2 × monthly receipts
+             */
+            principal?: number | string | null;
+            /**
+             * Start Month
+             * @description First projected month affected (1 = next)
+             * @default 1
+             */
+            start_month: number;
+            /**
+             * Tenor Months
+             * @default 24
+             */
+            tenor_months: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "new_debt";
+        };
+        /** Params */
+        finpulse__stress__shocks__OperatingExpenseIncrease__Params: {
+            /**
+             * Duration Months
+             * @description How long it lasts; default: to the end of the horizon
+             */
+            duration_months?: number | null;
+            /**
+             * Increase Pct
+             * @description 0.15 = costs rise by 15%
+             */
+            increase_pct: number | string;
+            /**
+             * Start Month
+             * @description First projected month affected (1 = next)
+             * @default 1
+             */
+            start_month: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "operating_expense_increase";
+        };
+        /** Params */
+        finpulse__stress__shocks__RevenueDecline__Params: {
+            /**
+             * Costs Follow Revenue
+             * @description Purchases fall with sales (variable costs)
+             * @default true
+             */
+            costs_follow_revenue: boolean;
+            /**
+             * Decline Pct
+             * @description 0.2 = revenue falls by 20%
+             */
+            decline_pct: number | string;
+            /**
+             * Duration Months
+             * @description How long it lasts; default: to the end of the horizon
+             */
+            duration_months?: number | null;
+            /**
+             * Start Month
+             * @description First projected month affected (1 = next)
+             * @default 1
+             */
+            start_month: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "revenue_decline";
+        };
+        /** Params */
+        finpulse__stress__shocks__SupplierCostIncrease__Params: {
+            /**
+             * Duration Months
+             * @description How long it lasts; default: to the end of the horizon
+             */
+            duration_months?: number | null;
+            /**
+             * Increase Pct
+             * @description 0.1 = prices rise by 10%
+             */
+            increase_pct: number | string;
+            /**
+             * Start Month
+             * @description First projected month affected (1 = next)
+             * @default 1
+             */
+            start_month: number;
+            /**
+             * Supplier Id
+             * @description Default: the largest supplier
+             */
+            supplier_id?: string | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "supplier_cost_increase";
         };
     };
     responses: never;
@@ -989,6 +1509,42 @@ export interface operations {
             };
         };
     };
+    stress_test_api_v1_entities__entity_id__stress_test_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Entity (subject) id */
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StressTestRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StressTestResult"];
+                };
+            };
+            /** @description Error (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     metric_catalogue_api_v1_meta_financial_metrics_get: {
         parameters: {
             query?: never;
@@ -1034,6 +1590,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ScoringModel"];
+                };
+            };
+            /** @description Error (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    stress_scenarios_api_v1_meta_stress_scenarios_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScenarioCatalogue"];
                 };
             };
             /** @description Error (application/problem+json) */
