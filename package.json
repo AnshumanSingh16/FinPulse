@@ -20,7 +20,10 @@
     "test": "npm run test --workspaces --if-present",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "contracts:generate": "uv run --project apps/api python -m finpulse.openapi packages/contracts/openapi.json && npm run generate -w @finpulse/contracts"
+    "contracts:generate": "uv run --project apps/api python -m finpulse.openapi packages/contracts/openapi.json && npm run generate -w @finpulse/contracts",
+    "db:init": "scripts/db-init.sh",
+    "db:seed": "scripts/db-seed.sh",
+    "db:reset": "scripts/db-reset.sh"
   },
   "devDependencies": {
     "prettier": "^3.9.9",

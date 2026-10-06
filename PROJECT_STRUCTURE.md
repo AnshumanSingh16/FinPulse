@@ -21,7 +21,8 @@ finpulse/
 ├── infra/
 │   ├── docker-compose.yml        # postgres, api, worker, web
 │   └── postgres/init.sql         # pgcrypto; local roles
-├── scripts/                      # dev tasks: export-openapi, gen-types, seed-demo-cohort
+├── docs/SYNTHETIC_DATA.md        # the synthetic dataset: entities, structure, guarantees, how to extend
+├── scripts/                      # dev.mjs (API + web), db-init.sh, db-seed.sh, db-reset.sh
 ├── .github/workflows/ci.yml
 ├── .env.example
 └── Makefile                      # one-word entrypoints: make dev / test / lint / gen
@@ -36,6 +37,7 @@ apps/api/
 ├── alembic/versions/
 ├── src/finpulse/
 │   ├── main.py                   # FastAPI app factory (create_app)
+│   ├── cli.py                    # `finpulse db init|seed|reset|counts`, `finpulse synthetic …`
 │   ├── worker.py                 # job worker entrypoint
 │   ├── config.py                 # Pydantic Settings
 │   │
@@ -51,13 +53,15 @@ apps/api/
 │   │   ├── series.py             # RecurringSeries, ObligationEvent
 │   │   └── results.py            # MetricResult, PassportResult, Signal, StressResult
 │   │
-│   ├── synthetic/                # PURE: seeded generator
-│   │   ├── personas/             # one module per persona (gig_worker.py, kirana_store.py, …)
-│   │   ├── components/           # income streams, spending, obligations, shocks
-│   │   ├── deterioration.py      # mechanisms: income_loss, loan_stacking, customer_loss, …
-│   │   ├── bureau.py             # simulated bureau event model (evaluation only)
-│   │   └── generator.py          # generate(persona, seed, params) → GeneratedDataset
-│   │
+│   ├── synthetic/                # PURE: seeded day-by-day simulation (see docs/SYNTHETIC_DATA.md)
+│   │   ├── spec.py               # ScenarioSpec + shocks: the knobs a scenario sets
+│   │   ├── engine.py             # simulation: sales, invoices, bills, payroll, tax, loans, cash
+│   │   ├── scenarios/            # one module per entity (sharma_electricals.py, …) + registry
+│   │   ├── model.py              # Dataset and its records
+│   │   ├── loans.py · bureau.py  # amortisation; simulated bureau (evaluation only)
+│   │   ├── summary.py            # month-by-month bookkeeping roll-up
+│   │   ├── export.py             # table-shaped records, fingerprint, CSV export
+│   │   └── sampling.py · calendar.py · ids.py · categories.py
 │   ├── ingestion/                # PURE: raw → normalised ledger
 │   │   ├── validate.py
 │   │   ├── counterparties.py
@@ -125,7 +129,8 @@ apps/api/
 │   │
 │   ├── persistence/
 │   │   ├── db.py                 # async engine/session
-│   │   ├── models/               # SQLAlchemy ORM, one module per DATA_MODEL section
+│   │   ├── models.py             # SQLAlchemy ORM (split per DATA_MODEL section as it grows)
+│   │   ├── seed.py               # load synthetic datasets (idempotent)
 │   │   ├── repositories/         # org-scoped data access; the only place SQL lives
 │   │   └── registry_sync.py      # sync code registries → reference tables
 │   │

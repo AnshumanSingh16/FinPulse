@@ -84,6 +84,20 @@ reconciliation.
 **Exit criteria**: generate any persona via API; browse its ledger; dataset is reproducible from
 `(persona, seed, params, generator_version)`.
 
+**Progress**
+- Done: deterministic day-by-day generator (`finpulse.synthetic`) with five entities —
+  Sharma Electricals (primary demo, deteriorating), a healthy MSME, a thin-file healthy MSME, a
+  high-risk MSME and a freelancer — producing bank transactions, a daily sales register,
+  invoices/receivables, bills/payables, customers, suppliers, loans with EMI schedules and
+  bounces, GST, ground truth and a simulated bureau. Tables and migration for all of it,
+  idempotent seeding, `db init|seed|reset` scripts, CSV export, and a consistency test suite
+  (see `docs/SYNTHETIC_DATA.md`).
+- Changed from the plan: business documents (`invoices`, `bills`, payments, `loans`,
+  `loan_installments`, `counter_sales`) were added to the data model so receivables, payables and
+  debt reconcile against cash. Scenarios are named entities rather than generic personas.
+- Remaining: HTTP endpoints (`POST /synthetic/generations`, subjects, accounts, transactions) and
+  the subjects/ledger pages in the web app; import-linter contract for the pure packages.
+
 ## Phase 2 — Ingestion & analytics layer
 
 **Build**

@@ -1,8 +1,12 @@
 # FinPulse — Data Model
 
-> Status: **design, not implemented.** Target PostgreSQL schema for the MVP. Alembic migrations in
-> `apps/api/alembic/` will be the executable source of truth once built; this document is the
-> design they implement.
+> Status: **partly implemented.** Alembic migrations in `apps/api/alembic/` are the executable
+> source of truth; this document is the design they implement.
+>
+> **Implemented (Phase 1):** `organizations`, `subjects`, `accounts`, `counterparties`,
+> `transactions`, `counter_sales`, `invoices`, `invoice_payments`, `bills`, `bill_payments`,
+> `loans`, `loan_installments`, `synthetic_generations`, `simulated_bureau_events`
+> (ORM: `apps/api/src/finpulse/persistence/models.py`). Everything else below is still design.
 
 ## 1. Conventions
 
@@ -10,7 +14,7 @@
 |---|---|
 | Database | PostgreSQL 15+. Supabase-compatible: plain Postgres features only (no extensions beyond `pgcrypto`). Runs on local Docker Postgres or a Supabase project unchanged. |
 | Schema | `public` for application tables. Supabase's `auth` schema is referenced only via `users.auth_user_id` (no FK across schemas, so the app also runs without Supabase). |
-| Primary keys | `id uuid primary key default gen_random_uuid()` |
+| Primary keys | `id uuid primary key`. Synthetic rows use deterministic UUIDv5 ids derived from (scenario, seed, entity), so re-seeding reproduces identical ids; other rows will use `gen_random_uuid()`. |
 | Timestamps | `created_at timestamptz not null default now()`, `updated_at` where rows are mutable. Business dates (`posted_on`, `as_of`) are `date`. |
 | Money | `*_minor bigint` (paise/cents) + `currency char(3)`. Signed where direction matters (`amount_minor` < 0 = outflow). Never `float`. |
 | Ratios/scores | `numeric(12,6)` for metric values; `numeric(5,2)` for 0–100 scores; `numeric(4,3)` for 0–1 confidence. |
@@ -28,7 +32,12 @@ organizations ─┬─ users (org_members)
                │
                └─ subjects ─┬─ accounts ── transactions ── counterparties
                             │                 │
-                            │                 └─ recurring_series ── obligation_events
+                            │                 ├─ recurring_series ── obligation_events
+                            │                 │
+                            │   invoices ── invoice_payments ──┤ (each payment = one bank credit)
+                            │   bills ───── bill_payments ─────┤ (each payment = one bank debit)
+                            │   loans ───── loan_installments ─┘ (disbursement / EMI = bank txns)
+                            │   counter_sales (daily sales register → UPI settlements, cash deposits)
                             │
                             ├─ synthetic_generations (ground truth) ── simulated_bureau_events
                             │
@@ -81,7 +90,7 @@ infra:     jobs · audit_events · backtest_runs
 |---|---|---|
 | id | uuid PK | |
 | org_id | uuid FK | |
-| kind | text check in (`individual`,`business`) | |
+| kind | text check in (`business`,`individual`) | |
 | display_name | text not null | Synthetic name |
 | segment | text | e.g. `gig_worker`, `salaried_thin_file`, `kirana_store`, `freelancer`, `seasonal_business` |
 | profile | jsonb | Non-sensitive descriptors (business sector, months of history). **No protected attributes.** |
@@ -176,32 +185,55 @@ Partitioning: not in MVP. Seam: range partition by `posted_on` if > ~50M rows.
 | status | text check in (`on_time`,`late`,`missed`,`partial`,`pending`) | |
 | days_late | int null | |
 
+### 3.2b Business documents and debt *(implemented)*
+
+These record the activity behind bank transactions so that receivables, payables and debt can be
+reconciled against cash. Every table has `org_id` and `subject_id` (FK, `ON DELETE CASCADE`).
+
+| Table | Key columns | Relationships and constraints |
+|---|---|---|
+| `counter_sales` | `sold_on`, `gross_minor`, `tax_minor`, `upi_minor`, `cash_minor` | Daily point-of-sale register. `upi + cash = gross`; unique per subject and day. UPI settles to the bank next day; cash is deposited on deposit days. |
+| `invoices` | `customer_id`, `number`, `issued_on`, `due_on`, `taxable_minor`, `tax_minor`, `total_minor`, `status` | Sales → receivable. `taxable + tax = total`; status (`open`,`partially_paid`,`paid`,`overdue`) as of the dataset's `as_of`. Unique `number` per subject. |
+| `invoice_payments` | `invoice_id`, `transaction_id`, `paid_on`, `amount_minor` | Allocation of one bank credit to one invoice (amount and date equal the transaction's). `transaction_id` is NULL only for payments made before the history window on an opening receivable. |
+| `bills` | `supplier_id`, `number`, `issued_on`, `due_on`, `taxable_minor`, `tax_minor`, `total_minor`, `status` | Purchases → payable. Same rules as invoices. |
+| `bill_payments` | `bill_id`, `transaction_id`, `paid_on`, `amount_minor` | Allocation of one bank debit to one bill. |
+| `loans` | `lender_id`, `account_id`, `kind`, `principal_minor`, `annual_rate_bps`, `tenor_months`, `disbursed_on`, `emi_minor`, `reports_to_bureau`, `disbursement_transaction_id` | Disbursement is a bank credit of `principal_minor` (NULL id if before the window). `reports_to_bureau = false` for lenders a bureau cannot see. |
+| `loan_installments` | `loan_id`, `seq`, `due_on`, `amount_minor`, `principal_minor`, `interest_minor`, `paid_on`, `transaction_id`, `bounces`, `status` | Reducing-balance EMI schedule; `principal + interest = amount`; Σ principal = loan principal. Each paid instalment in the window is one bank debit. `bounces` = failed auto-debits before payment. |
+
+Receivables at any date = Σ invoice totals issued by then − Σ invoice payments made by then
+(likewise payables). Debt outstanding = Σ principal disbursed − Σ principal of instalments paid.
+
 ### 3.3 Synthetic data & evaluation ground truth
 
-**`synthetic_generations`**
+**`synthetic_generations`** *(implemented)* — one per synthetic subject.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| org_id | uuid FK | |
+| subject_id | uuid FK unique | |
+| scenario_code | text | e.g. `sharma_electricals` (see `finpulse/synthetic/scenarios`) |
+| generator_version | int | Bumped whenever the engine's output changes |
+| seed | bigint | Reproducibility |
+| start_date, as_of | date | Visible history window |
+| currency | text | |
+| params | jsonb | months, archetype, warm-up months |
+| ground_truth | jsonb | `{archetype, deteriorates, onset_date, mechanisms[], narrative}` — **evaluation only** |
+| cash_positions | jsonb | Opening/closing cash-in-drawer and unsettled UPI (needed to reconcile the sales register to the bank) |
+| dataset_fingerprint | text | SHA-256 of the canonical dataset; equal ⇒ identical data |
+| created_at | timestamptz | |
+
+**`simulated_bureau_events`** *(implemented)* — what a traditional bureau would have recorded.
+**Evaluation only**; never an input to engines.
 
 | Column | Type | Notes |
 |---|---|---|
 | id | uuid PK | |
 | org_id, subject_id | uuid FK | |
-| persona_code | text | e.g. `gig_worker_stable`, `kirana_deteriorating` |
-| generator_version | int | |
-| seed | bigint not null | Reproducibility |
-| params | jsonb | months of history, income level, deterioration config |
-| ground_truth | jsonb | `{ "deteriorates": bool, "onset_date": date?, "mechanism": "income_loss|loan_stacking|customer_loss|…" }` |
-| status | text | `pending`/`succeeded`/`failed` |
-| created_at | timestamptz | |
-
-**`simulated_bureau_events`** — what a traditional bureau would have recorded. **Evaluation only**;
-never an input to engines (enforced: engines' repositories don't read this table, tested).
-
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid PK | |
-| org_id, subject_id, synthetic_generation_id | uuid FK | |
-| event_type | text check in (`account_opened`,`dpd_30`,`dpd_60`,`dpd_90`,`default`,`closed`) | |
-| event_on | date | Reporting date (lagged) |
-| reported_on | date | |
+| loan_id | uuid FK | Only loans whose lender reports to the bureau |
+| event_type | text check in (`account_opened`,`dpd_30`,`dpd_60`,`dpd_90`,`closed`) | DPD from month-end snapshots |
+| event_on | date | Month-end the lender's report describes |
+| reported_on | date | When the bureau receives it (`event_on` + 20 days) |
 
 **`backtest_runs`** — early-warning evaluation results.
 

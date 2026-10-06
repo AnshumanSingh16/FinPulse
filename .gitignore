@@ -26,3 +26,6 @@ build/
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# synthetic data exports (regenerate with `finpulse synthetic export`)
+synthetic-export/

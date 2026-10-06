@@ -1,5 +1,5 @@
 # Thin wrappers so common tasks are one word. Each target is a plain command you can run yourself.
-.PHONY: help setup env db-up db-down dev dev-api dev-web migrate contracts format lint typecheck test build check
+.PHONY: help setup env db-up db-down db-init db-seed db-reset dev dev-api dev-web migrate contracts format lint typecheck test build check
 
 API := apps/api
 
@@ -30,6 +30,15 @@ dev-web: ## Run only the web app (http://localhost:3000)
 
 migrate: ## Apply database migrations
 	cd $(API) && uv run alembic upgrade head
+
+db-init: ## Create the database if missing and apply migrations
+	scripts/db-init.sh
+
+db-seed: ## Load all synthetic scenarios (idempotent)
+	scripts/db-seed.sh
+
+db-reset: ## Drop all tables, re-migrate and re-seed (refuses in production)
+	scripts/db-reset.sh
 
 contracts: ## Regenerate OpenAPI + TypeScript types after changing backend schemas
 	npm run contracts:generate

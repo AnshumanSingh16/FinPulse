@@ -6,15 +6,18 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy.ext.asyncio import create_async_engine
 
+import finpulse.persistence.models  # noqa: F401 - registers tables on Base.metadata
 from finpulse.config import get_settings
 from finpulse.persistence.base import Base
 
 config = context.config
-if config.config_file_name is not None:
+# The CLI runs migrations in-process with its own structured logging already configured.
+if config.config_file_name is not None and config.attributes.get("configure_logger", True):
     fileConfig(config.config_file_name)
 
 target_metadata = Base.metadata
-DATABASE_URL = get_settings().database_url
+# Callers (tests, tools) may pass a URL explicitly; otherwise use the app's settings.
+DATABASE_URL = config.attributes.get("database_url") or get_settings().database_url
 
 
 def run_migrations_offline() -> None:

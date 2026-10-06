@@ -15,6 +15,9 @@ dependencies = [
     "structlog>=26.1",
 ]
 
+[project.scripts]
+finpulse = "finpulse.cli:main"
+
 [dependency-groups]
 dev = [
     "pytest>=9.1",
@@ -50,11 +53,14 @@ select = [
     "DTZ",     # naive datetimes
     "T20",     # no print()
 ]
-ignore = []
+ignore = [
+    "RUF001", "RUF002", "RUF003",  # typographic dashes, ×, ₹ in prose are intentional
+]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101"]  # assert is how pytest works
 "scripts/**" = ["T20"]
+"alembic/versions/**" = ["E501"]  # generated DDL strings
 
 [tool.ruff.format]
 quote-style = "double"
