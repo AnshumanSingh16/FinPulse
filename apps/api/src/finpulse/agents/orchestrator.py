@@ -1,5 +1,6 @@
-"""Runs the agents in dependency order: the five analysts in parallel, then the red team on
-their verified findings, then the senior synthesis on everything verified.
+"""Runs a chosen agent and the agents it depends on (the five analysts in parallel, then the
+red team on their verified findings, then the senior synthesis), for the single-agent endpoint.
+The full financial investigation workflow is ``finpulse.investigation.orchestrator``.
 
 A failed agent never stops the others: it is reported with its error, and the agents that
 depend on it are told it produced nothing. The red team and the senior agent are skipped only
@@ -16,15 +17,8 @@ from finpulse.agents.base import AgentSpec, run_agent
 from finpulse.agents.catalogue import AGENTS, ANALYSTS
 from finpulse.agents.evidence import EvidencePack
 from finpulse.agents.llm import LLMClient
-from finpulse.agents.schemas import AgentRun, IntelligenceReport, Usage
+from finpulse.agents.schemas import AgentRun
 from finpulse.core.errors import LLMUnavailableError, NotFoundError
-
-DISCLAIMER = (
-    "AI-generated analysis of deterministic results calculated from synthetic data. Every "
-    "statement was checked by a deterministic verifier: it cites the evidence it rests on, and "
-    "every number it states appears in that evidence. Interpretations (AI_INTERPRETATION) are "
-    "judgements, not facts. This is not a credit score, credit assessment or lending decision."
-)
 
 
 def dependency_closure(names: Iterable[str]) -> list[str]:
@@ -87,25 +81,3 @@ def _raise_if_unreachable(runs: Iterable[AgentRun]) -> None:
     runs = list(runs)
     if runs and all(r.error is not None and r.error.code == "llm_unavailable" for r in runs):
         raise LLMUnavailableError(runs[0].error.message if runs[0].error else None)
-
-
-async def run_pipeline(llm: LLMClient, pack: EvidencePack) -> IntelligenceReport:
-    runs = await run_agents(llm, pack)
-    senior = runs.get("senior_synthesis")
-    succeeded = [r for r in runs.values() if r.status == "succeeded"]
-    status = "complete" if len(succeeded) == len(runs) else "failed" if not succeeded else "partial"
-    return IntelligenceReport(
-        entity=pack.entity,
-        as_of=pack.as_of,
-        status=status,
-        evidence_pack_sha256=pack.sha256,
-        evidence_items=len(pack.items),
-        agents=runs,
-        synthesis=senior.output if senior and senior.status == "succeeded" else None,
-        usage=Usage(
-            input_tokens=sum(r.usage.input_tokens for r in runs.values()),
-            output_tokens=sum(r.usage.output_tokens for r in runs.values()),
-            calls=sum(r.usage.calls for r in runs.values()),
-        ),
-        disclaimer=DISCLAIMER,
-    )

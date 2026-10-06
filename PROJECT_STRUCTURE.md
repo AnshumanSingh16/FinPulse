@@ -121,11 +121,18 @@ apps/api/
 │   │   ├── evidence.py           # deterministic evidence pack: citable, typed, hashed items
 │   │   ├── numbers.py · verifier.py  # number reading; claim verification, pruning
 │   │   ├── llm.py                # LLMClient protocol; Claude adapter (structured outputs)
-│   │   ├── schemas.py            # Claim + each agent's output; AgentRun, IntelligenceReport
+│   │   ├── schemas.py            # Claim + each agent's output; AgentRun
 │   │   ├── prompts.py            # shared rules + one role prompt per agent
 │   │   ├── base.py               # AgentSpec, run_agent: verify → repair → prune
 │   │   ├── catalogue.py          # the seven AgentSpecs
-│   │   └── orchestrator.py       # analysts ∥ → red team → senior synthesis
+│   │   └── orchestrator.py       # one agent + its dependencies (single-agent endpoint)
+│   │
+│   ├── investigation/            # the investigation workflow (see docs/INVESTIGATIONS.md)
+│   │   ├── orchestrator.py       # 11 recorded stages; events mirrored to structured logs
+│   │   ├── analysis.py           # deterministic: disagreements, review, confidence, audit
+│   │   ├── schemas.py            # Investigation record
+│   │   ├── store.py              # recent investigations (memory + optional JSON files)
+│   │   └── report.py             # terminal rendering for demos
 │   │
 │   ├── orchestration/
 │   │   ├── workflow.py           # Phase/StepSpec definitions; investigation_v1

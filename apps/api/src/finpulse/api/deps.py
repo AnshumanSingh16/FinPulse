@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
 from finpulse.agents.llm import AnthropicLLM, LLMClient
 from finpulse.config import Settings
+from finpulse.investigation.store import InvestigationStore
 from finpulse.persistence.db import session_scope
 from finpulse.persistence.repositories.financial_data import (
     FinancialDataSource,
@@ -54,9 +55,19 @@ def get_llm_client(request: Request) -> LLMClient:
     return llm
 
 
+def get_investigation_store(request: Request) -> InvestigationStore:
+    store: InvestigationStore | None = getattr(request.app.state, "investigations", None)
+    if store is None:
+        settings: Settings = request.app.state.settings
+        store = InvestigationStore(settings.investigations_keep, settings.investigations_dir)
+        request.app.state.investigations = store
+    return store
+
+
 SettingsDep = Annotated[Settings, Depends(get_app_settings)]
 EngineDep = Annotated[AsyncEngine, Depends(get_engine)]
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 OrgDep = Annotated[uuid.UUID, Depends(get_current_org_id)]
 DataSourceDep = Annotated[FinancialDataSource, Depends(get_financial_data_source)]
 LLMDep = Annotated[LLMClient, Depends(get_llm_client)]
+StoreDep = Annotated[InvestigationStore, Depends(get_investigation_store)]

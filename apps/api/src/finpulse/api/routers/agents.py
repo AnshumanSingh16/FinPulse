@@ -15,8 +15,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from finpulse.agents.catalogue import AGENTS
 from finpulse.agents.evidence import EvidencePack, build_evidence_pack
-from finpulse.agents.orchestrator import dependency_closure, run_agents, run_pipeline
-from finpulse.agents.schemas import AgentInfo, AgentRun, IntelligenceReport
+from finpulse.agents.orchestrator import dependency_closure, run_agents
+from finpulse.agents.schemas import AgentInfo, AgentRun
 from finpulse.api.deps import DataSourceDep, LLMDep, OrgDep
 from finpulse.api.routers.entities import AsOf, EntityId
 from finpulse.services.entities import load_entity, resolve_as_of
@@ -54,22 +54,6 @@ async def evidence_pack(
     entity_id: EntityId, source: DataSourceDep, org_id: OrgDep, as_of: AsOf = None
 ) -> EvidencePack:
     return await _pack(source, org_id, entity_id, as_of)
-
-
-@router.post(
-    "/entities/{entity_id}/intelligence",
-    response_model=IntelligenceReport,
-    summary="Run all seven agents and return the verified intelligence report",
-)
-async def intelligence(
-    entity_id: EntityId,
-    source: DataSourceDep,
-    org_id: OrgDep,
-    llm: LLMDep,
-    request: Annotated[AgentRequest | None, Body()] = None,
-) -> IntelligenceReport:
-    pack = await _pack(source, org_id, entity_id, request.as_of if request else None)
-    return await run_pipeline(llm, pack)
 
 
 @router.post(

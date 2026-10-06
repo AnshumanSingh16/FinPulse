@@ -38,12 +38,18 @@ export type EarlyWarningRuleCatalogue = Schemas["RuleCatalogue"];
 
 export type EvidencePack = Schemas["EvidencePack"];
 export type EvidenceItem = Schemas["EvidenceItem"];
-export type IntelligenceReport = Schemas["IntelligenceReport"];
 export type AgentRun = Schemas["AgentRun"];
 export type AgentClaim = Schemas["RegisteredClaim"];
 export type VerificationReport = Schemas["VerificationReport"];
 export type AgentInfo = Schemas["AgentInfo"];
 export type SingleAgentResponse = Schemas["SingleAgentResponse"];
+
+export type Investigation = Schemas["Investigation"];
+export type InvestigationSummary = Schemas["InvestigationSummary"];
+export type InvestigationEvent = Schemas["InvestigationEvent"];
+export type InvestigationStage = Schemas["StageRecord"];
+export type Disagreement = Schemas["Disagreement"];
+export type FinalAssessment = Schemas["FinalAssessment"];
 
 export type StressTestRequest = Schemas["StressTestRequest"];
 export type StressTestResult = Schemas["StressTestResult"];

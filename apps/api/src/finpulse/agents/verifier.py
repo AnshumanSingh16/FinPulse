@@ -81,10 +81,13 @@ class Verifier:
         pack: EvidencePack,
         rules: VerifyRules | None = None,
         upstream: dict[str, RegisteredClaim] | None = None,
+        known_refs: dict[str, frozenset[str]] | None = None,
     ) -> None:
         self.pack = pack
         self.rules = rules or VerifyRules()
         self.upstream = upstream or {}
+        # Fields that must name something the orchestrator supplied (e.g. disagreement ids).
+        self.known_refs = known_refs or {}
         self._numbers: dict[str, set[Decimal]] = {}
         self._all: set[Decimal] | None = None
 
@@ -126,6 +129,15 @@ class Verifier:
                     self._evidence_ref(value, here, self.rules.evidence_ref_fields[key], r)
                 elif key in self.rules.claim_ref_fields:
                     self._claim_refs(value, here, r)
+                elif key in self.known_refs:
+                    if value not in self.known_refs[key]:
+                        r.found.append(
+                            Found(
+                                here,
+                                "unknown_reference",
+                                f"{value!r} is not one of {sorted(self.known_refs[key])}.",
+                            )
+                        )
                 else:
                     self._walk(value, here, top, r)
         elif isinstance(node, list):

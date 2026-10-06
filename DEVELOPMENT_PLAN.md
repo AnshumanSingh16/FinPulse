@@ -260,8 +260,14 @@ ID-bearing evidence.
   - Seven agents: Financial Profile, Credit Intelligence, Early Warning Investigation, Risk
     Investigation, Stress-Test Interpretation, Red Team and Senior Financial Intelligence.
   - An orchestrator: analysts in parallel, then the red team, then the senior agent.
-  - Endpoints for the evidence pack, the intelligence report, single agents and the agent
-    catalogue.
+  - Endpoints for the evidence pack, single agents and the agent catalogue.
+  - The investigation orchestrator ([docs/INVESTIGATIONS.md](docs/INVESTIGATIONS.md)):
+    - eleven recorded stages;
+    - deterministic disagreement detection;
+    - mandatory red-team review of significant risk assessments;
+    - deterministic confidence capping and a deterministic fallback final assessment;
+    - a claim and evidence-reference audit, and an event log mirrored to structured logs;
+    - `POST /entities/{id}/investigate`, an in-memory or JSON-file store, and a CLI renderer.
   - Tests with a scripted model. See [docs/AI_AGENTS.md](docs/AI_AGENTS.md).
 - Deferred:
   - Running and tuning the prompts against the live model.

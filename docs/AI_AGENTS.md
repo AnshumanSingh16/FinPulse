@@ -109,20 +109,22 @@ claim ids it builds on.
 | Reply not matching the schema | Re-asked with the validation errors. After 3 attempts the agent fails with `llm_invalid_output` |
 | Verification issues | Repair loop, then pruning, then the agent fails with `verification_failed` (see above) |
 | Unexpected exception in an agent | That agent fails with `agent_error`. The others continue |
-| One analyst fails | Report `partial`. The red team and senior agent are told which agent produced nothing |
-| Every analyst fails | Red team and senior agent are `skipped`. Report `failed` (or 503 if the model was unreachable) |
+| One analyst fails | Investigation `completed_with_gaps`. The red team and senior agent are told which agent produced nothing |
+| Every analyst fails | Red team and senior agent are skipped, and the final assessment falls back to deterministic results (or 503 if the model was unreachable) |
 
 ## API
 
 ```
 GET  /api/v1/entities/{id}/evidence-pack[?as_of=]   the evidence (deterministic, no AI)
-POST /api/v1/entities/{id}/intelligence              all seven agents → IntelligenceReport
+POST /api/v1/entities/{id}/investigate               the full investigation workflow (see INVESTIGATIONS.md)
 POST /api/v1/entities/{id}/agents/{agent_name}        one agent (+ the agents it depends on)
 GET  /api/v1/meta/agents                              agents, dependencies, prompt versions, schemas
 ```
 
-The POST bodies take an optional `{"as_of": "YYYY-MM-DD"}`. An `IntelligenceReport` holds each
-agent's run, plus the senior synthesis, token usage and a disclaimer. Each run includes:
+The POST bodies take an optional `{"as_of": "YYYY-MM-DD"}`. The orchestrated workflow is
+described in [INVESTIGATIONS.md](INVESTIGATIONS.md). It adds disagreement detection, mandatory
+red-team review, confidence capping, recommendations and an inspectable event log. Each agent
+run includes:
 
 - its status and verified output;
 - the claims it registered;
@@ -183,7 +185,7 @@ verifier, repair loop, claim register, orchestrator and API need no changes.
 - **Not yet run against the live model.** Every test uses the scripted fake, so the prompts are
   version-1 and untuned. Expect some first-attempt verification issues that the repair loop
   absorbs.
-- **Synchronous.** The intelligence endpoint returns when all agents finish. A full run is
+- **Synchronous.** The investigate endpoint returns when all agents finish. A full run is
   several model calls at high effort, so it takes minutes rather than seconds. Background jobs,
   persistence and SSE progress (DEVELOPMENT_PLAN Phase 8) are not built.
 - **No tool use.** Agents receive the evidence up front rather than calling read-only tools.

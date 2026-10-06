@@ -29,3 +29,6 @@ build/
 
 # synthetic data exports (regenerate with `finpulse synthetic export`)
 synthetic-export/
+
+# Saved investigations (INVESTIGATIONS_DIR)
+investigations/

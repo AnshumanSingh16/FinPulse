@@ -89,7 +89,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/entities/{entity_id}/intelligence": {
+    "/api/v1/entities/{entity_id}/investigate": {
         parameters: {
             query?: never;
             header?: never;
@@ -98,8 +98,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Run all seven agents and return the verified intelligence report */
-        post: operations["intelligence_api_v1_entities__entity_id__intelligence_post"];
+        /** Run a complete financial investigation and return its structured record */
+        post: operations["investigate_api_v1_entities__entity_id__investigate_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -186,6 +186,57 @@ export interface paths {
         };
         /** Early-warning signals detected by deterministic rules */
         get: operations["warnings_api_v1_entities__entity_id__warnings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/investigations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Recent investigations, newest first */
+        get: operations["list_investigations_api_v1_investigations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/investigations/{investigation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A complete investigation record */
+        get: operations["get_investigation_api_v1_investigations__investigation_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/investigations/{investigation_id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The investigation's timestamped event log */
+        get: operations["get_events_api_v1_investigations__investigation_id__events_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -466,6 +517,31 @@ export interface components {
             /** To Value */
             to_value: string | null;
         };
+        /** ClaimAudit */
+        ClaimAudit: {
+            /**
+             * Claims Pruned
+             * @description Statements dropped because they could not be verified
+             */
+            claims_pruned: number;
+            /**
+             * Claims Verified
+             * @description Claims returned; every one passed verification
+             */
+            claims_verified: number;
+            /**
+             * Evidence References Resolve
+             * @description Every evidence id cited anywhere exists in the evidence pack
+             */
+            evidence_references_resolve: boolean;
+            /**
+             * Issues Caught
+             * @description Verification issues found across all attempts
+             */
+            issues_caught: number;
+            /** Unmet Requirements */
+            unmet_requirements: string[];
+        };
         /** Comparison */
         Comparison: {
             /** Absolute Change */
@@ -493,6 +569,29 @@ export interface components {
              * @enum {string}
              */
             unit: "INR" | "ratio" | "months" | "score";
+        };
+        /** ConfidenceAssessment */
+        ConfidenceAssessment: {
+            /**
+             * Adjustments
+             * @description Why the ceiling is where it is
+             */
+            adjustments: string[];
+            /**
+             * Cap
+             * @description Ceiling set deterministically by the orchestrator
+             * @enum {string}
+             */
+            cap: "high" | "medium" | "low";
+            /**
+             * Level
+             * @enum {string}
+             */
+            level: "high" | "medium" | "low";
+            /** Senior Rationale */
+            senior_rationale: string | null;
+            /** Stated By Senior Agent */
+            stated_by_senior_agent: ("high" | "medium" | "low") | null;
         };
         /** ConfidenceConfig */
         ConfidenceConfig: {
@@ -605,6 +704,35 @@ export interface components {
             summary: string;
             /** Weight */
             weight: string;
+        };
+        /** Disagreement */
+        Disagreement: {
+            /** Agents */
+            agents: string[];
+            /** Claim Ids */
+            claim_ids: string[];
+            /** Description */
+            description: string;
+            /** Evidence Ids */
+            evidence_ids: string[];
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "stance_spread" | "agent_vs_engine" | "conflicting_reading" | "severity_mismatch";
+            /**
+             * Resolved
+             * @description Resolved by the senior agent
+             * @default false
+             */
+            resolved: boolean;
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "major" | "moderate";
         };
         /**
          * Driver
@@ -805,6 +933,36 @@ export interface components {
              */
             sha256: string;
         };
+        /** EvidencePackRef */
+        EvidencePackRef: {
+            /** By Kind */
+            by_kind: {
+                [key: string]: number;
+            };
+            /** Engine Versions */
+            engine_versions: {
+                [key: string]: string;
+            };
+            /** Items */
+            items: number;
+            /** Sha256 */
+            sha256: string;
+        };
+        /** EvidenceReference */
+        EvidenceReference: {
+            /** Cited By */
+            cited_by: string[];
+            /** Id */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Source */
+            source: string;
+            /** Text */
+            text: string;
+            /** Title */
+            title: string;
+        };
         /** FactorConfig */
         FactorConfig: {
             /** Breakpoints */
@@ -907,6 +1065,64 @@ export interface components {
             /** Type */
             type: string;
         };
+        /** FinalAssessment */
+        FinalAssessment: {
+            /** Assumptions */
+            assumptions: {
+                [key: string]: unknown;
+            }[];
+            /** Calculated Metrics */
+            calculated_metrics: {
+                [key: string]: unknown;
+            }[];
+            /** Challenges Addressed */
+            challenges_addressed: {
+                [key: string]: unknown;
+            }[];
+            /** Disagreements Resolved */
+            disagreements_resolved: {
+                [key: string]: unknown;
+            }[];
+            /** Early Warning Index */
+            early_warning_index: number;
+            /** Facts */
+            facts: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Financial Health
+             * @description Prototype passport score, not credit
+             */
+            financial_health: {
+                [key: string]: unknown;
+            };
+            /** Forecasts */
+            forecasts: {
+                [key: string]: unknown;
+            }[];
+            /** Headline */
+            headline: string;
+            /** Interpretations */
+            interpretations: {
+                [key: string]: unknown;
+            }[];
+            /** Open Questions */
+            open_questions: string[];
+            /** Overall Assessment */
+            overall_assessment: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Risk Level
+             * @description From the deterministic early-warning engine
+             */
+            risk_level: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "senior_synthesis" | "deterministic_fallback";
+        };
         /** FinancialHealth */
         FinancialHealth: {
             band: components["schemas"]["Band"] | null;
@@ -1007,10 +1223,18 @@ export interface components {
             /** Score */
             score: string | null;
         };
-        /** IntelligenceReport */
-        IntelligenceReport: {
-            /** Agents */
-            agents: {
+        /** InvestigateRequest */
+        InvestigateRequest: {
+            /**
+             * As Of
+             * @description Defaults to the end of the data
+             */
+            as_of?: string | null;
+        };
+        /** Investigation */
+        Investigation: {
+            /** Agent Analyses */
+            agent_analyses: {
                 [key: string]: components["schemas"]["AgentRun"];
             };
             /**
@@ -1018,26 +1242,142 @@ export interface components {
              * Format: date
              */
             as_of: string;
+            claim_audit: components["schemas"]["ClaimAudit"];
+            /**
+             * Completed At
+             * Format: date-time
+             */
+            completed_at: string;
+            confidence: components["schemas"]["ConfidenceAssessment"];
+            /** Disagreements */
+            disagreements: components["schemas"]["Disagreement"][];
             /** Disclaimer */
             disclaimer: string;
+            /** Duration Ms */
+            duration_ms: number;
             entity: components["schemas"]["EntityRef"];
-            /** Evidence Items */
-            evidence_items: number;
-            /** Evidence Pack Sha256 */
-            evidence_pack_sha256: string;
+            /**
+             * Entity Id
+             * Format: uuid
+             */
+            entity_id: string;
+            /** Events */
+            events: components["schemas"]["InvestigationEvent"][];
+            evidence_pack: components["schemas"]["EvidencePackRef"];
+            /** Evidence References */
+            evidence_references: components["schemas"]["EvidenceReference"][];
+            final_assessment: components["schemas"]["FinalAssessment"];
+            /** Financial Health */
+            financial_health: {
+                [key: string]: unknown;
+            };
+            /** Financial Metrics Used */
+            financial_metrics_used: components["schemas"]["MetricUsed"][];
+            /**
+             * Investigation Id
+             * Format: uuid
+             */
+            investigation_id: string;
+            /** Recommendations */
+            recommendations: {
+                [key: string]: unknown;
+            }[];
+            red_team_findings: components["schemas"]["RedTeamFindings"] | null;
+            red_team_run: components["schemas"]["AgentRun"] | null;
+            /** Review Requests */
+            review_requests: components["schemas"]["ReviewRequest"][];
+            /** Risk Summary */
+            risk_summary: {
+                [key: string]: unknown;
+            };
+            senior_synthesis_run: components["schemas"]["AgentRun"] | null;
+            /** Stages */
+            stages: components["schemas"]["StageRecord"][];
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
             /**
              * Status
              * @enum {string}
              */
-            status: "complete" | "partial" | "failed";
-            /**
-             * Synthesis
-             * @description The Senior Financial Intelligence Agent's verified synthesis
-             */
-            synthesis: {
-                [key: string]: unknown;
-            } | null;
+            status: "completed" | "completed_with_gaps" | "failed";
+            /** Triggered Warnings */
+            triggered_warnings: components["schemas"]["TriggeredWarning"][];
             usage: components["schemas"]["Usage"];
+            /** Workflow Version */
+            workflow_version: string;
+        };
+        /** InvestigationEvent */
+        InvestigationEvent: {
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /** Data */
+            data?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Event
+             * @description Machine-readable, e.g. "agent_completed"
+             */
+            event: string;
+            /**
+             * Level
+             * @enum {string}
+             */
+            level: "info" | "warning" | "error";
+            /** Message */
+            message: string;
+            /**
+             * Stage
+             * @enum {string}
+             */
+            stage: "financial_data" | "deterministic_analytics" | "financial_passport" | "early_warning_detection" | "stress_testing" | "evidence_assembly" | "specialized_investigation" | "disagreement_detection" | "red_team_challenge" | "senior_synthesis" | "final_assessment";
+        };
+        /** InvestigationSummary */
+        InvestigationSummary: {
+            /**
+             * As Of
+             * Format: date
+             */
+            as_of: string;
+            /**
+             * Confidence
+             * @enum {string}
+             */
+            confidence: "high" | "medium" | "low";
+            /** Duration Ms */
+            duration_ms: number;
+            /**
+             * Entity Id
+             * Format: uuid
+             */
+            entity_id: string;
+            /** Entity Name */
+            entity_name: string;
+            /** Headline */
+            headline: string;
+            /**
+             * Investigation Id
+             * Format: uuid
+             */
+            investigation_id: string;
+            /** Risk Level */
+            risk_level: string;
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "completed" | "completed_with_gaps" | "failed";
         };
         /** Issue */
         Issue: {
@@ -1045,7 +1385,7 @@ export interface components {
              * Code
              * @enum {string}
              */
-            code: "unknown_evidence_id" | "missing_citation" | "type_not_supported" | "unsupported_number" | "wrong_section_type" | "unknown_claim_id" | "wrong_reference_kind";
+            code: "unknown_evidence_id" | "missing_citation" | "type_not_supported" | "unsupported_number" | "wrong_section_type" | "unknown_claim_id" | "wrong_reference_kind" | "unknown_reference";
             /** Detail */
             detail: string;
             /**
@@ -1153,6 +1493,26 @@ export interface components {
              * @enum {string}
              */
             unit: "INR" | "ratio" | "days" | "months" | "score" | "count";
+        };
+        /** MetricUsed */
+        MetricUsed: {
+            /**
+             * Cited By
+             * @description Verified claims that cite this metric
+             */
+            cited_by: string[];
+            /** Code */
+            code: string;
+            /** Evidence Id */
+            evidence_id: string;
+            /** Name */
+            name: string;
+            /** Period */
+            period: string;
+            /** Unit */
+            unit: string;
+            /** Value */
+            value: string | null;
         };
         /** ModelInfo */
         ModelInfo: {
@@ -1375,6 +1735,24 @@ export interface components {
              */
             status: "ready" | "not_ready";
         };
+        /** RedTeamFindings */
+        RedTeamFindings: {
+            /** Challenges */
+            challenges: {
+                [key: string]: unknown;
+            }[];
+            coverage: components["schemas"]["ReviewCoverage"];
+            /** Disagreements Assessed */
+            disagreements_assessed: {
+                [key: string]: unknown;
+            }[];
+            /** Overall Robustness */
+            overall_robustness: {
+                [key: string]: unknown;
+            } | null;
+            /** Status */
+            status: string;
+        };
         /** RegisteredClaim */
         RegisteredClaim: {
             /** Agent */
@@ -1400,6 +1778,36 @@ export interface components {
              * @enum {string}
              */
             statement_type: "FACT" | "CALCULATED_METRIC" | "FORECAST" | "ASSUMPTION" | "AI_INTERPRETATION";
+        };
+        /** ReviewCoverage */
+        ReviewCoverage: {
+            /** Requested */
+            requested: number;
+            /** Reviewed */
+            reviewed: number;
+            /** Unreviewed */
+            unreviewed: string[];
+        };
+        /** ReviewRequest */
+        ReviewRequest: {
+            /** Agent */
+            agent: string;
+            /**
+             * Challenges
+             * @default 0
+             */
+            challenges: number;
+            /** Claim Id */
+            claim_id: string;
+            /** Reason */
+            reason: string;
+            /**
+             * Reviewed
+             * @default false
+             */
+            reviewed: boolean;
+            /** Statement */
+            statement: string;
         };
         /** RiskAssessment */
         RiskAssessment: {
@@ -1702,6 +2110,39 @@ export interface components {
              */
             table: "transactions" | "invoices" | "invoice_payments" | "bills" | "bill_payments" | "loans" | "loan_installments" | "counter_sales" | "accounts";
         };
+        /** StageRecord */
+        StageRecord: {
+            /**
+             * Completed At
+             * Format: date-time
+             */
+            completed_at: string;
+            /** Details */
+            details?: {
+                [key: string]: unknown;
+            };
+            /** Duration Ms */
+            duration_ms: number;
+            /**
+             * Stage
+             * @enum {string}
+             */
+            stage: "financial_data" | "deterministic_analytics" | "financial_passport" | "early_warning_detection" | "stress_testing" | "evidence_assembly" | "specialized_investigation" | "disagreement_detection" | "red_team_challenge" | "senior_synthesis" | "final_assessment";
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "completed" | "completed_with_issues" | "failed" | "skipped";
+            /** Summary */
+            summary: string;
+            /** Title */
+            title: string;
+        };
         /** StressTestRequest */
         StressTestRequest: {
             /** As Of */
@@ -1825,6 +2266,35 @@ export interface components {
             /** Rules */
             rules: string[];
         };
+        /** TriggeredWarning */
+        TriggeredWarning: {
+            /** Category */
+            category: string;
+            /** Description */
+            description: string;
+            /** Evidence Id */
+            evidence_id: string;
+            /**
+             * First Detected On
+             * Format: date
+             */
+            first_detected_on: string;
+            /**
+             * Investigated
+             * @description The Early Warning Investigation Agent explained it
+             */
+            investigated: boolean;
+            /** Investigation Claim Ids */
+            investigation_claim_ids: string[];
+            /** Rule */
+            rule: string;
+            /** Severity */
+            severity: string;
+            /** Title */
+            title: string;
+            /** Warning Id */
+            warning_id: string;
+        };
         /** Usage */
         Usage: {
             /**
@@ -1866,6 +2336,11 @@ export interface components {
              * @description Statements removed because they still failed after the repair attempts
              */
             pruned?: string[];
+            /**
+             * Unmet Requirements
+             * @description Orchestrator requirements still unmet after the repair attempts (e.g. a significant claim the red team did not review)
+             */
+            unmet_requirements?: string[];
         };
         /** WarningBrief */
         WarningBrief: {
@@ -2271,7 +2746,7 @@ export interface operations {
             };
         };
     };
-    intelligence_api_v1_entities__entity_id__intelligence_post: {
+    investigate_api_v1_entities__entity_id__investigate_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -2283,7 +2758,7 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json": components["schemas"]["AgentRequest"] | null;
+                "application/json": components["schemas"]["InvestigateRequest"] | null;
             };
         };
         responses: {
@@ -2293,7 +2768,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["IntelligenceReport"];
+                    "application/json": components["schemas"]["Investigation"];
                 };
             };
             /** @description Error (application/problem+json) */
@@ -2476,6 +2951,99 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WarningsReport"];
+                };
+            };
+            /** @description Error (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_investigations_api_v1_investigations_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvestigationSummary"][];
+                };
+            };
+            /** @description Error (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    get_investigation_api_v1_investigations__investigation_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Investigation id */
+                investigation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Investigation"];
+                };
+            };
+            /** @description Error (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    get_events_api_v1_investigations__investigation_id__events_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Investigation id */
+                investigation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvestigationEvent"][];
                 };
             };
             /** @description Error (application/problem+json) */

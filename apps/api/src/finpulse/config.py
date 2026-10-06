@@ -65,6 +65,13 @@ class Settings(BaseSettings):
     # Anthropic recommends for the refusal category.
     llm_refusal_fallback: bool = Field(default=True, validation_alias="LLM_REFUSAL_FALLBACK")
 
+    # Investigations kept for inspection (GET /api/v1/investigations); optionally also written
+    # as JSON files to this directory.
+    investigations_keep: int = Field(
+        default=50, ge=1, le=1000, validation_alias="INVESTIGATIONS_KEEP"
+    )
+    investigations_dir: Path | None = Field(default=None, validation_alias="INVESTIGATIONS_DIR")
+
     @field_validator("cors_allowed_origins", mode="before")
     @classmethod
     def _split_origins(cls, value: object) -> object:

@@ -18,6 +18,7 @@ from finpulse.analytics import default_as_of
 from finpulse.synthetic import SCENARIOS, generate
 from tests.analytics.synthetic_adapter import to_financial_data
 
+STANCES: dict[str, str] = {}  # tests may set an agent's stance
 TYPES = {
     "fact": "FACT",
     "calculated_metric": "CALCULATED_METRIC",
@@ -70,6 +71,18 @@ def claim_ids(request: LLMRequest) -> list[str]:
     return re.findall(r'"claim_id": "([A-Z]+-\d+)"', request.messages[0]["content"])
 
 
+def disagreement_ids(request: LLMRequest | None) -> list[str]:
+    if request is None:
+        return []
+    return sorted(set(re.findall(r'"id": "(DIS-\d+)"', request.messages[0]["content"])))
+
+
+def review_targets(request: LLMRequest | None) -> list[str]:
+    if request is None:
+        return []
+    return re.findall(r'"claim_id": "([A-Z]+-\d+)", "reason"', request.messages[0]["content"])
+
+
 def valid_output(
     agent: str, pack: EvidencePack, request: LLMRequest | None = None
 ) -> dict[str, Any]:
@@ -77,6 +90,7 @@ def valid_output(
     ws = warnings(pack)
     if agent == "financial_profile":
         return {
+            "risk_stance": STANCES.get(agent, "high"),
             "summary": interp([i("passport:overall"), i("risk:summary")]),
             "strengths": [claim(i("metric:payments.consistency"))],
             "weaknesses": [claim(i("metric:cash.runway")), claim(i("passport:overall"))],
@@ -84,6 +98,7 @@ def valid_output(
         }
     if agent == "credit_intelligence":
         return {
+            "risk_stance": STANCES.get(agent, "high"),
             "reliability_view": interp([i("metric:payments.consistency")]),
             "repayment_capacity": [claim(i("metric:debt.service_burden"))],
             "payment_behaviour": [claim(i("metric:payments.consistency"))],
@@ -93,6 +108,7 @@ def valid_output(
         }
     if agent == "early_warning_investigation":
         return {
+            "risk_stance": STANCES.get(agent, "high"),
             "investigations": [
                 {
                     "warning_evidence_id": w.id,
@@ -107,6 +123,7 @@ def valid_output(
         }
     if agent == "risk_investigation":
         return {
+            "risk_stance": STANCES.get(agent, "high"),
             "risks": [
                 {
                     "title": "Liquidity squeeze",
@@ -120,6 +137,7 @@ def valid_output(
         }
     if agent == "stress_interpretation":
         return {
+            "risk_stance": STANCES.get(agent, "high"),
             "scenarios": [
                 {
                     "scenario_evidence_id": "stress:revenue_down_20",
@@ -133,10 +151,11 @@ def valid_output(
         }
     ids = claim_ids(request) if request else []
     if agent == "red_team":
+        targets = review_targets(request) or ids[:1]
         return {
             "challenges": [
                 {
-                    "target_claim_id": ids[0],
+                    "target_claim_id": t,
                     "challenge_summary": "Payment behaviour is still clean.",
                     "contradictory_evidence": [claim(i("metric:payments.consistency"))],
                     "missing_information": ["No credit-bureau records are available."],
@@ -144,6 +163,11 @@ def valid_output(
                     "alternative_explanations": [interp([i("metric:revenue.volatility")])],
                     "severity": "moderate",
                 }
+                for t in targets
+            ],
+            "disagreements_assessed": [
+                {"disagreement_id": d, "assessment": interp([i("risk:summary")])}
+                for d in disagreement_ids(request)
             ],
             "overall_robustness": interp([i("risk:summary")]),
         }
@@ -163,7 +187,21 @@ def valid_output(
                     "resolution": "partially_upheld",
                     "explanation": interp([i("metric:payments.consistency")], based_on_claims=[]),
                 }
-                for t in target[:1]
+                for t in sorted(set(target))
+            ],
+            "disagreements_resolved": [
+                {
+                    "disagreement_id": d,
+                    "resolution": interp([i("risk:summary")], based_on_claims=[]),
+                }
+                for d in disagreement_ids(request)
+            ],
+            "recommendations": [
+                {
+                    "action": "Ask for the receivables ageing by customer.",
+                    "priority": "high",
+                    "rationale": interp([i("risk:summary")], based_on_claims=ids[:1]),
+                },
             ],
             "open_questions": ["Will the largest customer resume orders?"],
             "confidence": "medium",

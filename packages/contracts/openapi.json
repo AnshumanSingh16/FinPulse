@@ -403,6 +403,46 @@
         "title": "ChangeDriver",
         "type": "object"
       },
+      "ClaimAudit": {
+        "properties": {
+          "claims_pruned": {
+            "description": "Statements dropped because they could not be verified",
+            "title": "Claims Pruned",
+            "type": "integer"
+          },
+          "claims_verified": {
+            "description": "Claims returned; every one passed verification",
+            "title": "Claims Verified",
+            "type": "integer"
+          },
+          "evidence_references_resolve": {
+            "description": "Every evidence id cited anywhere exists in the evidence pack",
+            "title": "Evidence References Resolve",
+            "type": "boolean"
+          },
+          "issues_caught": {
+            "description": "Verification issues found across all attempts",
+            "title": "Issues Caught",
+            "type": "integer"
+          },
+          "unmet_requirements": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unmet Requirements",
+            "type": "array"
+          }
+        },
+        "required": [
+          "claims_verified",
+          "claims_pruned",
+          "issues_caught",
+          "unmet_requirements",
+          "evidence_references_resolve"
+        ],
+        "title": "ClaimAudit",
+        "type": "object"
+      },
       "Comparison": {
         "properties": {
           "absolute_change": {
@@ -494,6 +534,73 @@
           "direction"
         ],
         "title": "Comparison",
+        "type": "object"
+      },
+      "ConfidenceAssessment": {
+        "properties": {
+          "adjustments": {
+            "description": "Why the ceiling is where it is",
+            "items": {
+              "type": "string"
+            },
+            "title": "Adjustments",
+            "type": "array"
+          },
+          "cap": {
+            "description": "Ceiling set deterministically by the orchestrator",
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ],
+            "title": "Cap",
+            "type": "string"
+          },
+          "level": {
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ],
+            "title": "Level",
+            "type": "string"
+          },
+          "senior_rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Senior Rationale"
+          },
+          "stated_by_senior_agent": {
+            "anyOf": [
+              {
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stated By Senior Agent"
+          }
+        },
+        "required": [
+          "level",
+          "stated_by_senior_agent",
+          "senior_rationale",
+          "cap",
+          "adjustments"
+        ],
+        "title": "ConfidenceAssessment",
         "type": "object"
       },
       "ConfidenceConfig": {
@@ -824,6 +931,74 @@
           "summary"
         ],
         "title": "DimensionScore",
+        "type": "object"
+      },
+      "Disagreement": {
+        "properties": {
+          "agents": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Agents",
+            "type": "array"
+          },
+          "claim_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Claim Ids",
+            "type": "array"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "stance_spread",
+              "agent_vs_engine",
+              "conflicting_reading",
+              "severity_mismatch"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "resolved": {
+            "default": false,
+            "description": "Resolved by the senior agent",
+            "title": "Resolved",
+            "type": "boolean"
+          },
+          "severity": {
+            "enum": [
+              "major",
+              "moderate"
+            ],
+            "title": "Severity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "severity",
+          "description",
+          "agents",
+          "claim_ids",
+          "evidence_ids"
+        ],
+        "title": "Disagreement",
         "type": "object"
       },
       "Driver": {
@@ -1306,6 +1481,81 @@
         "title": "EvidencePack",
         "type": "object"
       },
+      "EvidencePackRef": {
+        "properties": {
+          "by_kind": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "By Kind",
+            "type": "object"
+          },
+          "engine_versions": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Engine Versions",
+            "type": "object"
+          },
+          "items": {
+            "title": "Items",
+            "type": "integer"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sha256",
+          "items",
+          "by_kind",
+          "engine_versions"
+        ],
+        "title": "EvidencePackRef",
+        "type": "object"
+      },
+      "EvidenceReference": {
+        "properties": {
+          "cited_by": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Cited By",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "source",
+          "title",
+          "text",
+          "cited_by"
+        ],
+        "title": "EvidenceReference",
+        "type": "object"
+      },
       "FactorConfig": {
         "additionalProperties": false,
         "properties": {
@@ -1565,6 +1815,130 @@
           "type"
         ],
         "title": "FieldError",
+        "type": "object"
+      },
+      "FinalAssessment": {
+        "properties": {
+          "assumptions": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Assumptions",
+            "type": "array"
+          },
+          "calculated_metrics": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Calculated Metrics",
+            "type": "array"
+          },
+          "challenges_addressed": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Challenges Addressed",
+            "type": "array"
+          },
+          "disagreements_resolved": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Disagreements Resolved",
+            "type": "array"
+          },
+          "early_warning_index": {
+            "title": "Early Warning Index",
+            "type": "integer"
+          },
+          "facts": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Facts",
+            "type": "array"
+          },
+          "financial_health": {
+            "additionalProperties": true,
+            "description": "Prototype passport score, not credit",
+            "title": "Financial Health",
+            "type": "object"
+          },
+          "forecasts": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Forecasts",
+            "type": "array"
+          },
+          "headline": {
+            "title": "Headline",
+            "type": "string"
+          },
+          "interpretations": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Interpretations",
+            "type": "array"
+          },
+          "open_questions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Open Questions",
+            "type": "array"
+          },
+          "overall_assessment": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Overall Assessment"
+          },
+          "risk_level": {
+            "description": "From the deterministic early-warning engine",
+            "title": "Risk Level",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "senior_synthesis",
+              "deterministic_fallback"
+            ],
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "headline",
+          "overall_assessment",
+          "risk_level",
+          "early_warning_index",
+          "financial_health",
+          "facts",
+          "calculated_metrics",
+          "forecasts",
+          "assumptions",
+          "interpretations",
+          "challenges_addressed",
+          "disagreements_resolved",
+          "open_questions"
+        ],
+        "title": "FinalAssessment",
         "type": "object"
       },
       "FinancialHealth": {
@@ -1868,13 +2242,33 @@
         "title": "HistoryPoint",
         "type": "object"
       },
-      "IntelligenceReport": {
+      "InvestigateRequest": {
+        "additionalProperties": false,
         "properties": {
-          "agents": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Defaults to the end of the data",
+            "title": "As Of"
+          }
+        },
+        "title": "InvestigateRequest",
+        "type": "object"
+      },
+      "Investigation": {
+        "properties": {
+          "agent_analyses": {
             "additionalProperties": {
               "$ref": "#/components/schemas/AgentRun"
             },
-            "title": "Agents",
+            "title": "Agent Analyses",
             "type": "object"
           },
           "as_of": {
@@ -1882,59 +2276,325 @@
             "title": "As Of",
             "type": "string"
           },
+          "claim_audit": {
+            "$ref": "#/components/schemas/ClaimAudit"
+          },
+          "completed_at": {
+            "format": "date-time",
+            "title": "Completed At",
+            "type": "string"
+          },
+          "confidence": {
+            "$ref": "#/components/schemas/ConfidenceAssessment"
+          },
+          "disagreements": {
+            "items": {
+              "$ref": "#/components/schemas/Disagreement"
+            },
+            "title": "Disagreements",
+            "type": "array"
+          },
           "disclaimer": {
             "title": "Disclaimer",
             "type": "string"
           },
+          "duration_ms": {
+            "title": "Duration Ms",
+            "type": "integer"
+          },
           "entity": {
             "$ref": "#/components/schemas/EntityRef"
           },
-          "evidence_items": {
-            "title": "Evidence Items",
-            "type": "integer"
+          "entity_id": {
+            "format": "uuid",
+            "title": "Entity Id",
+            "type": "string"
           },
-          "evidence_pack_sha256": {
-            "title": "Evidence Pack Sha256",
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/InvestigationEvent"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "evidence_pack": {
+            "$ref": "#/components/schemas/EvidencePackRef"
+          },
+          "evidence_references": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceReference"
+            },
+            "title": "Evidence References",
+            "type": "array"
+          },
+          "final_assessment": {
+            "$ref": "#/components/schemas/FinalAssessment"
+          },
+          "financial_health": {
+            "additionalProperties": true,
+            "title": "Financial Health",
+            "type": "object"
+          },
+          "financial_metrics_used": {
+            "items": {
+              "$ref": "#/components/schemas/MetricUsed"
+            },
+            "title": "Financial Metrics Used",
+            "type": "array"
+          },
+          "investigation_id": {
+            "format": "uuid",
+            "title": "Investigation Id",
+            "type": "string"
+          },
+          "recommendations": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Recommendations",
+            "type": "array"
+          },
+          "red_team_findings": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RedTeamFindings"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "red_team_run": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentRun"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "review_requests": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewRequest"
+            },
+            "title": "Review Requests",
+            "type": "array"
+          },
+          "risk_summary": {
+            "additionalProperties": true,
+            "title": "Risk Summary",
+            "type": "object"
+          },
+          "senior_synthesis_run": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentRun"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "stages": {
+            "items": {
+              "$ref": "#/components/schemas/StageRecord"
+            },
+            "title": "Stages",
+            "type": "array"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
             "type": "string"
           },
           "status": {
             "enum": [
-              "complete",
-              "partial",
+              "completed",
+              "completed_with_gaps",
               "failed"
             ],
             "title": "Status",
             "type": "string"
           },
-          "synthesis": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "The Senior Financial Intelligence Agent's verified synthesis",
-            "title": "Synthesis"
+          "triggered_warnings": {
+            "items": {
+              "$ref": "#/components/schemas/TriggeredWarning"
+            },
+            "title": "Triggered Warnings",
+            "type": "array"
           },
           "usage": {
             "$ref": "#/components/schemas/Usage"
+          },
+          "workflow_version": {
+            "title": "Workflow Version",
+            "type": "string"
           }
         },
         "required": [
+          "investigation_id",
+          "entity_id",
           "entity",
           "as_of",
+          "workflow_version",
           "status",
-          "evidence_pack_sha256",
-          "evidence_items",
-          "agents",
-          "synthesis",
+          "started_at",
+          "completed_at",
+          "duration_ms",
+          "stages",
+          "triggered_warnings",
+          "risk_summary",
+          "financial_health",
+          "financial_metrics_used",
+          "agent_analyses",
+          "disagreements",
+          "review_requests",
+          "red_team_findings",
+          "red_team_run",
+          "senior_synthesis_run",
+          "final_assessment",
+          "recommendations",
+          "confidence",
+          "evidence_pack",
+          "evidence_references",
+          "claim_audit",
           "usage",
+          "events",
           "disclaimer"
         ],
-        "title": "IntelligenceReport",
+        "title": "Investigation",
+        "type": "object"
+      },
+      "InvestigationEvent": {
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "data": {
+            "additionalProperties": true,
+            "title": "Data",
+            "type": "object"
+          },
+          "event": {
+            "description": "Machine-readable, e.g. \"agent_completed\"",
+            "title": "Event",
+            "type": "string"
+          },
+          "level": {
+            "enum": [
+              "info",
+              "warning",
+              "error"
+            ],
+            "title": "Level",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "stage": {
+            "enum": [
+              "financial_data",
+              "deterministic_analytics",
+              "financial_passport",
+              "early_warning_detection",
+              "stress_testing",
+              "evidence_assembly",
+              "specialized_investigation",
+              "disagreement_detection",
+              "red_team_challenge",
+              "senior_synthesis",
+              "final_assessment"
+            ],
+            "title": "Stage",
+            "type": "string"
+          }
+        },
+        "required": [
+          "at",
+          "stage",
+          "level",
+          "event",
+          "message"
+        ],
+        "title": "InvestigationEvent",
+        "type": "object"
+      },
+      "InvestigationSummary": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "confidence": {
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ],
+            "title": "Confidence",
+            "type": "string"
+          },
+          "duration_ms": {
+            "title": "Duration Ms",
+            "type": "integer"
+          },
+          "entity_id": {
+            "format": "uuid",
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "entity_name": {
+            "title": "Entity Name",
+            "type": "string"
+          },
+          "headline": {
+            "title": "Headline",
+            "type": "string"
+          },
+          "investigation_id": {
+            "format": "uuid",
+            "title": "Investigation Id",
+            "type": "string"
+          },
+          "risk_level": {
+            "title": "Risk Level",
+            "type": "string"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "completed",
+              "completed_with_gaps",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "investigation_id",
+          "entity_id",
+          "entity_name",
+          "as_of",
+          "status",
+          "risk_level",
+          "confidence",
+          "headline",
+          "started_at",
+          "duration_ms"
+        ],
+        "title": "InvestigationSummary",
         "type": "object"
       },
       "Issue": {
@@ -1947,7 +2607,8 @@
               "unsupported_number",
               "wrong_section_type",
               "unknown_claim_id",
-              "wrong_reference_kind"
+              "wrong_reference_kind",
+              "unknown_reference"
             ],
             "title": "Code",
             "type": "string"
@@ -2220,6 +2881,61 @@
           "points"
         ],
         "title": "MetricSeries",
+        "type": "object"
+      },
+      "MetricUsed": {
+        "properties": {
+          "cited_by": {
+            "description": "Verified claims that cite this metric",
+            "items": {
+              "type": "string"
+            },
+            "title": "Cited By",
+            "type": "array"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "evidence_id": {
+            "title": "Evidence Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "period": {
+            "title": "Period",
+            "type": "string"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "code",
+          "evidence_id",
+          "name",
+          "value",
+          "unit",
+          "period",
+          "cited_by"
+        ],
+        "title": "MetricUsed",
         "type": "object"
       },
       "ModelInfo": {
@@ -2754,6 +3470,54 @@
         "title": "ReadinessResponse",
         "type": "object"
       },
+      "RedTeamFindings": {
+        "properties": {
+          "challenges": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Challenges",
+            "type": "array"
+          },
+          "coverage": {
+            "$ref": "#/components/schemas/ReviewCoverage"
+          },
+          "disagreements_assessed": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Disagreements Assessed",
+            "type": "array"
+          },
+          "overall_robustness": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Overall Robustness"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "challenges",
+          "disagreements_assessed",
+          "overall_robustness",
+          "coverage"
+        ],
+        "title": "RedTeamFindings",
+        "type": "object"
+      },
       "RegisteredClaim": {
         "properties": {
           "agent": {
@@ -2811,6 +3575,70 @@
           "confidence"
         ],
         "title": "RegisteredClaim",
+        "type": "object"
+      },
+      "ReviewCoverage": {
+        "properties": {
+          "requested": {
+            "title": "Requested",
+            "type": "integer"
+          },
+          "reviewed": {
+            "title": "Reviewed",
+            "type": "integer"
+          },
+          "unreviewed": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unreviewed",
+            "type": "array"
+          }
+        },
+        "required": [
+          "requested",
+          "reviewed",
+          "unreviewed"
+        ],
+        "title": "ReviewCoverage",
+        "type": "object"
+      },
+      "ReviewRequest": {
+        "properties": {
+          "agent": {
+            "title": "Agent",
+            "type": "string"
+          },
+          "challenges": {
+            "default": 0,
+            "title": "Challenges",
+            "type": "integer"
+          },
+          "claim_id": {
+            "title": "Claim Id",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "reviewed": {
+            "default": false,
+            "title": "Reviewed",
+            "type": "boolean"
+          },
+          "statement": {
+            "title": "Statement",
+            "type": "string"
+          }
+        },
+        "required": [
+          "claim_id",
+          "reason",
+          "agent",
+          "statement"
+        ],
+        "title": "ReviewRequest",
         "type": "object"
       },
       "RiskAssessment": {
@@ -3567,6 +4395,75 @@
         "title": "SourceRef",
         "type": "object"
       },
+      "StageRecord": {
+        "properties": {
+          "completed_at": {
+            "format": "date-time",
+            "title": "Completed At",
+            "type": "string"
+          },
+          "details": {
+            "additionalProperties": true,
+            "title": "Details",
+            "type": "object"
+          },
+          "duration_ms": {
+            "title": "Duration Ms",
+            "type": "integer"
+          },
+          "stage": {
+            "enum": [
+              "financial_data",
+              "deterministic_analytics",
+              "financial_passport",
+              "early_warning_detection",
+              "stress_testing",
+              "evidence_assembly",
+              "specialized_investigation",
+              "disagreement_detection",
+              "red_team_challenge",
+              "senior_synthesis",
+              "final_assessment"
+            ],
+            "title": "Stage",
+            "type": "string"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "completed",
+              "completed_with_issues",
+              "failed",
+              "skipped"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "stage",
+          "title",
+          "status",
+          "started_at",
+          "completed_at",
+          "duration_ms",
+          "summary"
+        ],
+        "title": "StageRecord",
+        "type": "object"
+      },
       "StressTestRequest": {
         "additionalProperties": false,
         "properties": {
@@ -3871,6 +4768,69 @@
         "title": "TimelinePoint",
         "type": "object"
       },
+      "TriggeredWarning": {
+        "properties": {
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "evidence_id": {
+            "title": "Evidence Id",
+            "type": "string"
+          },
+          "first_detected_on": {
+            "format": "date",
+            "title": "First Detected On",
+            "type": "string"
+          },
+          "investigated": {
+            "description": "The Early Warning Investigation Agent explained it",
+            "title": "Investigated",
+            "type": "boolean"
+          },
+          "investigation_claim_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Investigation Claim Ids",
+            "type": "array"
+          },
+          "rule": {
+            "title": "Rule",
+            "type": "string"
+          },
+          "severity": {
+            "title": "Severity",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "warning_id": {
+            "title": "Warning Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "warning_id",
+          "evidence_id",
+          "rule",
+          "category",
+          "severity",
+          "title",
+          "description",
+          "first_detected_on",
+          "investigated",
+          "investigation_claim_ids"
+        ],
+        "title": "TriggeredWarning",
+        "type": "object"
+      },
       "Usage": {
         "properties": {
           "calls": {
@@ -3931,6 +4891,14 @@
               "type": "string"
             },
             "title": "Pruned",
+            "type": "array"
+          },
+          "unmet_requirements": {
+            "description": "Orchestrator requirements still unmet after the repair attempts (e.g. a significant claim the red team did not review)",
+            "items": {
+              "type": "string"
+            },
+            "title": "Unmet Requirements",
             "type": "array"
           }
         },
@@ -4755,9 +5723,9 @@
         ]
       }
     },
-    "/api/v1/entities/{entity_id}/intelligence": {
+    "/api/v1/entities/{entity_id}/investigate": {
       "post": {
-        "operationId": "intelligence_api_v1_entities__entity_id__intelligence_post",
+        "operationId": "investigate_api_v1_entities__entity_id__investigate_post",
         "parameters": [
           {
             "description": "Entity (subject) id",
@@ -4778,7 +5746,7 @@
               "schema": {
                 "anyOf": [
                   {
-                    "$ref": "#/components/schemas/AgentRequest"
+                    "$ref": "#/components/schemas/InvestigateRequest"
                   },
                   {
                     "type": "null"
@@ -4794,7 +5762,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/IntelligenceReport"
+                  "$ref": "#/components/schemas/Investigation"
                 }
               }
             },
@@ -4811,9 +5779,9 @@
             "description": "Error (application/problem+json)"
           }
         },
-        "summary": "Run all seven agents and return the verified intelligence report",
+        "summary": "Run a complete financial investigation and return its structured record",
         "tags": [
-          "agents"
+          "investigations"
         ]
       }
     },
@@ -5193,6 +6161,135 @@
         "summary": "Early-warning signals detected by deterministic rules",
         "tags": [
           "early-warning"
+        ]
+      }
+    },
+    "/api/v1/investigations": {
+      "get": {
+        "operationId": "list_investigations_api_v1_investigations_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/InvestigationSummary"
+                  },
+                  "title": "Response List Investigations Api V1 Investigations Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (application/problem+json)"
+          }
+        },
+        "summary": "Recent investigations, newest first",
+        "tags": [
+          "investigations"
+        ]
+      }
+    },
+    "/api/v1/investigations/{investigation_id}": {
+      "get": {
+        "operationId": "get_investigation_api_v1_investigations__investigation_id__get",
+        "parameters": [
+          {
+            "description": "Investigation id",
+            "in": "path",
+            "name": "investigation_id",
+            "required": true,
+            "schema": {
+              "description": "Investigation id",
+              "format": "uuid",
+              "title": "Investigation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Investigation"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (application/problem+json)"
+          }
+        },
+        "summary": "A complete investigation record",
+        "tags": [
+          "investigations"
+        ]
+      }
+    },
+    "/api/v1/investigations/{investigation_id}/events": {
+      "get": {
+        "operationId": "get_events_api_v1_investigations__investigation_id__events_get",
+        "parameters": [
+          {
+            "description": "Investigation id",
+            "in": "path",
+            "name": "investigation_id",
+            "required": true,
+            "schema": {
+              "description": "Investigation id",
+              "format": "uuid",
+              "title": "Investigation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/InvestigationEvent"
+                  },
+                  "title": "Response Get Events Api V1 Investigations  Investigation Id  Events Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (application/problem+json)"
+          }
+        },
+        "summary": "The investigation's timestamped event log",
+        "tags": [
+          "investigations"
         ]
       }
     },

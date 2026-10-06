@@ -6,8 +6,12 @@
     finpulse synthetic list              list scenarios
     finpulse synthetic summary CODE      month-by-month roll-up of a scenario
     finpulse synthetic export [CODE] -o DIR   write CSV files + ground_truth.json
+    finpulse investigate run [CODE] [--as-of D] [-o FILE] [--events]
+                                         run a full investigation on a synthetic scenario
+                                         (calls the AI agents: needs ANTHROPIC_API_KEY)
+    finpulse investigate show FILE [--events]  print a saved investigation
 
-All generation is deterministic Python; nothing here calls an LLM.
+Everything except `investigate run` is deterministic Python and never calls an LLM.
 """
 
 from __future__ import annotations
@@ -234,7 +238,59 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("code", nargs="?", choices=sorted(SCENARIOS))
     p.add_argument("-o", "--out", default="synthetic-export")
     p.set_defaults(handler=synthetic_export)
+
+    inv = groups.add_parser("investigate", help="financial investigations (AI agents)")
+    inv_cmds = inv.add_subparsers(dest="cmd", required=True)
+    p = inv_cmds.add_parser("run", help="investigate a synthetic scenario (needs an API key)")
+    p.add_argument("code", nargs="?", default=PRIMARY_DEMO, choices=sorted(SCENARIOS))
+    p.add_argument("--as-of", help="YYYY-MM-DD (default: end of the data)")
+    p.add_argument("-o", "--out", help="also save the investigation as JSON")
+    p.add_argument("--events", action="store_true", help="print the full event log")
+    p.set_defaults(handler=investigate_run)
+    p = inv_cmds.add_parser("show", help="print a saved investigation")
+    p.add_argument("file")
+    p.add_argument("--events", action="store_true", help="print the full event log")
+    p.set_defaults(handler=investigate_show)
     return parser
+
+
+# --- investigate --------------------------------------------------------------------------------
+
+
+def investigate_run(args: argparse.Namespace, settings: Settings) -> None:
+    from datetime import date
+
+    from finpulse.agents.llm import AnthropicLLM
+    from finpulse.analytics import default_as_of
+    from finpulse.core.errors import AppError
+    from finpulse.investigation.orchestrator import InvestigationOrchestrator
+    from finpulse.investigation.report import render
+    from finpulse.synthetic.adapter import to_financial_data
+
+    data = to_financial_data(generate(get_scenario(args.code)))
+    as_of = date.fromisoformat(args.as_of) if args.as_of else default_as_of(data)
+    if as_of is None:
+        _say("The scenario has no data.")
+        sys.exit(1)
+    try:
+        investigation = asyncio.run(
+            InvestigationOrchestrator(AnthropicLLM(settings)).investigate(data, as_of)
+        )
+    except AppError as exc:
+        _say(f"Investigation failed: {exc.detail or exc}")
+        sys.exit(1)
+    if args.out:
+        Path(args.out).write_text(investigation.model_dump_json(indent=2), encoding="utf-8")
+        _say(f"Saved to {args.out}\n")
+    _say(render(investigation, events=args.events))
+
+
+def investigate_show(args: argparse.Namespace, settings: Settings) -> None:
+    from finpulse.investigation.report import render
+    from finpulse.investigation.schemas import Investigation
+
+    investigation = Investigation.model_validate_json(Path(args.file).read_text(encoding="utf-8"))
+    _say(render(investigation, events=args.events))
 
 
 def main(argv: list[str] | None = None) -> None:

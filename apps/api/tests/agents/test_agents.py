@@ -74,6 +74,7 @@ async def test_red_team_cannot_target_a_claim_that_does_not_exist() -> None:
                 "severity": "minor",
             }
         ],
+        "disagreements_assessed": [],
         "overall_robustness": interp([item(PACK, "risk:summary")]),
     }
     llm = FakeLLM(PACK, {"red_team": [out] * 3})

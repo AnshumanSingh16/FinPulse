@@ -32,7 +32,7 @@ from finpulse.core.errors import UnprocessableError
 from finpulse.early_warning import detect_warnings, risk_summary
 from finpulse.early_warning import load_config as load_warning_config
 from finpulse.early_warning.engine import ENGINE_VERSION as WARNING_VERSION
-from finpulse.early_warning.schemas import RiskSummary
+from finpulse.early_warning.schemas import RiskSummary, WarningsReport
 from finpulse.scoring import load_model, with_monthly_change
 from finpulse.scoring.format import format_value
 from finpulse.scoring.schemas import Passport
@@ -264,9 +264,8 @@ def _passport(p: Passport) -> Iterable[EvidenceItem]:
     )
 
 
-def _warnings(summary: RiskSummary, data: FinancialData, as_of: date) -> Iterable[EvidenceItem]:
+def _warnings(summary: RiskSummary, report: WarningsReport) -> Iterable[EvidenceItem]:
     config = load_warning_config()
-    report = detect_warnings(data, as_of, config)
     for w in report.warnings:
         t = w.threshold
         yield EvidenceItem(
@@ -358,24 +357,29 @@ def _warnings(summary: RiskSummary, data: FinancialData, as_of: date) -> Iterabl
     )
 
 
-def _stress(data: FinancialData, as_of: date) -> Iterable[EvidenceItem]:
+def run_stress_presets(data: FinancialData, as_of: date) -> dict[str, StressTestResult | str]:
+    """Every preset scenario: its result, or why it does not apply to this entity."""
     model = load_model()
-    baseline_done = False
-    for code, (name, _) in PRESETS.items():
+    out: dict[str, StressTestResult | str] = {}
+    for code in PRESETS:
         try:
-            r: StressTestResult = run_stress_test(
-                data,
-                as_of,
-                StressTestRequest(preset=code),
-                model,
-            )
+            out[code] = run_stress_test(data, as_of, StressTestRequest(preset=code), model)
         except UnprocessableError as exc:
+            out[code] = exc.detail or str(exc)
+    return out
+
+
+def _stress(results: dict[str, StressTestResult | str]) -> Iterable[EvidenceItem]:
+    baseline_done = False
+    for code, r in results.items():
+        name = PRESETS[code][0]
+        if isinstance(r, str):
             yield EvidenceItem(
                 id=f"stress:{code}",
                 kind="forecast",
                 source="stress",
                 title=f"Stress scenario: {name}",
-                text=f"Not applicable to this entity: {exc.detail}",
+                text=f"Not applicable to this entity: {r}",
                 values={"applicable": False},
                 tags=["scenario"],
             )
@@ -477,17 +481,23 @@ def _projection_values(p: Projection) -> dict[str, Value]:
     }
 
 
-def build_evidence_pack(data: FinancialData, as_of: date) -> EvidencePack:
-    """Every verified backend output for one entity at one date. Pure and deterministic."""
-    report = compute_report(data, as_of)
-    passport = with_monthly_change(data, as_of, load_model())
-    summary = risk_summary(data, as_of, load_warning_config())
+def assemble_evidence_pack(
+    data: FinancialData,
+    as_of: date,
+    report: FinancialMetricsReport,
+    passport: Passport,
+    warnings: WarningsReport,
+    summary: RiskSummary,
+    stress: dict[str, StressTestResult | str],
+) -> EvidencePack:
+    """The pack from engine outputs already computed (the investigation workflow computes each
+    stage separately and records it)."""
     items = [
         *_facts(data, report),
         *_metrics(report),
         *_passport(passport),
-        *_warnings(summary, data, as_of),
-        *_stress(data, as_of),
+        *_warnings(summary, warnings),
+        *_stress(stress),
     ]
     ids = [i.id for i in items]
     if len(ids) != len(set(ids)):
@@ -504,4 +514,18 @@ def build_evidence_pack(data: FinancialData, as_of: date) -> EvidencePack:
         },
         sha256=_hash(items),
         items=items,
+    )
+
+
+def build_evidence_pack(data: FinancialData, as_of: date) -> EvidencePack:
+    """Every verified backend output for one entity at one date. Pure and deterministic."""
+    config = load_warning_config()
+    return assemble_evidence_pack(
+        data,
+        as_of,
+        compute_report(data, as_of),
+        with_monthly_change(data, as_of, load_model()),
+        detect_warnings(data, as_of, config),
+        risk_summary(data, as_of, config),
+        run_stress_presets(data, as_of),
     )

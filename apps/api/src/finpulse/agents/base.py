@@ -86,6 +86,29 @@ class AgentSpec:
         )
 
 
+@dataclass(frozen=True)
+class ContextSection:
+    """A block of structured context the orchestrator adds to an agent's input."""
+
+    title: str
+    instruction: str
+    rows: list[dict[str, Any]]
+
+
+@dataclass(frozen=True)
+class AgentContext:
+    """What the orchestrator gives one agent run beyond evidence and upstream claims.
+
+    ``known_refs`` lists the values that fields such as ``disagreement_id`` may take.
+    ``requirements`` returns what the (already verified) output still lacks — e.g. significant
+    claims the red team has not reviewed; unmet requirements earn a repair round and are
+    reported, but never discard a verified answer."""
+
+    sections: tuple[ContextSection, ...] = ()
+    known_refs: dict[str, frozenset[str]] = field(default_factory=dict)
+    requirements: Callable[[dict[str, Any]], list[str]] | None = None
+
+
 # --- input ---------------------------------------------------------------------------------------
 
 
@@ -94,6 +117,7 @@ def build_user_message(
     pack: EvidencePack,
     items: list[EvidenceItem],
     upstream: dict[str, AgentRun],
+    context: AgentContext | None = None,
 ) -> str:
     e = pack.entity
     lines = [
@@ -158,6 +182,15 @@ def build_user_message(
                 "",
                 f"Note: these agents produced no verified findings: {', '.join(missing)}.",
             ]
+    for section in context.sections if context else ():
+        lines += [
+            "",
+            f"## {section.title}",
+            section.instruction,
+            "<context>",
+            *(json.dumps(row, ensure_ascii=False, default=str) for row in section.rows),
+            "</context>",
+        ]
     lines += ["", "## Task", "Produce your analysis as JSON matching the response schema."]
     return "\n".join(lines)
 
@@ -170,6 +203,16 @@ def repair_message(found: list[Found]) -> str:
         "Return the complete corrected JSON. Fix only these problems: cite the right evidence "
         "ids, correct the statement_type, or quote numbers exactly as the cited evidence gives "
         "them (never compute new numbers). If a statement cannot be supported, remove it."
+    )
+
+
+def requirements_message(unmet: list[str]) -> str:
+    listed = "\n".join(f"- {u}" for u in unmet[:40])
+    return (
+        "Your answer passed verification but is incomplete:\n"
+        f"{listed}\n\n"
+        "Return the complete JSON again with these added. The same rules apply: cite evidence "
+        "ids and quote only numbers that appear in the cited evidence."
     )
 
 
@@ -217,15 +260,18 @@ async def run_agent(
     llm: LLMClient,
     pack: EvidencePack,
     upstream: dict[str, AgentRun] | None = None,
+    context: AgentContext | None = None,
 ) -> AgentRun:
     upstream = upstream or {}
     items = spec.select(pack)
     upstream_claims = {c.claim_id: c for run in upstream.values() for c in run.claims}
-    verifier = Verifier(pack, spec.rules, upstream_claims)
+    verifier = Verifier(pack, spec.rules, upstream_claims, context.known_refs if context else None)
     schema = strict_schema(spec.output_model.model_json_schema())
     messages: list[dict[str, Any]] = [
-        {"role": "user", "content": build_user_message(spec, pack, items, upstream)}
+        {"role": "user", "content": build_user_message(spec, pack, items, upstream, context)}
     ]
+    requirements = context.requirements if context else None
+    best: tuple[dict[str, Any], VerificationReport] | None = None  # last fully verified answer
     usage = Usage()
     history: list[list[Issue]] = []
     base = {
@@ -301,19 +347,31 @@ async def run_agent(
             result = verifier.verify(data)
             history.append([f.issue() for f in result.found])
             if result.passed:
-                return succeeded(data, _report(result, history, []))
+                unmet = requirements(data) if requirements else []
+                report = _report(result, history, [], unmet)
+                if not unmet or attempt == MAX_ATTEMPTS:
+                    return succeeded(data, report)
+                best = (data, report)
+                messages += [
+                    _assistant_turn(response),
+                    {"role": "user", "content": requirements_message(unmet)},
+                ]
+                continue
             if attempt < MAX_ATTEMPTS:
                 messages += [
                     _assistant_turn(response),
                     {"role": "user", "content": repair_message(result.found)},
                 ]
                 continue
+            if best is not None:  # a later attempt broke a verified answer: keep the verified one
+                return succeeded(*best)
             if prunable(result.found):
                 data, removed = prune(data, result.found)
                 data = spec.output_model.model_validate(data).model_dump(mode="json")
                 final = verifier.verify(data)
                 if final.passed:
-                    return succeeded(data, _report(final, history, removed))
+                    unmet = requirements(data) if requirements else []
+                    return succeeded(data, _report(final, history, removed, unmet))
                 result = final
             return failed(
                 "verification_failed",
@@ -330,8 +388,11 @@ async def run_agent(
     return failed("agent_error", "No attempt was made.")  # pragma: no cover
 
 
-def _report(result: Any, history: list[list[Issue]], pruned: list[str]) -> VerificationReport:
+def _report(
+    result: Any, history: list[list[Issue]], pruned: list[str], unmet: list[str] | None = None
+) -> VerificationReport:
     return VerificationReport(
+        unmet_requirements=unmet or [],
         passed=result.passed,
         claims_checked=result.claims_checked,
         numbers_checked=result.numbers_checked,

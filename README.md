@@ -38,7 +38,7 @@ packages/contracts/   Shared API contract: OpenAPI exported from FastAPI + gener
 infra/                docker-compose for local PostgreSQL
 scripts/              dev helpers (run API + web together, db init/seed/reset)
 docs/                 SYNTHETIC_DATA.md · FINANCIAL_METRICS.md · FINANCIAL_PASSPORT.md ·
-                      EARLY_WARNING.md · STRESS_TESTING.md · AI_AGENTS.md
+                      EARLY_WARNING.md · STRESS_TESTING.md · AI_AGENTS.md · INVESTIGATIONS.md
 ```
 
 Details: [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md).
@@ -211,7 +211,8 @@ See [docs/STRESS_TESTING.md](docs/STRESS_TESTING.md) for the methodology and how
 
 ```
 GET  /api/v1/entities/{entity_id}/evidence-pack      what the agents may use (no AI)
-POST /api/v1/entities/{entity_id}/intelligence       all seven agents → verified report
+POST /api/v1/entities/{entity_id}/investigate        full investigation → structured record
+GET  /api/v1/investigations[/{id}[/events]]          inspect recent investigations
 POST /api/v1/entities/{entity_id}/agents/{agent}     one agent (+ its dependencies)
 ```
 
@@ -228,6 +229,25 @@ A deterministic verifier checks every claim's citations, type and numbers. Arith
 difference of two cited figures is rejected. A failing claim is sent back for repair, then
 dropped. Set `ANTHROPIC_API_KEY` (model `claude-opus-5-5` by default) to enable them. See
 [docs/AI_AGENTS.md](docs/AI_AGENTS.md).
+
+**Investigations** orchestrate the full workflow, in this order:
+
+1. data;
+2. analytics;
+3. the Financial Passport;
+4. early warnings;
+5. stress tests;
+6. evidence assembly;
+7. the specialist agents;
+8. disagreement detection;
+9. mandatory red-team review of significant risk assessments;
+10. the senior synthesis;
+11. the final assessment.
+
+The result is one record with the triggered warnings, the metrics used, each agent's analysis,
+the red-team findings, the final assessment, recommendations, confidence, timestamps and a full
+event log. `uv run finpulse investigate show FILE --events` prints it for a demo. See
+[docs/INVESTIGATIONS.md](docs/INVESTIGATIONS.md).
 
 ## How the frontend talks to the backend
 

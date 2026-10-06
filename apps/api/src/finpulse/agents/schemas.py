@@ -8,16 +8,18 @@ verifier before anything downstream sees it.
 
 from __future__ import annotations
 
-import datetime as dt
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from finpulse.analytics.schemas import EntityRef
-
 StatementType = Literal["FACT", "CALCULATED_METRIC", "FORECAST", "ASSUMPTION", "AI_INTERPRETATION"]
 Confidence = Literal["high", "medium", "low"]
 Severity = Literal["low", "medium", "high", "critical"]
+RiskStance = Literal["low", "moderate", "elevated", "high", "severe"]
+STANCE_DESCRIPTION = (
+    "Your overall judgement of this entity's financial risk, from your angle. The orchestrator "
+    "compares stances across agents and with the deterministic engines to find disagreements."
+)
 
 
 class _Out(BaseModel):
@@ -43,6 +45,7 @@ class SynthesisClaim(Claim):
 
 
 class FinancialProfileOutput(_Out):
+    risk_stance: RiskStance = Field(description=STANCE_DESCRIPTION)
     summary: Claim = Field(description="Overall financial condition (AI_INTERPRETATION)")
     strengths: list[Claim]
     weaknesses: list[Claim]
@@ -53,6 +56,7 @@ class FinancialProfileOutput(_Out):
 
 
 class CreditIntelligenceOutput(_Out):
+    risk_stance: RiskStance = Field(description=STANCE_DESCRIPTION)
     reliability_view: Claim = Field(
         description="Overall view of financial reliability (AI_INTERPRETATION); never a credit "
         "decision or score"
@@ -80,6 +84,7 @@ class WarningInvestigation(_Out):
 
 
 class EarlyWarningInvestigationOutput(_Out):
+    risk_stance: RiskStance = Field(description=STANCE_DESCRIPTION)
     investigations: list[WarningInvestigation]
     common_thread: Claim = Field(description="How the warnings connect (AI_INTERPRETATION)")
 
@@ -96,6 +101,7 @@ class RiskItem(_Out):
 
 
 class RiskInvestigationOutput(_Out):
+    risk_stance: RiskStance = Field(description=STANCE_DESCRIPTION)
     risks: list[RiskItem] = Field(description="Most important first")
     overall: Claim
 
@@ -110,6 +116,7 @@ class ScenarioInterpretation(_Out):
 
 
 class StressInterpretationOutput(_Out):
+    risk_stance: RiskStance = Field(description=STANCE_DESCRIPTION)
     scenarios: list[ScenarioInterpretation]
     most_damaging_scenario_evidence_id: str
     resilience_summary: Claim
@@ -129,8 +136,14 @@ class Challenge(_Out):
     severity: Literal["major", "moderate", "minor"]
 
 
+class DisagreementAssessment(_Out):
+    disagreement_id: str = Field(description='An id from the disagreement list, e.g. "DIS-01"')
+    assessment: Claim = Field(description="Which reading the evidence better supports, and why")
+
+
 class RedTeamOutput(_Out):
     challenges: list[Challenge]
+    disagreements_assessed: list[DisagreementAssessment]
     overall_robustness: Claim
 
 
@@ -143,6 +156,20 @@ class ChallengeResponse(_Out):
     explanation: SynthesisClaim
 
 
+class DisagreementResolution(_Out):
+    disagreement_id: str
+    resolution: SynthesisClaim
+
+
+class Recommendation(_Out):
+    action: str = Field(
+        description="A next step for the analyst: what to verify, request or monitor. Never a "
+        "lending decision"
+    )
+    priority: Literal["high", "medium", "low"]
+    rationale: SynthesisClaim
+
+
 class SeniorSynthesisOutput(_Out):
     headline: str
     overall_assessment: SynthesisClaim = Field(description="AI_INTERPRETATION")
@@ -152,6 +179,8 @@ class SeniorSynthesisOutput(_Out):
     assumptions: list[SynthesisClaim] = Field(description="ASSUMPTION claims only")
     interpretations: list[SynthesisClaim] = Field(description="AI_INTERPRETATION claims only")
     challenges_addressed: list[ChallengeResponse]
+    disagreements_resolved: list[DisagreementResolution]
+    recommendations: list[Recommendation]
     open_questions: list[str]
     confidence: Confidence
     confidence_rationale: str
@@ -167,6 +196,7 @@ IssueCode = Literal[
     "wrong_section_type",
     "unknown_claim_id",
     "wrong_reference_kind",
+    "unknown_reference",
 ]
 
 
@@ -187,6 +217,11 @@ class VerificationReport(BaseModel):
     )
     attempts_issues: list[list[Issue]] = Field(
         default_factory=list, description="Issues found at each attempt, for audit"
+    )
+    unmet_requirements: list[str] = Field(
+        default_factory=list,
+        description="Orchestrator requirements still unmet after the repair attempts (e.g. a "
+        "significant claim the red team did not review)",
     )
 
 
@@ -227,20 +262,6 @@ class AgentRun(BaseModel):
     evidence_items: int = Field(description="Number of evidence items the agent was given")
     attempts: int = 0
     usage: Usage = Field(default_factory=Usage)
-
-
-class IntelligenceReport(BaseModel):
-    entity: EntityRef
-    as_of: dt.date
-    status: Literal["complete", "partial", "failed"]
-    evidence_pack_sha256: str
-    evidence_items: int
-    agents: dict[str, AgentRun]
-    synthesis: dict[str, Any] | None = Field(
-        description="The Senior Financial Intelligence Agent's verified synthesis"
-    )
-    usage: Usage
-    disclaimer: str
 
 
 class AgentInfo(BaseModel):

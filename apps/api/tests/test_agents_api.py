@@ -56,19 +56,6 @@ async def test_evidence_pack(client: httpx.AsyncClient) -> None:
     }
 
 
-async def test_intelligence_report(client: httpx.AsyncClient) -> None:
-    response = await client.post(url("intelligence"))
-
-    assert response.status_code == 200
-    body = response.json()
-    assert body["status"] == "complete"
-    assert set(body["agents"]) == set(AGENTS)
-    assert body["synthesis"]["headline"]
-    claim = body["synthesis"]["calculated_metrics"][0]
-    assert claim["statement_type"] == "CALCULATED_METRIC" and claim["evidence_ids"]
-    assert body["agents"]["risk_investigation"]["verification"]["passed"] is True
-
-
 async def test_one_agent(client: httpx.AsyncClient) -> None:
     body = (await client.post(url("agents/red_team"), json={"as_of": "2026-09-30"})).json()
 
@@ -89,20 +76,20 @@ async def test_unknown_agent_is_404(client: httpx.AsyncClient) -> None:
 
 
 async def test_unknown_entity_is_404(client: httpx.AsyncClient) -> None:
-    response = await client.post(url("intelligence", uuid.uuid4()))
+    response = await client.post(url("agents/financial_profile", uuid.uuid4()))
 
     assert response.status_code == 404
 
 
 async def test_bad_body_is_422(client: httpx.AsyncClient) -> None:
-    response = await client.post(url("intelligence"), json={"as_of": "soon", "x": 1})
+    response = await client.post(url("agents/financial_profile"), json={"as_of": "soon", "x": 1})
 
     assert response.status_code == 422 and response.headers["content-type"] == PROBLEM
 
 
 async def test_without_a_model_the_agents_answer_503() -> None:
     async for c in client_with(DownLLM()):
-        response = await c.post(url("intelligence"))
+        response = await c.post(url("agents/financial_profile"))
         assert response.status_code == 503
         assert response.json()["code"] == "llm_unavailable"
         assert "ANTHROPIC_API_KEY" in response.json()["detail"]
