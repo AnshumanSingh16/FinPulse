@@ -12,12 +12,12 @@ from typing import Annotated
 
 from fastapi import APIRouter, Path, Query
 
-from finpulse.analytics import CATALOGUE, compute_report, default_as_of
-from finpulse.analytics.inputs import FinancialData
+from finpulse.analytics import CATALOGUE, compute_report
 from finpulse.analytics.schemas import FinancialMetricsReport, Metric, MetricDefinitionOut
 from finpulse.api.deps import DataSourceDep, OrgDep
 from finpulse.api.schemas.entities import EntitySummary
-from finpulse.core.errors import NotFoundError, UnprocessableError
+from finpulse.core.errors import NotFoundError
+from finpulse.services.entities import load_entity, resolve_as_of
 
 router = APIRouter(prefix="/api/v1")
 
@@ -31,18 +31,8 @@ EntityId = Annotated[uuid.UUID, Path(description="Entity (subject) id")]
 async def _report(
     source: DataSourceDep, org_id: uuid.UUID, entity_id: uuid.UUID, as_of: date | None
 ) -> FinancialMetricsReport:
-    data: FinancialData | None = await source.load(org_id, entity_id)
-    if data is None:
-        raise NotFoundError(f"No entity with id {entity_id}.", code="entity_not_found")
-    effective = as_of or default_as_of(data)
-    if effective is None or not data.transactions or effective < data.transactions[0].posted_on:
-        first = data.transactions[0].posted_on if data.transactions else None
-        raise UnprocessableError(
-            "There is no financial data on or before the requested date."
-            + (f" The history starts on {first}." if first else ""),
-            code="insufficient_history",
-        )
-    return compute_report(data, effective)
+    data = await load_entity(source, org_id, entity_id)
+    return compute_report(data, resolve_as_of(data, as_of))
 
 
 @router.get("/entities", response_model=list[EntitySummary], tags=["entities"])

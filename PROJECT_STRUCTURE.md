@@ -78,12 +78,13 @@ apps/api/
 │   │   ├── engine.py             # compute_report(data, as_of) → FinancialMetricsReport
 │   │   └── schemas.py            # Pydantic outputs (also the API response models)
 │   │
-│   ├── scoring/                  # PURE: Financial Passport
-│   │   ├── models/passport_v1.yaml
-│   │   ├── model.py              # load + validate model file
-│   │   ├── transforms.py         # piecewise-linear curves
-│   │   ├── passport.py           # score(metric_results, stress_results, model) → PassportResult
-│   │   └── reason_codes.py
+│   ├── scoring/                  # PURE: Financial Passport (see docs/FINANCIAL_PASSPORT.md)
+│   │   ├── models/passport_v1.toml  # the methodology: dimensions, weights, curves, bands
+│   │   ├── config.py             # load + strictly validate a model file
+│   │   ├── engine.py             # score_passport(report, model), explain_change(a, b)
+│   │   ├── history.py            # month-end history, change since previous month
+│   │   ├── methodology.py        # renders the config into the methodology document
+│   │   ├── format.py · schemas.py
 │   │
 │   ├── early_warning/            # PURE
 │   │   ├── rules/                # one module per rule family
@@ -125,7 +126,7 @@ apps/api/
 │   │   ├── executor.py           # runs phases, persists boundaries, resumes, emits events
 │   │   └── budgets.py
 │   │
-│   ├── services/                 # use cases; own DB transactions; enqueue jobs
+│   ├── services/                 # use cases (entities.py: load entity, resolve as_of; more to come)
 │   │   ├── subjects.py · synthetic.py · analysis.py · stress.py
 │   │   ├── investigations.py · alerts.py · evidence.py · backtests.py
 │   │

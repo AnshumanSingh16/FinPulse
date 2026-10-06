@@ -289,6 +289,19 @@ Exact formulas, windows and edge-case rules are written in the metric docstring 
 
 ## 7. Scoring engine — the Financial Passport (`scoring/`)
 
+> **Implemented (Phase 3)** as a prototype; see [docs/FINANCIAL_PASSPORT.md](docs/FINANCIAL_PASSPORT.md).
+> It differs from the sketch below:
+> - **Dimensions** are the six requested ones: Cash-Flow Stability, Repayment Capacity, Revenue
+>   Stability, Financial Resilience, Debt Health and Transaction Consistency.
+> - **Configuration** is TOML (`scoring/models/passport_v1.toml`).
+> - **Confidence** is reported alongside the score rather than shrinking it toward 50.
+> - **Bands** are words (Strong … Critical), not letters.
+> - **Explanations** are strengths and concerns plus factor-level change attribution, instead
+>   of reason codes.
+> - **History** is recomputed per month-end rather than stored.
+> - **Resilience** comes from buffer, runway and liquidity metrics until the stress engine
+>   (Phase 5) exists.
+
 ### 7.1 Shape
 
 The passport is **multidimensional first**; the overall score is a derived summary, not the product.

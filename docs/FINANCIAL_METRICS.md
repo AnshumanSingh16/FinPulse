@@ -79,6 +79,13 @@ and monthly `series` for revenue, expenses, net cash flow and month-end balance 
 | `liquidity.ratio` | ratio | as_of | (cash ≥ 0 + receivables) ÷ (payables + overdraft drawn + overdue instalments + principal due in 12 months) | *n/a* with no current liabilities |
 | `buffer.months` | months | 3 months → as_of | Own cash (positive balance only) ÷ average monthly total outflows | no outflows |
 | `transactions.consistency` | score | 13 weeks (min 8) | 100 × share of weeks with an operating receipt × (1 − 0.5 × min(CV of weekly transaction counts, 1)) | < 8 weeks |
+| `cashflow.positive_months` | ratio | 6 months (min 3) | Share of months with net cash flow ≥ 0 **before new borrowing** (loan disbursements removed) | < 3 months |
+| `cashflow.net_margin` | ratio | 6 months (min 3) | Net cash flow before borrowing ÷ money received excluding borrowing | < 3 months, nothing received |
+| `debt.leverage` | ratio | as_of vs last 3 months | Debt outstanding ÷ annualised revenue (3 months × 4); 0 with no loans | no revenue while in debt |
+| `debt.new_loans_6m` | count | 183 days | Loans disbursed in the period (loan stacking signal) | no transactions |
+| `liquidity.overdraft_utilisation` | ratio | 90 days | Average end-of-day overdraft drawn ÷ overdraft limit | *n/a* without an overdraft facility |
+
+The last five were added for the Financial Passport ([FINANCIAL_PASSPORT.md](FINANCIAL_PASSPORT.md)).
 
 ## What the metrics show for the demo entities
 

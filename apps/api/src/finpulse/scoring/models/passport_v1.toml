@@ -1,0 +1,206 @@
+# FinPulse Financial Passport — scoring configuration, version 1.
+#
+# PROTOTYPE. This is a multidimensional financial-health profile built for a hackathon on
+# synthetic data. It is NOT a credit score, not a credit-bureau product (it is not CIBIL or
+# anything like it), not validated against real outcomes, and must not be used to make lending
+# or any other regulated decision.
+#
+# How a score is built (see docs/FINANCIAL_PASSPORT.md):
+#   1. Each factor reads one metric from the analytics engine and turns its value into 0–100
+#      points by straight-line interpolation between the breakpoints below ([value, points]
+#      pairs, values in the metric's own unit; beyond the first/last breakpoint the end points
+#      apply).
+#   2. A dimension score is the weighted mean of its scored factors (weights re-normalised over
+#      the factors that could be scored).
+#   3. The Financial Health score is the weighted mean of the dimension scores (re-normalised
+#      over dimensions that could be scored).
+# Changing anything in this file changes scores: bump `version`.
+
+[model]
+id = "finpulse-passport"
+version = 1
+name = "FinPulse Financial Passport (prototype)"
+disclaimer = """Prototype financial-health profile for demonstration, calculated from synthetic data \
+by a documented, deterministic method. It is not a credit score, is not produced by or \
+comparable to any credit bureau (such as CIBIL), has not been validated against real repayment \
+outcomes, and must not be used for lending or any other regulated decision."""
+
+# How much a factor counts towards confidence, by the confidence of the metric it reads.
+[confidence]
+high = 1.0
+medium = 0.75
+low = 0.5
+# A passport whose overall confidence is below this is marked provisional.
+provisional_below = 0.7
+
+# Bands describe the overall score in words. Highest first; the last must start at 0.
+[[bands]]
+code = "strong"
+label = "Strong"
+min_score = 80
+description = "Healthy across most dimensions."
+
+[[bands]]
+code = "sound"
+label = "Sound"
+min_score = 65
+description = "Generally healthy, with some areas to watch."
+
+[[bands]]
+code = "watch"
+label = "Watch"
+min_score = 50
+description = "Mixed picture: several dimensions show strain."
+
+[[bands]]
+code = "strained"
+label = "Strained"
+min_score = 35
+description = "Significant financial strain in several dimensions."
+
+[[bands]]
+code = "critical"
+label = "Critical"
+min_score = 0
+description = "Severe strain: cash, repayments or revenue are under acute pressure."
+
+# --- dimensions -----------------------------------------------------------------------------
+
+[dimensions.cash_flow_stability]
+name = "Cash-Flow Stability"
+weight = 0.20
+description = "Does the entity keep more cash than it spends, month after month, without borrowing to do so?"
+
+[[dimensions.cash_flow_stability.factors]]
+metric = "cashflow.net_margin"
+weight = 0.40
+breakpoints = [[-0.15, 0], [-0.05, 30], [0.0, 50], [0.05, 75], [0.15, 95], [0.25, 100]]
+strength = "Keeps a healthy share of what comes in"
+concern = "Spends more than it earns, before any new borrowing"
+
+[[dimensions.cash_flow_stability.factors]]
+metric = "cashflow.positive_months"
+weight = 0.30
+breakpoints = [[0.0, 0], [0.5, 50], [0.8333, 85], [1.0, 100]]
+strength = "Cash-positive in most months"
+concern = "Few months end cash-positive"
+
+[[dimensions.cash_flow_stability.factors]]
+metric = "income.stability"
+weight = 0.30
+breakpoints = [[0, 0], [100, 100]]
+strength = "Money comes in steadily month to month"
+concern = "Monthly receipts swing widely"
+
+[dimensions.repayment_capacity]
+name = "Repayment Capacity"
+weight = 0.20
+description = "Does it meet its obligations on time, and how much of its income do repayments absorb?"
+
+[[dimensions.repayment_capacity.factors]]
+metric = "payments.consistency"
+weight = 0.55
+breakpoints = [[0.5, 0], [0.8, 40], [0.9, 70], [0.97, 90], [1.0, 100]]
+strength = "Pays loan instalments and suppliers on time"
+concern = "Misses or delays scheduled payments"
+
+[[dimensions.repayment_capacity.factors]]
+metric = "debt.service_burden"
+weight = 0.45
+breakpoints = [[0.0, 100], [0.1, 85], [0.25, 55], [0.4, 25], [0.6, 0]]
+strength = "Repayments take a small share of income"
+concern = "Repayments absorb a large share of income"
+
+[dimensions.revenue_stability]
+name = "Revenue Stability"
+weight = 0.15
+description = "Are sales steady, holding up or growing, and spread across customers?"
+
+[[dimensions.revenue_stability.factors]]
+metric = "revenue.volatility"
+weight = 0.40
+breakpoints = [[0.0, 100], [0.1, 88], [0.2, 70], [0.35, 45], [0.6, 10], [0.8, 0]]
+strength = "Monthly revenue is steady"
+concern = "Monthly revenue is volatile"
+
+[[dimensions.revenue_stability.factors]]
+metric = "revenue.growth"
+weight = 0.35
+breakpoints = [[-0.3, 0], [-0.15, 30], [-0.05, 55], [0.0, 65], [0.1, 85], [0.25, 100]]
+strength = "Revenue is growing"
+concern = "Revenue is falling"
+
+[[dimensions.revenue_stability.factors]]
+metric = "customers.concentration"
+weight = 0.25
+breakpoints = [[0.15, 100], [0.3, 75], [0.5, 45], [0.8, 10], [1.0, 0]]
+strength = "Revenue is spread across many customers"
+concern = "Revenue depends heavily on one customer"
+
+[dimensions.financial_resilience]
+name = "Financial Resilience"
+weight = 0.20
+description = "Could it absorb a disruption — how long would its own cash last?"
+
+[[dimensions.financial_resilience.factors]]
+metric = "buffer.months"
+weight = 0.40
+breakpoints = [[0, 0], [0.5, 30], [1, 55], [3, 85], [6, 100]]
+strength = "Holds a good cash buffer"
+concern = "Has little or no cash buffer"
+
+[[dimensions.financial_resilience.factors]]
+metric = "cash.runway"
+weight = 0.35
+# Not applicable means the entity is not burning cash: no runway constraint.
+not_applicable_points = 100
+breakpoints = [[0, 0], [1, 25], [3, 55], [6, 80], [12, 100]]
+strength = "Not running down its cash"
+concern = "At the current burn, available funds run out soon"
+
+[[dimensions.financial_resilience.factors]]
+metric = "liquidity.ratio"
+weight = 0.25
+breakpoints = [[0.2, 0], [0.5, 25], [1.0, 60], [1.5, 80], [2.5, 100]]
+strength = "Short-term assets comfortably cover short-term liabilities"
+concern = "Short-term liabilities exceed short-term assets"
+
+[dimensions.debt_health]
+name = "Debt Health"
+weight = 0.15
+description = "How much does it owe relative to its size, how hard is it leaning on its overdraft, and is it piling on new loans?"
+
+[[dimensions.debt_health.factors]]
+metric = "debt.leverage"
+weight = 0.40
+breakpoints = [[0.0, 100], [0.1, 90], [0.25, 70], [0.5, 40], [1.0, 0]]
+strength = "Owes little relative to its revenue"
+concern = "Owes a lot relative to its revenue"
+
+[[dimensions.debt_health.factors]]
+metric = "liquidity.overdraft_utilisation"
+weight = 0.35
+# Not applicable means there is no overdraft facility, so none is being used.
+not_applicable_points = 100
+breakpoints = [[0.0, 100], [0.25, 80], [0.5, 50], [0.8, 20], [1.0, 0]]
+strength = "Barely uses its overdraft"
+concern = "Lives in its overdraft"
+
+[[dimensions.debt_health.factors]]
+metric = "debt.new_loans_6m"
+weight = 0.25
+breakpoints = [[0, 100], [1, 70], [2, 35], [3, 10], [4, 0]]
+strength = "No recent rush of new borrowing"
+concern = "Has taken several new loans recently"
+
+[dimensions.transaction_consistency]
+name = "Transaction Consistency"
+weight = 0.10
+description = "Is its banking activity regular — money coming in week after week?"
+
+[[dimensions.transaction_consistency.factors]]
+metric = "transactions.consistency"
+weight = 1.0
+breakpoints = [[0, 0], [100, 100]]
+strength = "Regular week-to-week banking activity"
+concern = "Irregular banking activity, with weeks without receipts"

@@ -55,6 +55,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/entities/{entity_id}/passport": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Financial Passport (prototype financial-health profile, not a credit score) */
+        get: operations["passport_api_v1_entities__entity_id__passport_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/entities/{entity_id}/passport/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Financial Passport at each month-end, with each change explained */
+        get: operations["history_api_v1_entities__entity_id__passport_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/meta/financial-metrics": {
         parameters: {
             query?: never;
@@ -64,6 +98,23 @@ export interface paths {
         };
         /** Definitions of every financial metric (methodology) */
         get: operations["metric_catalogue_api_v1_meta_financial_metrics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/meta/passport-model": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The scoring configuration: dimensions, weights, curves, bands, disclaimer */
+        get: operations["passport_model_api_v1_meta_passport_model_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -110,6 +161,61 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** Band */
+        Band: {
+            /** Code */
+            code: string;
+            /** Description */
+            description: string;
+            /** Label */
+            label: string;
+        };
+        /** BandConfig */
+        BandConfig: {
+            /** Code */
+            code: string;
+            /** Description */
+            description: string;
+            /** Label */
+            label: string;
+            /** Min Score */
+            min_score: string;
+        };
+        /** ChangeDriver */
+        ChangeDriver: {
+            /** Dimension */
+            dimension: string;
+            /** From Points */
+            from_points: string | null;
+            /** From Value */
+            from_value: string | null;
+            /**
+             * Impact
+             * @description Change in this factor's contribution to the score
+             */
+            impact: string;
+            /** Metric Code */
+            metric_code: string;
+            /** Metric Name */
+            metric_name: string;
+            /** Text */
+            text: string;
+            /** To Points */
+            to_points: string | null;
+            /** To Value */
+            to_value: string | null;
+        };
+        /** ConfidenceConfig */
+        ConfidenceConfig: {
+            /** High */
+            high: string;
+            /** Low */
+            low: string;
+            /** Medium */
+            medium: string;
+            /** Provisional Below */
+            provisional_below: string;
+        };
         /** DataCoverage */
         DataCoverage: {
             /** Bill Count */
@@ -151,6 +257,79 @@ export interface components {
              */
             status: "ok" | "failed";
         };
+        /** DimensionChange */
+        DimensionChange: {
+            /** Code */
+            code: string;
+            /** Delta */
+            delta: string | null;
+            /** From Score */
+            from_score: string | null;
+            /** Name */
+            name: string;
+            /** To Score */
+            to_score: string | null;
+        };
+        /** DimensionConfig */
+        DimensionConfig: {
+            /** Description */
+            description: string;
+            /** Factors */
+            factors: components["schemas"]["FactorConfig"][];
+            /** Name */
+            name: string;
+            /** Weight */
+            weight: string;
+        };
+        /** DimensionScore */
+        DimensionScore: {
+            /** Code */
+            code: string;
+            /**
+             * Confidence
+             * @description 0–1: share of the dimension resting on good data
+             */
+            confidence: string;
+            /** Description */
+            description: string;
+            /** Effective Weight */
+            effective_weight: string;
+            /** Factors */
+            factors: components["schemas"]["FactorScore"][];
+            /** Name */
+            name: string;
+            /**
+             * Score
+             * @description 0–100, or null if no factor could be scored
+             */
+            score: string | null;
+            /** Summary */
+            summary: string;
+            /** Weight */
+            weight: string;
+        };
+        /**
+         * Driver
+         * @description A strength or concern: the factors pushing the score up or down the most.
+         */
+        Driver: {
+            /** Dimension */
+            dimension: string;
+            /**
+             * Impact
+             * @description Points above (+) or below (−) a neutral 50 on this factor
+             */
+            impact: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "strength" | "concern";
+            /** Metric Code */
+            metric_code: string;
+            /** Text */
+            text: string;
+        };
         /** EntityRef */
         EntityRef: {
             /** Display Name */
@@ -184,6 +363,81 @@ export interface components {
             /** Segment */
             segment: string;
         };
+        /** FactorConfig */
+        FactorConfig: {
+            /** Breakpoints */
+            breakpoints: [
+                string,
+                string
+            ][];
+            /** Concern */
+            concern: string;
+            /** Metric */
+            metric: string;
+            /** Not Applicable Points */
+            not_applicable_points?: string | null;
+            /** Strength */
+            strength: string;
+            /** Weight */
+            weight: string;
+        };
+        /**
+         * FactorScore
+         * @description One metric's contribution. Every passport number traces back to these.
+         */
+        FactorScore: {
+            /**
+             * Contribution To Dimension
+             * @description points × effective_weight
+             */
+            contribution_to_dimension: string;
+            /**
+             * Contribution To Overall
+             * @description Points this factor adds to the Financial Health score
+             */
+            contribution_to_overall: string;
+            /**
+             * Effective Weight
+             * @description Weight after re-normalising over scored factors
+             */
+            effective_weight: string;
+            /** Explanation */
+            explanation: string;
+            /**
+             * Metric Availability
+             * @enum {string}
+             */
+            metric_availability: "available" | "insufficient_data" | "not_applicable";
+            /** Metric Code */
+            metric_code: string;
+            /** Metric Confidence */
+            metric_confidence: ("high" | "medium" | "low") | null;
+            /** Metric Name */
+            metric_name: string;
+            metric_period: components["schemas"]["Period"];
+            /**
+             * Metric Unit
+             * @enum {string}
+             */
+            metric_unit: "INR" | "ratio" | "days" | "months" | "score" | "count";
+            /** Metric Value */
+            metric_value: string | null;
+            /**
+             * Points
+             * @description 0–100 from the factor's curve
+             */
+            points: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "scored" | "scored_not_applicable" | "excluded";
+            /**
+             * Weight
+             * @description Configured weight within the dimension
+             */
+            weight: string;
+        };
         /** FieldError */
         FieldError: {
             /** Loc */
@@ -192,6 +446,22 @@ export interface components {
             msg: string;
             /** Type */
             type: string;
+        };
+        /** FinancialHealth */
+        FinancialHealth: {
+            band: components["schemas"]["Band"] | null;
+            /** Confidence */
+            confidence: string;
+            /**
+             * Provisional
+             * @description True when confidence is below the model's threshold
+             */
+            provisional: boolean;
+            /**
+             * Score
+             * @description 0–100 prototype Financial Health score
+             */
+            score: string | null;
         };
         /** FinancialMetricsReport */
         FinancialMetricsReport: {
@@ -232,6 +502,26 @@ export interface components {
             timestamp: string;
             /** Version */
             version: string;
+        };
+        /** HistoryPoint */
+        HistoryPoint: {
+            /**
+             * As Of
+             * Format: date
+             */
+            as_of: string;
+            /** Band */
+            band: string | null;
+            /** Confidence */
+            confidence: string;
+            /** Dimensions */
+            dimensions: {
+                [key: string]: string | null;
+            };
+            /** Provisional */
+            provisional: boolean;
+            /** Score */
+            score: string | null;
         };
         /** Metric */
         Metric: {
@@ -316,6 +606,72 @@ export interface components {
              */
             unit: "INR" | "ratio" | "days" | "months" | "score" | "count";
         };
+        /** ModelInfo */
+        ModelInfo: {
+            /** Disclaimer */
+            disclaimer: string;
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Version */
+            version: number;
+        };
+        /** ModelRef */
+        ModelRef: {
+            /**
+             * Config Sha256
+             * @description Hash of the scoring configuration that was used
+             */
+            config_sha256: string;
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Version */
+            version: number;
+        };
+        /** Passport */
+        Passport: {
+            /** Analytics Engine Version */
+            analytics_engine_version: string;
+            /**
+             * As Of
+             * Format: date
+             */
+            as_of: string;
+            change_from_previous_month?: components["schemas"]["ScoreChange"] | null;
+            /** Concerns */
+            concerns: components["schemas"]["Driver"][];
+            /** Dimensions */
+            dimensions: components["schemas"]["DimensionScore"][];
+            /** Disclaimer */
+            disclaimer: string;
+            entity: components["schemas"]["EntityRef"];
+            financial_health: components["schemas"]["FinancialHealth"];
+            model: components["schemas"]["ModelRef"];
+            /** Strengths */
+            strengths: components["schemas"]["Driver"][];
+        };
+        /** PassportHistory */
+        PassportHistory: {
+            /**
+             * Changes
+             * @description Explanation of each step between points
+             */
+            changes: components["schemas"]["ScoreChange"][];
+            /** Disclaimer */
+            disclaimer: string;
+            entity: components["schemas"]["EntityRef"];
+            model: components["schemas"]["ModelRef"];
+            /**
+             * Points
+             * @description Oldest first: month-ends, then as_of
+             */
+            points: components["schemas"]["HistoryPoint"][];
+            /** Summary */
+            summary: string;
+        };
         /** Period */
         Period: {
             /**
@@ -376,6 +732,54 @@ export interface components {
              * @enum {string}
              */
             status: "ready" | "not_ready";
+        };
+        /** ScoreChange */
+        ScoreChange: {
+            /** Delta */
+            delta: string;
+            /** Dimensions */
+            dimensions: components["schemas"]["DimensionChange"][];
+            /**
+             * Drivers
+             * @description Largest factor movements, biggest first
+             */
+            drivers: components["schemas"]["ChangeDriver"][];
+            /**
+             * From As Of
+             * Format: date
+             */
+            from_as_of: string;
+            /** From Band */
+            from_band: string;
+            /** From Score */
+            from_score: string;
+            /** Summary */
+            summary: string;
+            /**
+             * To As Of
+             * Format: date
+             */
+            to_as_of: string;
+            /** To Band */
+            to_band: string;
+            /** To Score */
+            to_score: string;
+        };
+        /** ScoringModel */
+        ScoringModel: {
+            /** Bands */
+            bands: components["schemas"]["BandConfig"][];
+            confidence: components["schemas"]["ConfidenceConfig"];
+            /** Dimensions */
+            dimensions: {
+                [key: string]: components["schemas"]["DimensionConfig"];
+            };
+            model: components["schemas"]["ModelInfo"];
+            /**
+             * Sha256
+             * @default
+             */
+            sha256: string;
         };
         /** SeriesPoint */
         SeriesPoint: {
@@ -513,6 +917,78 @@ export interface operations {
             };
         };
     };
+    passport_api_v1_entities__entity_id__passport_get: {
+        parameters: {
+            query?: {
+                /** @description Calculate as at the end of this day. Defaults to the end of the data. */
+                as_of?: string | null;
+            };
+            header?: never;
+            path: {
+                /** @description Entity (subject) id */
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Passport"];
+                };
+            };
+            /** @description Error (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    history_api_v1_entities__entity_id__passport_history_get: {
+        parameters: {
+            query?: {
+                /** @description Calculate as at the end of this day. Defaults to the end of the data. */
+                as_of?: string | null;
+                /** @description Number of points, including as_of */
+                months?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Entity (subject) id */
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PassportHistory"];
+                };
+            };
+            /** @description Error (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     metric_catalogue_api_v1_meta_financial_metrics_get: {
         parameters: {
             query?: never;
@@ -529,6 +1005,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MetricDefinitionOut"][];
+                };
+            };
+            /** @description Error (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    passport_model_api_v1_meta_passport_model_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScoringModel"];
                 };
             };
             /** @description Error (application/problem+json) */

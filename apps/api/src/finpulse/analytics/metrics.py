@@ -209,6 +209,49 @@ TRANSACTION_CONSISTENCY = define(
     (1 − 0.5 × min(CV of weekly transaction counts, 1)). Needs 8 covered weeks.""",
 )
 
+POSITIVE_MONTHS = define(
+    "cashflow.positive_months",
+    "Cash-positive months",
+    "cash_flow",
+    "ratio",
+    """Share of the last 6 complete months (minimum 3) in which net cash flow was zero or positive
+    before new borrowing (loan disbursements are excluded, so borrowing cannot make a month look
+    cash-generative).""",
+)
+NET_CASH_MARGIN = define(
+    "cashflow.net_margin",
+    "Net cash margin",
+    "cash_flow",
+    "ratio",
+    """Over the last 6 complete months (minimum 3): net cash flow before new borrowing ÷ money
+    received excluding loan disbursements. Positive = the entity keeps part of what comes in after
+    paying everything, including repayments and drawings.""",
+)
+DEBT_LEVERAGE = define(
+    "debt.leverage",
+    "Debt leverage",
+    "debt",
+    "ratio",
+    """Loan principal outstanding at as_of ÷ annualised revenue (last 3 complete months × 4).
+    0.5 = debt equal to half a year's sales.""",
+)
+NEW_LOANS = define(
+    "debt.new_loans_6m",
+    "New loans in 6 months",
+    "debt",
+    "count",
+    """Number of loans disbursed in the 183 days up to as_of. Several new loans in a short time
+    (loan stacking) is a common sign of a cash squeeze.""",
+)
+OVERDRAFT_UTILISATION = define(
+    "liquidity.overdraft_utilisation",
+    "Overdraft utilisation",
+    "liquidity",
+    "ratio",
+    """Average over the last 90 days of the overdraft drawn at the end of each day ÷ the
+    overdraft limit. Not applicable without an overdraft facility.""",
+)
+
 # Windows (months)
 GROWTH_WINDOW = 3
 VOLATILITY_MONTHS, VOLATILITY_MIN = 12, 4
@@ -950,6 +993,155 @@ def transaction_consistency(ctx: Context) -> Metric:
     )
 
 
+def positive_months(ctx: Context) -> Metric:
+    months = ctx.window(STABILITY_MONTHS)
+    confidence = months_confidence(len(months), STABILITY_MONTHS, CONCENTRATION_MIN)
+    if confidence is None:
+        return unavailable(
+            POSITIVE_MONTHS,
+            ctx.as_of_period(),
+            "insufficient_data",
+            f"Needs at least {CONCENTRATION_MIN} complete months.",
+        )
+    values = [ctx.net_cash_flow_before_borrowing(m) for m in months]
+    positive = sum(1 for v in values if v >= 0)
+    return available(
+        POSITIVE_MONTHS,
+        ratio(positive, len(values)),
+        ctx.months_period(months, f"last_{len(months)}_months"),
+        confidence=confidence,
+        components={
+            "months": len(values),
+            "cash_positive_months": positive,
+            "borrowed_in_period": inr(sum(ctx.borrowed[m] for m in months)),
+            **{
+                f"net_before_borrowing:{month_label(m)}": inr(v)
+                for m, v in zip(months, values, strict=True)
+            },
+        },
+    )
+
+
+def net_cash_margin(ctx: Context) -> Metric:
+    months = ctx.window(STABILITY_MONTHS)
+    confidence = months_confidence(len(months), STABILITY_MONTHS, CONCENTRATION_MIN)
+    if confidence is None:
+        return unavailable(
+            NET_CASH_MARGIN,
+            ctx.as_of_period(),
+            "insufficient_data",
+            f"Needs at least {CONCENTRATION_MIN} complete months.",
+        )
+    received = sum(ctx.credits[m] - ctx.borrowed[m] for m in months)
+    net = sum(ctx.net_cash_flow_before_borrowing(m) for m in months)
+    period = ctx.months_period(months, f"last_{len(months)}_months")
+    components: dict[str, ComponentValue] = {
+        "money_in_excluding_borrowing": inr(received),
+        "net_cash_flow_before_borrowing": inr(net),
+    }
+    if received <= 0:
+        return unavailable(
+            NET_CASH_MARGIN,
+            period,
+            "insufficient_data",
+            "No money received.",
+            components=components,
+        )
+    return available(
+        NET_CASH_MARGIN, ratio(net, received), period, confidence=confidence, components=components
+    )
+
+
+def debt_leverage(ctx: Context) -> Metric:
+    months = ctx.window(RECENT_MONTHS)
+    debt = debt_outstanding(ctx)
+    if debt.value is None:
+        return unavailable(DEBT_LEVERAGE, ctx.as_of_period(), "insufficient_data", NO_MONTH)
+    components: dict[str, ComponentValue] = {"debt_outstanding": debt.value}
+    if not ctx.loans:
+        return available(
+            DEBT_LEVERAGE,
+            Decimal(0),
+            ctx.as_of_period(),
+            components=components,
+            notes=["No loans on record."],
+        )
+    confidence = months_confidence(len(months), RECENT_MONTHS, 1)
+    if confidence is None:
+        return unavailable(DEBT_LEVERAGE, ctx.as_of_period(), "insufficient_data", NO_MONTH)
+    annual = Decimal(sum(ctx.revenue(m) for m in months)) * 12 / len(months)
+    components["annualised_revenue"] = inr(int(annual))
+    period = Period(start=months[0], end=ctx.as_of, label="debt_at_as_of_vs_annualised_revenue")
+    if annual <= 0:
+        return unavailable(
+            DEBT_LEVERAGE,
+            period,
+            "insufficient_data",
+            "No revenue to compare the debt with.",
+            components=components,
+        )
+    return available(
+        DEBT_LEVERAGE,
+        (debt.value * 100) / annual,
+        period,
+        confidence=confidence if ctx.has_sales_documents else "low",
+        components=components,
+        sources=debt.sources,
+    )
+
+
+def new_loans(ctx: Context) -> Metric:
+    if not ctx.txns:
+        return unavailable(
+            NEW_LOANS,
+            ctx.as_of_period(),
+            "insufficient_data",
+            "No transactions on or before as_of.",
+        )
+    start = ctx.as_of - timedelta(days=182)
+    recent = [loan for loan in ctx.loans if loan.disbursed_on >= start]
+    lenders = {loan.lender_id for loan in recent}
+    return available(
+        NEW_LOANS,
+        Decimal(len(recent)),
+        Period(start=start, end=ctx.as_of, label="last_183_days"),
+        confidence="high" if ctx.covered_days(183) >= 183 else "medium",
+        components={
+            "borrowed": inr(sum(loan.principal_minor for loan in recent)),
+            "distinct_lenders": len(lenders),
+            "loans_on_record": len(ctx.loans),
+        },
+        sources=[source("loans", recent, "Loans disbursed in the period")],
+    )
+
+
+def overdraft_utilisation(ctx: Context) -> Metric:
+    period = ctx.days_period(TURNOVER_DAYS)
+    limit = ctx.overdraft_limit
+    if limit <= 0:
+        return unavailable(
+            OVERDRAFT_UTILISATION, period, "not_applicable", "No overdraft facility."
+        )
+    days = ctx.covered_days(TURNOVER_DAYS)
+    if days < 30:
+        return unavailable(
+            OVERDRAFT_UTILISATION, period, "insufficient_data", "Needs at least 30 days of history."
+        )
+    drawn = [max(0, -ctx.balance_at(ctx.as_of - timedelta(days=k))) for k in range(days)]
+    return available(
+        OVERDRAFT_UTILISATION,
+        Decimal(sum(drawn)) / (len(drawn) * limit),
+        period,
+        confidence="high" if days >= TURNOVER_DAYS else "medium",
+        components={
+            "overdraft_limit": inr(limit),
+            "average_drawn": inr(sum(drawn) // len(drawn)),
+            "days_overdrawn": sum(1 for d in drawn if d > 0),
+            "days": len(drawn),
+        },
+    )
+
+
 ALL_METRICS = (
     revenue_monthly,
     expenses_monthly,
@@ -971,4 +1163,9 @@ ALL_METRICS = (
     liquidity_ratio,
     financial_buffer,
     transaction_consistency,
+    positive_months,
+    net_cash_margin,
+    debt_leverage,
+    new_loans,
+    overdraft_utilisation,
 )

@@ -159,6 +159,7 @@ class Context:
         self.debits: dict[date, int] = defaultdict(int)
         self.operating_inflows: dict[date, int] = defaultdict(int)
         self.debt_service_paid: dict[date, int] = defaultdict(int)
+        self.borrowed: dict[date, int] = defaultdict(int)
 
         for inv in self.invoices:
             self.invoiced_taxable[month_start(inv.issued_on)] += inv.taxable_minor
@@ -172,6 +173,8 @@ class Context:
                 self.credits[m] += t.amount_minor
                 if classify.is_operating_inflow(t.category):
                     self.operating_inflows[m] += t.amount_minor
+                if t.category == classify.LOAN_DISBURSEMENT:
+                    self.borrowed[m] += t.amount_minor
             else:
                 self.debits[m] += -t.amount_minor
                 if classify.is_operating_expense(
@@ -199,6 +202,10 @@ class Context:
 
     def net_cash_flow(self, m: date) -> int:
         return self.credits[m] - self.debits[m]
+
+    def net_cash_flow_before_borrowing(self, m: date) -> int:
+        """Net cash flow with new loan money taken out: borrowing is not cash generation."""
+        return self.net_cash_flow(m) - self.borrowed[m]
 
     def txns_in(self, months: list[date]) -> list[Txn]:
         if not months:

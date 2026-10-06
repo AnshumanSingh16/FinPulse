@@ -7,11 +7,11 @@ history.
 > trustworthy, and detect if their financial health is deteriorating before a traditional credit
 > system would?
 
-**Status: Phase 2a (financial analytics).** On top of the platform foundation and a
-deterministic synthetic-data layer (five fictional entities, led by the demo business **Sharma
-Electricals**), a deterministic analytics engine calculates 20 financial metrics and serves them
-over the API. Scoring, early warnings, stress tests and AI agents are not built yet — see
-[DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md).
+**Status: Phase 3 (Financial Passport).** On top of the platform foundation, a deterministic
+synthetic-data layer (five fictional entities, led by the demo business **Sharma Electricals**)
+and an analytics engine with 25 financial metrics, the **Financial Passport** scores six
+financial-health dimensions and a prototype Financial Health score. Early warnings, stress tests
+and AI agents are not built yet — see [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md).
 
 ## Core principle
 
@@ -28,7 +28,7 @@ apps/web/             Next.js frontend (TypeScript, Tailwind, shadcn/ui)
 packages/contracts/   Shared API contract: OpenAPI exported from FastAPI + generated TS types
 infra/                docker-compose for local PostgreSQL
 scripts/              dev helpers (run API + web together, db init/seed/reset)
-docs/                 SYNTHETIC_DATA.md · FINANCIAL_METRICS.md
+docs/                 SYNTHETIC_DATA.md · FINANCIAL_METRICS.md · FINANCIAL_PASSPORT.md
 ```
 
 Details: [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md).
@@ -111,10 +111,32 @@ GET /api/v1/entities/{entity_id}/financial-metrics/{metric_code}
 GET /api/v1/meta/financial-metrics
 ```
 
-Twenty metrics, from monthly revenue and cash runway to receivable days, debt-service burden and
+Twenty-five metrics, from monthly revenue and cash runway to receivable days, debt-service burden and
 payment consistency. Each comes with its value, unit, period, availability, confidence, method,
 breakdown and source records. All are calculated in plain Python (no LLM) and covered by
 hand-checked tests. See [docs/FINANCIAL_METRICS.md](docs/FINANCIAL_METRICS.md).
+
+## Financial Passport
+
+> A prototype multidimensional financial-health profile on synthetic data — **not a credit
+> score**, not a credit-bureau product, and not for lending decisions.
+
+```
+GET /api/v1/entities/{entity_id}/passport[?as_of=YYYY-MM-DD]
+GET /api/v1/entities/{entity_id}/passport/history[?months=12]
+GET /api/v1/meta/passport-model
+```
+
+```
+Sharma Electricals, 30 Sep 2026 — Financial Health 50.6/100 (Watch)
+  Cash-Flow Stability 26.4 · Repayment Capacity 81.9 · Revenue Stability 55.5
+  Financial Resilience 8.2 · Debt Health 65.1 · Transaction Consistency 92.1
+  (was 75.1, Sound, on 31 Oct 2025)
+```
+
+Scores come from a versioned TOML configuration, applied deterministically. Every point traces
+to a metric, changes are attributed to the factors that moved, and history is tracked month by
+month. See [docs/FINANCIAL_PASSPORT.md](docs/FINANCIAL_PASSPORT.md).
 
 ## How the frontend talks to the backend
 

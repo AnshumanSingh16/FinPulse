@@ -148,6 +148,16 @@ the same as_of).
 **Exit criteria**: every persona gets a passport with traceable factors; changing the model file
 creates a new version without altering stored passports.
 
+**Progress**
+- Done: TOML scoring configuration with strict validation; a deterministic engine (piecewise-linear
+  curves, re-normalised weights, confidence, provisional flag, word bands); factor-level
+  contributions that sum exactly to the score; strengths and concerns; change attribution;
+  month-end history; `GET /entities/{id}/passport`, `/passport/history` and
+  `/meta/passport-model`. Five supporting metrics were added to the analytics engine. The
+  methodology document is generated from the config and tested for drift.
+- Deferred: storing passports (history is recomputed and stamped with the config hash), and the
+  stress-based Resilience inputs (Phase 5).
+
 ## Phase 4 — Early-warning engine + evaluation harness
 
 **Build**

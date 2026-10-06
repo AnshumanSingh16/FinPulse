@@ -22,4 +22,10 @@ export type MetricSeries = Schemas["MetricSeries"];
 export type MetricDefinition = Schemas["MetricDefinitionOut"];
 export type DataCoverage = Schemas["DataCoverage"];
 
+export type Passport = Schemas["Passport"];
+export type PassportHistory = Schemas["PassportHistory"];
+export type DimensionScore = Schemas["DimensionScore"];
+export type FactorScore = Schemas["FactorScore"];
+export type ScoreChange = Schemas["ScoreChange"];
+
 export type ApiPath = keyof paths;

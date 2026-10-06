@@ -1,6 +1,179 @@
 {
   "components": {
     "schemas": {
+      "Band": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "label",
+          "description"
+        ],
+        "title": "Band",
+        "type": "object"
+      },
+      "BandConfig": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "min_score": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Min Score",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "label",
+          "min_score",
+          "description"
+        ],
+        "title": "BandConfig",
+        "type": "object"
+      },
+      "ChangeDriver": {
+        "properties": {
+          "dimension": {
+            "title": "Dimension",
+            "type": "string"
+          },
+          "from_points": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Points"
+          },
+          "from_value": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Value"
+          },
+          "impact": {
+            "description": "Change in this factor's contribution to the score",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Impact",
+            "type": "string"
+          },
+          "metric_code": {
+            "title": "Metric Code",
+            "type": "string"
+          },
+          "metric_name": {
+            "title": "Metric Name",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "to_points": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Points"
+          },
+          "to_value": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Value"
+          }
+        },
+        "required": [
+          "dimension",
+          "metric_code",
+          "metric_name",
+          "from_value",
+          "to_value",
+          "from_points",
+          "to_points",
+          "impact",
+          "text"
+        ],
+        "title": "ChangeDriver",
+        "type": "object"
+      },
+      "ConfidenceConfig": {
+        "additionalProperties": false,
+        "properties": {
+          "high": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "High",
+            "type": "string"
+          },
+          "low": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Low",
+            "type": "string"
+          },
+          "medium": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Medium",
+            "type": "string"
+          },
+          "provisional_below": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Provisional Below",
+            "type": "string"
+          }
+        },
+        "required": [
+          "high",
+          "medium",
+          "low",
+          "provisional_below"
+        ],
+        "title": "ConfidenceConfig",
+        "type": "object"
+      },
       "DataCoverage": {
         "properties": {
           "bill_count": {
@@ -116,6 +289,205 @@
         "title": "DependencyCheck",
         "type": "object"
       },
+      "DimensionChange": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "delta": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delta"
+          },
+          "from_score": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Score"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "to_score": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Score"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "from_score",
+          "to_score",
+          "delta"
+        ],
+        "title": "DimensionChange",
+        "type": "object"
+      },
+      "DimensionConfig": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "factors": {
+            "items": {
+              "$ref": "#/components/schemas/FactorConfig"
+            },
+            "title": "Factors",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "weight": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Weight",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "weight",
+          "description",
+          "factors"
+        ],
+        "title": "DimensionConfig",
+        "type": "object"
+      },
+      "DimensionScore": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "confidence": {
+            "description": "0\u20131: share of the dimension resting on good data",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Confidence",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "effective_weight": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Effective Weight",
+            "type": "string"
+          },
+          "factors": {
+            "items": {
+              "$ref": "#/components/schemas/FactorScore"
+            },
+            "title": "Factors",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "0\u2013100, or null if no factor could be scored",
+            "title": "Score"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "weight": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Weight",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "description",
+          "score",
+          "weight",
+          "effective_weight",
+          "confidence",
+          "factors",
+          "summary"
+        ],
+        "title": "DimensionScore",
+        "type": "object"
+      },
+      "Driver": {
+        "description": "A strength or concern: the factors pushing the score up or down the most.",
+        "properties": {
+          "dimension": {
+            "title": "Dimension",
+            "type": "string"
+          },
+          "impact": {
+            "description": "Points above (+) or below (\u2212) a neutral 50 on this factor",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Impact",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "strength",
+              "concern"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "metric_code": {
+            "title": "Metric Code",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "dimension",
+          "metric_code",
+          "impact",
+          "text"
+        ],
+        "title": "Driver",
+        "type": "object"
+      },
       "EntityRef": {
         "properties": {
           "display_name": {
@@ -191,6 +563,201 @@
         "title": "EntitySummary",
         "type": "object"
       },
+      "FactorConfig": {
+        "additionalProperties": false,
+        "properties": {
+          "breakpoints": {
+            "items": {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                }
+              ],
+              "type": "array"
+            },
+            "title": "Breakpoints",
+            "type": "array"
+          },
+          "concern": {
+            "title": "Concern",
+            "type": "string"
+          },
+          "metric": {
+            "title": "Metric",
+            "type": "string"
+          },
+          "not_applicable_points": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Not Applicable Points"
+          },
+          "strength": {
+            "title": "Strength",
+            "type": "string"
+          },
+          "weight": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Weight",
+            "type": "string"
+          }
+        },
+        "required": [
+          "metric",
+          "weight",
+          "breakpoints",
+          "strength",
+          "concern"
+        ],
+        "title": "FactorConfig",
+        "type": "object"
+      },
+      "FactorScore": {
+        "description": "One metric's contribution. Every passport number traces back to these.",
+        "properties": {
+          "contribution_to_dimension": {
+            "description": "points \u00d7 effective_weight",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Contribution To Dimension",
+            "type": "string"
+          },
+          "contribution_to_overall": {
+            "description": "Points this factor adds to the Financial Health score",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Contribution To Overall",
+            "type": "string"
+          },
+          "effective_weight": {
+            "description": "Weight after re-normalising over scored factors",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Effective Weight",
+            "type": "string"
+          },
+          "explanation": {
+            "title": "Explanation",
+            "type": "string"
+          },
+          "metric_availability": {
+            "enum": [
+              "available",
+              "insufficient_data",
+              "not_applicable"
+            ],
+            "title": "Metric Availability",
+            "type": "string"
+          },
+          "metric_code": {
+            "title": "Metric Code",
+            "type": "string"
+          },
+          "metric_confidence": {
+            "anyOf": [
+              {
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metric Confidence"
+          },
+          "metric_name": {
+            "title": "Metric Name",
+            "type": "string"
+          },
+          "metric_period": {
+            "$ref": "#/components/schemas/Period"
+          },
+          "metric_unit": {
+            "enum": [
+              "INR",
+              "ratio",
+              "days",
+              "months",
+              "score",
+              "count"
+            ],
+            "title": "Metric Unit",
+            "type": "string"
+          },
+          "metric_value": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metric Value"
+          },
+          "points": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "0\u2013100 from the factor's curve",
+            "title": "Points"
+          },
+          "status": {
+            "enum": [
+              "scored",
+              "scored_not_applicable",
+              "excluded"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "weight": {
+            "description": "Configured weight within the dimension",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Weight",
+            "type": "string"
+          }
+        },
+        "required": [
+          "metric_code",
+          "metric_name",
+          "metric_value",
+          "metric_unit",
+          "metric_period",
+          "metric_availability",
+          "metric_confidence",
+          "status",
+          "points",
+          "weight",
+          "effective_weight",
+          "contribution_to_dimension",
+          "contribution_to_overall",
+          "explanation"
+        ],
+        "title": "FactorScore",
+        "type": "object"
+      },
       "FieldError": {
         "properties": {
           "loc": {
@@ -222,6 +789,51 @@
           "type"
         ],
         "title": "FieldError",
+        "type": "object"
+      },
+      "FinancialHealth": {
+        "properties": {
+          "band": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Band"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "confidence": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Confidence",
+            "type": "string"
+          },
+          "provisional": {
+            "description": "True when confidence is below the model's threshold",
+            "title": "Provisional",
+            "type": "boolean"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "0\u2013100 prototype Financial Health score",
+            "title": "Score"
+          }
+        },
+        "required": [
+          "score",
+          "band",
+          "confidence",
+          "provisional"
+        ],
+        "title": "FinancialHealth",
         "type": "object"
       },
       "FinancialMetricsReport": {
@@ -306,6 +918,72 @@
           "timestamp"
         ],
         "title": "HealthResponse",
+        "type": "object"
+      },
+      "HistoryPoint": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "band": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Band"
+          },
+          "confidence": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Confidence",
+            "type": "string"
+          },
+          "dimensions": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Dimensions",
+            "type": "object"
+          },
+          "provisional": {
+            "title": "Provisional",
+            "type": "boolean"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          }
+        },
+        "required": [
+          "as_of",
+          "score",
+          "band",
+          "confidence",
+          "provisional",
+          "dimensions"
+        ],
+        "title": "HistoryPoint",
         "type": "object"
       },
       "Metric": {
@@ -523,6 +1201,178 @@
         "title": "MetricSeries",
         "type": "object"
       },
+      "ModelInfo": {
+        "additionalProperties": false,
+        "properties": {
+          "disclaimer": {
+            "title": "Disclaimer",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "name",
+          "disclaimer"
+        ],
+        "title": "ModelInfo",
+        "type": "object"
+      },
+      "ModelRef": {
+        "properties": {
+          "config_sha256": {
+            "description": "Hash of the scoring configuration that was used",
+            "title": "Config Sha256",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "name",
+          "config_sha256"
+        ],
+        "title": "ModelRef",
+        "type": "object"
+      },
+      "Passport": {
+        "properties": {
+          "analytics_engine_version": {
+            "title": "Analytics Engine Version",
+            "type": "string"
+          },
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "change_from_previous_month": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScoreChange"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "concerns": {
+            "items": {
+              "$ref": "#/components/schemas/Driver"
+            },
+            "title": "Concerns",
+            "type": "array"
+          },
+          "dimensions": {
+            "items": {
+              "$ref": "#/components/schemas/DimensionScore"
+            },
+            "title": "Dimensions",
+            "type": "array"
+          },
+          "disclaimer": {
+            "title": "Disclaimer",
+            "type": "string"
+          },
+          "entity": {
+            "$ref": "#/components/schemas/EntityRef"
+          },
+          "financial_health": {
+            "$ref": "#/components/schemas/FinancialHealth"
+          },
+          "model": {
+            "$ref": "#/components/schemas/ModelRef"
+          },
+          "strengths": {
+            "items": {
+              "$ref": "#/components/schemas/Driver"
+            },
+            "title": "Strengths",
+            "type": "array"
+          }
+        },
+        "required": [
+          "entity",
+          "as_of",
+          "model",
+          "financial_health",
+          "dimensions",
+          "strengths",
+          "concerns",
+          "analytics_engine_version",
+          "disclaimer"
+        ],
+        "title": "Passport",
+        "type": "object"
+      },
+      "PassportHistory": {
+        "properties": {
+          "changes": {
+            "description": "Explanation of each step between points",
+            "items": {
+              "$ref": "#/components/schemas/ScoreChange"
+            },
+            "title": "Changes",
+            "type": "array"
+          },
+          "disclaimer": {
+            "title": "Disclaimer",
+            "type": "string"
+          },
+          "entity": {
+            "$ref": "#/components/schemas/EntityRef"
+          },
+          "model": {
+            "$ref": "#/components/schemas/ModelRef"
+          },
+          "points": {
+            "description": "Oldest first: month-ends, then as_of",
+            "items": {
+              "$ref": "#/components/schemas/HistoryPoint"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entity",
+          "model",
+          "points",
+          "changes",
+          "summary",
+          "disclaimer"
+        ],
+        "title": "PassportHistory",
+        "type": "object"
+      },
       "Period": {
         "properties": {
           "end": {
@@ -638,6 +1488,114 @@
           "checks"
         ],
         "title": "ReadinessResponse",
+        "type": "object"
+      },
+      "ScoreChange": {
+        "properties": {
+          "delta": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Delta",
+            "type": "string"
+          },
+          "dimensions": {
+            "items": {
+              "$ref": "#/components/schemas/DimensionChange"
+            },
+            "title": "Dimensions",
+            "type": "array"
+          },
+          "drivers": {
+            "description": "Largest factor movements, biggest first",
+            "items": {
+              "$ref": "#/components/schemas/ChangeDriver"
+            },
+            "title": "Drivers",
+            "type": "array"
+          },
+          "from_as_of": {
+            "format": "date",
+            "title": "From As Of",
+            "type": "string"
+          },
+          "from_band": {
+            "title": "From Band",
+            "type": "string"
+          },
+          "from_score": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "From Score",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "to_as_of": {
+            "format": "date",
+            "title": "To As Of",
+            "type": "string"
+          },
+          "to_band": {
+            "title": "To Band",
+            "type": "string"
+          },
+          "to_score": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "To Score",
+            "type": "string"
+          }
+        },
+        "required": [
+          "from_as_of",
+          "to_as_of",
+          "from_score",
+          "to_score",
+          "delta",
+          "from_band",
+          "to_band",
+          "dimensions",
+          "drivers",
+          "summary"
+        ],
+        "title": "ScoreChange",
+        "type": "object"
+      },
+      "ScoringModel": {
+        "additionalProperties": false,
+        "properties": {
+          "bands": {
+            "items": {
+              "$ref": "#/components/schemas/BandConfig"
+            },
+            "title": "Bands",
+            "type": "array"
+          },
+          "confidence": {
+            "$ref": "#/components/schemas/ConfidenceConfig"
+          },
+          "dimensions": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/DimensionConfig"
+            },
+            "title": "Dimensions",
+            "type": "object"
+          },
+          "model": {
+            "$ref": "#/components/schemas/ModelInfo"
+          },
+          "sha256": {
+            "default": "",
+            "title": "Sha256",
+            "type": "string"
+          }
+        },
+        "required": [
+          "model",
+          "confidence",
+          "bands",
+          "dimensions"
+        ],
+        "title": "ScoringModel",
         "type": "object"
       },
       "SeriesPoint": {
@@ -892,6 +1850,148 @@
         ]
       }
     },
+    "/api/v1/entities/{entity_id}/passport": {
+      "get": {
+        "operationId": "passport_api_v1_entities__entity_id__passport_get",
+        "parameters": [
+          {
+            "description": "Entity (subject) id",
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "description": "Entity (subject) id",
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Calculate as at the end of this day. Defaults to the end of the data.",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Calculate as at the end of this day. Defaults to the end of the data.",
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Passport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (application/problem+json)"
+          }
+        },
+        "summary": "Financial Passport (prototype financial-health profile, not a credit score)",
+        "tags": [
+          "passport"
+        ]
+      }
+    },
+    "/api/v1/entities/{entity_id}/passport/history": {
+      "get": {
+        "operationId": "history_api_v1_entities__entity_id__passport_history_get",
+        "parameters": [
+          {
+            "description": "Entity (subject) id",
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "description": "Entity (subject) id",
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Calculate as at the end of this day. Defaults to the end of the data.",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Calculate as at the end of this day. Defaults to the end of the data.",
+              "title": "As Of"
+            }
+          },
+          {
+            "description": "Number of points, including as_of",
+            "in": "query",
+            "name": "months",
+            "required": false,
+            "schema": {
+              "default": 12,
+              "description": "Number of points, including as_of",
+              "maximum": 24,
+              "minimum": 1,
+              "title": "Months",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PassportHistory"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (application/problem+json)"
+          }
+        },
+        "summary": "Financial Passport at each month-end, with each change explained",
+        "tags": [
+          "passport"
+        ]
+      }
+    },
     "/api/v1/meta/financial-metrics": {
       "get": {
         "operationId": "metric_catalogue_api_v1_meta_financial_metrics_get",
@@ -923,6 +2023,38 @@
         },
         "summary": "Definitions of every financial metric (methodology)",
         "tags": [
+          "meta"
+        ]
+      }
+    },
+    "/api/v1/meta/passport-model": {
+      "get": {
+        "operationId": "passport_model_api_v1_meta_passport_model_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScoringModel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (application/problem+json)"
+          }
+        },
+        "summary": "The scoring configuration: dimensions, weights, curves, bands, disclaimer",
+        "tags": [
+          "passport",
           "meta"
         ]
       }

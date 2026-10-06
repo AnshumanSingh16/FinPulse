@@ -459,3 +459,88 @@ def test_point_in_time_metrics_need_a_transaction(code: str) -> None:
     book.txn(D(2026, 5, 1), 100, "income.client_payment")
 
     assert metric(book.data(), code, D(2026, 4, 30)).availability == "insufficient_data"
+
+
+# --- metrics added for the Financial Passport -------------------------------------------------
+
+
+def _cash_book() -> Book:
+    """Jan net +500; Feb −500; Mar −200 before a ₹5,000 loan."""
+    book = Book(opening=10_000)
+    book.txn(D(2026, 1, 1), 1000, "income.client_payment")
+    book.txn(D(2026, 1, 10), -500, "expense.rent")
+    book.txn(D(2026, 2, 1), 1000, "income.client_payment")
+    book.txn(D(2026, 2, 10), -1500, "expense.rent")
+    book.txn(D(2026, 3, 1), 5000, "debt.loan_disbursement")
+    book.txn(D(2026, 3, 2), 1000, "income.client_payment")
+    book.txn(D(2026, 3, 10), -1200, "expense.rent")
+    return book
+
+
+def test_cash_positive_months_ignore_borrowing() -> None:
+    m = metric(_cash_book().data(), "cashflow.positive_months", D(2026, 3, 31))
+
+    # March is +4,800 with the loan, −200 without it: only January counts.
+    assert m.value == Decimal("0.3333")
+    assert m.confidence == "medium"  # 3 of the intended 6 months
+    assert m.components["borrowed_in_period"] == Decimal("5000.00")
+
+
+def test_net_cash_margin_excludes_borrowing() -> None:
+    m = metric(_cash_book().data(), "cashflow.net_margin", D(2026, 3, 31))
+
+    assert m.value == Decimal("-0.0667")  # (500 − 500 − 200) ÷ 3,000 received
+
+
+def test_debt_leverage_against_annualised_revenue() -> None:
+    book = Book()
+    lender, customer = book.party("Bank", "lender"), book.party("A")
+    book.loan(lender, 12_000, D(2026, 1, 1))
+    book.txn(D(2026, 1, 1), 12_000, "debt.loan_disbursement", lender)
+    for month in (1, 2, 3):
+        book.invoice(customer, D(2026, month, 10), 1000)
+
+    m = metric(book.data(), "debt.leverage", D(2026, 3, 31))
+
+    assert m.value == Decimal("1.0000")  # 12,000 owed ÷ (3,000 × 4)
+    assert m.components["annualised_revenue"] == Decimal("12000.00")
+
+
+def test_debt_leverage_is_zero_without_loans() -> None:
+    book = Book()
+    book.txn(D(2026, 1, 1), 100, "income.client_payment")
+
+    assert value(book.data(), "debt.leverage", D(2026, 3, 31)) == Decimal("0.0000")
+
+
+def test_new_loans_counts_the_last_183_days() -> None:
+    book = Book()
+    lender = book.party("Bank", "lender")
+    book.txn(D(2026, 1, 1), 100, "income.client_payment")
+    book.loan(lender, 1000, D(2026, 1, 1))  # 211 days before as_of
+    book.loan(lender, 2000, D(2026, 6, 1))
+    book.loan(lender, 9000, D(2026, 8, 15))  # after as_of
+
+    m = metric(book.data(), "debt.new_loans_6m", D(2026, 7, 31))
+
+    assert m.value == Decimal("1")
+    assert m.components["borrowed"] == Decimal("2000.00")
+
+
+def test_overdraft_utilisation_is_the_average_share_drawn() -> None:
+    book = Book(opening=0, overdraft=1000)
+    book.txn(D(2026, 1, 1), -500, "expense.rent")  # 500 drawn every day after
+
+    m = metric(book.data(), "liquidity.overdraft_utilisation", D(2026, 3, 31))
+
+    assert m.value == Decimal("0.5000")
+    assert m.components["days_overdrawn"] == 90
+
+
+def test_overdraft_utilisation_needs_a_facility() -> None:
+    book = Book()
+    book.txn(D(2026, 1, 1), 100, "income.client_payment")
+
+    m = metric(book.data(), "liquidity.overdraft_utilisation", D(2026, 3, 31))
+
+    assert m.availability == "not_applicable"

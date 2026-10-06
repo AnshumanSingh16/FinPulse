@@ -142,7 +142,7 @@ metric definitions are in [docs/FINANCIAL_METRICS.md](docs/FINANCIAL_METRICS.md)
 | Method | Path | Description |
 |---|---|---|
 | GET | `/entities` | Entities in the caller's organisation: `id`, `display_name`, `kind`, `segment`, `data_origin` |
-| GET | `/entities/{entity_id}/financial-metrics` | Full report: `entity`, `as_of`, `currency`, `engine_version`, `coverage`, `metrics[]` (20), `series[]` (monthly revenue, expenses, net cash flow, month-end balance). Optional `?as_of=YYYY-MM-DD` (default: end of the data). |
+| GET | `/entities/{entity_id}/financial-metrics` | Full report: `entity`, `as_of`, `currency`, `engine_version`, `coverage`, `metrics[]` (25), `series[]` (monthly revenue, expenses, net cash flow, month-end balance). Optional `?as_of=YYYY-MM-DD` (default: end of the data). |
 | GET | `/entities/{entity_id}/financial-metrics/{metric_code}` | One metric |
 | GET | `/meta/financial-metrics` | Metric definitions: code, name, family, unit, version, method |
 
@@ -201,6 +201,18 @@ Metric value:
 ```
 
 ### 4.7 Financial Passport
+
+**Implemented (Phase 3), computed per request:**
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/entities/{entity_id}/passport` | Financial Health score, band, confidence, provisional flag; six dimensions with factor-level points, weights, contributions and explanations; strengths and concerns; `change_from_previous_month`; model version and config hash; `disclaimer`. Optional `?as_of=`. |
+| GET | `/entities/{entity_id}/passport/history` | Passport at each month-end, then `as_of` (`?months=1..24`, default 12), with each step's change explained |
+| GET | `/meta/passport-model` | The scoring configuration (dimensions, weights, curves, bands, disclaimer) |
+
+Methodology: [docs/FINANCIAL_PASSPORT.md](docs/FINANCIAL_PASSPORT.md). A prototype financial-health
+profile, **not a credit score**. The run-based endpoints below follow once analysis runs are
+persisted.
 
 | Method | Path | Description |
 |---|---|---|
