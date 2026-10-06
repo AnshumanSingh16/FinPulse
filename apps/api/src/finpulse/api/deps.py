@@ -9,6 +9,7 @@ from typing import Annotated
 from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
+from finpulse.agents.llm import AnthropicLLM, LLMClient
 from finpulse.config import Settings
 from finpulse.persistence.db import session_scope
 from finpulse.persistence.repositories.financial_data import (
@@ -43,8 +44,19 @@ def get_financial_data_source(request: Request) -> FinancialDataSource:
     return PostgresFinancialDataSource(request.app.state.db_engine)
 
 
+def get_llm_client(request: Request) -> LLMClient:
+    """One Claude client per app (it holds a connection pool), created on first use so the
+    deterministic API never needs AI credentials."""
+    llm: LLMClient | None = getattr(request.app.state, "llm", None)
+    if llm is None:
+        llm = AnthropicLLM(request.app.state.settings)
+        request.app.state.llm = llm
+    return llm
+
+
 SettingsDep = Annotated[Settings, Depends(get_app_settings)]
 EngineDep = Annotated[AsyncEngine, Depends(get_engine)]
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 OrgDep = Annotated[uuid.UUID, Depends(get_current_org_id)]
 DataSourceDep = Annotated[FinancialDataSource, Depends(get_financial_data_source)]
+LLMDep = Annotated[LLMClient, Depends(get_llm_client)]

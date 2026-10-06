@@ -65,3 +65,17 @@ class DependencyUnavailableError(AppError):
     status = 503
     code = "dependency_unavailable"
     title = "Dependency unavailable"
+
+
+class UpstreamLLMError(AppError):
+    """The language model could not produce a usable answer (unavailable, refused, invalid)."""
+
+    status = 502
+    code = "llm_error"
+    title = "AI layer error"
+
+
+class LLMUnavailableError(UpstreamLLMError):
+    status = 503
+    code = "llm_unavailable"
+    title = "AI layer unavailable"

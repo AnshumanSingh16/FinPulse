@@ -11,7 +11,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Annotated, Literal
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -50,6 +50,20 @@ class Settings(BaseSettings):
     database_connect_timeout_s: float = Field(
         default=3.0, gt=0, le=30, validation_alias="DATABASE_CONNECT_TIMEOUT_S"
     )
+
+    # --- AI agents (Claude). Optional: without credentials the deterministic API works and the
+    # agent endpoints answer 503 llm_unavailable. The key is never logged or returned.
+    anthropic_api_key: SecretStr | None = Field(default=None, validation_alias="ANTHROPIC_API_KEY")
+    llm_model: str = Field(default="claude-opus-5-5", validation_alias="LLM_MODEL")
+    llm_effort: Literal["low", "medium", "high", "xhigh", "max"] = Field(
+        default="high", validation_alias="LLM_EFFORT"
+    )
+    llm_max_tokens: int = Field(default=16000, ge=1024, le=64000, validation_alias="LLM_MAX_TOKENS")
+    llm_timeout_s: float = Field(default=300.0, gt=0, le=1800, validation_alias="LLM_TIMEOUT_S")
+    llm_max_retries: int = Field(default=2, ge=0, le=10, validation_alias="LLM_MAX_RETRIES")
+    # Server-side refusal fallback (Claude API only): a declined request is retried on the model
+    # Anthropic recommends for the refusal category.
+    llm_refusal_fallback: bool = Field(default=True, validation_alias="LLM_REFUSAL_FALLBACK")
 
     @field_validator("cors_allowed_origins", mode="before")
     @classmethod

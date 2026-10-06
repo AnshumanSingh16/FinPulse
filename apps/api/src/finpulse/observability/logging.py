@@ -29,6 +29,8 @@ SENSITIVE_KEYS = frozenset(
         "token",
         "api_key",
         "llm_api_key",
+        "anthropic_api_key",
+        "x-api-key",
         "database_url",
         "description",
         "counterparty_name",

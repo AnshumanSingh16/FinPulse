@@ -36,6 +36,15 @@ export type RiskSummary = Schemas["RiskSummary"];
 export type RiskTimelinePoint = Schemas["TimelinePoint"];
 export type EarlyWarningRuleCatalogue = Schemas["RuleCatalogue"];
 
+export type EvidencePack = Schemas["EvidencePack"];
+export type EvidenceItem = Schemas["EvidenceItem"];
+export type IntelligenceReport = Schemas["IntelligenceReport"];
+export type AgentRun = Schemas["AgentRun"];
+export type AgentClaim = Schemas["RegisteredClaim"];
+export type VerificationReport = Schemas["VerificationReport"];
+export type AgentInfo = Schemas["AgentInfo"];
+export type SingleAgentResponse = Schemas["SingleAgentResponse"];
+
 export type StressTestRequest = Schemas["StressTestRequest"];
 export type StressTestResult = Schemas["StressTestResult"];
 export type StressProjection = Schemas["Projection"];

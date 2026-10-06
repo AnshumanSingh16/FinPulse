@@ -21,6 +21,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/entities/{entity_id}/agents/{agent_name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run one agent (and any agents whose findings it needs) */
+        post: operations["run_one_api_v1_entities__entity_id__agents__agent_name__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/entities/{entity_id}/evidence-pack": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The verified evidence the agents read (deterministic; no AI involved) */
+        get: operations["evidence_pack_api_v1_entities__entity_id__evidence_pack_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/entities/{entity_id}/financial-metrics": {
         parameters: {
             query?: never;
@@ -49,6 +83,23 @@ export interface paths {
         get: operations["financial_metric_api_v1_entities__entity_id__financial_metrics__metric_code__get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/entities/{entity_id}/intelligence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run all seven agents and return the verified intelligence report */
+        post: operations["intelligence_api_v1_entities__entity_id__intelligence_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -135,6 +186,23 @@ export interface paths {
         };
         /** Early-warning signals detected by deterministic rules */
         get: operations["warnings_api_v1_entities__entity_id__warnings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/meta/agents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The agents, their dependencies, prompt versions and output schemas */
+        get: operations["agent_catalogue_api_v1_meta_agents_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -249,6 +317,76 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AgentErrorInfo */
+        AgentErrorInfo: {
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+        };
+        /** AgentInfo */
+        AgentInfo: {
+            /** Depends On */
+            depends_on: string[];
+            /** Name */
+            name: string;
+            /** Output Schema */
+            output_schema: {
+                [key: string]: unknown;
+            };
+            /** Prompt Version */
+            prompt_version: string;
+            /** Purpose */
+            purpose: string;
+            /** Title */
+            title: string;
+        };
+        /** AgentRequest */
+        AgentRequest: {
+            /**
+             * As Of
+             * @description Defaults to the end of the data
+             */
+            as_of?: string | null;
+        };
+        /** AgentRun */
+        AgentRun: {
+            /** Agent */
+            agent: string;
+            /**
+             * Attempts
+             * @default 0
+             */
+            attempts: number;
+            /** Claims */
+            claims?: components["schemas"]["RegisteredClaim"][];
+            error?: components["schemas"]["AgentErrorInfo"] | null;
+            /**
+             * Evidence Items
+             * @description Number of evidence items the agent was given
+             */
+            evidence_items: number;
+            /** Model */
+            model?: string | null;
+            /**
+             * Output
+             * @description The agent's verified output
+             */
+            output: {
+                [key: string]: unknown;
+            } | null;
+            /** Prompt Version */
+            prompt_version: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "succeeded" | "failed" | "skipped";
+            /** Title */
+            title: string;
+            usage?: components["schemas"]["Usage"];
+            verification?: components["schemas"]["VerificationReport"] | null;
+        };
         /** AppliedShock */
         AppliedShock: {
             /** Description */
@@ -614,6 +752,59 @@ export interface components {
                 [key: string]: string | number | null;
             };
         };
+        /** EvidenceItem */
+        EvidenceItem: {
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "fact" | "calculated_metric" | "forecast" | "assumption";
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "data" | "analytics" | "passport" | "early_warning" | "stress";
+            /**
+             * Tags
+             * @description For selecting items per agent
+             */
+            tags?: string[];
+            /**
+             * Text
+             * @description A deterministic statement of the item, numbers as displayed
+             */
+            text: string;
+            /** Title */
+            title: string;
+            /** Values */
+            values?: {
+                [key: string]: string | number | boolean | null;
+            };
+        };
+        /** EvidencePack */
+        EvidencePack: {
+            /**
+             * As Of
+             * Format: date
+             */
+            as_of: string;
+            /** Engine Versions */
+            engine_versions: {
+                [key: string]: string;
+            };
+            entity: components["schemas"]["EntityRef"];
+            /** Items */
+            items: components["schemas"]["EvidenceItem"][];
+            /** Pack Version */
+            pack_version: string;
+            /**
+             * Sha256
+             * @description Hash of the items: identical inputs give identical packs
+             */
+            sha256: string;
+        };
         /** FactorConfig */
         FactorConfig: {
             /** Breakpoints */
@@ -815,6 +1006,53 @@ export interface components {
             provisional: boolean;
             /** Score */
             score: string | null;
+        };
+        /** IntelligenceReport */
+        IntelligenceReport: {
+            /** Agents */
+            agents: {
+                [key: string]: components["schemas"]["AgentRun"];
+            };
+            /**
+             * As Of
+             * Format: date
+             */
+            as_of: string;
+            /** Disclaimer */
+            disclaimer: string;
+            entity: components["schemas"]["EntityRef"];
+            /** Evidence Items */
+            evidence_items: number;
+            /** Evidence Pack Sha256 */
+            evidence_pack_sha256: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "complete" | "partial" | "failed";
+            /**
+             * Synthesis
+             * @description The Senior Financial Intelligence Agent's verified synthesis
+             */
+            synthesis: {
+                [key: string]: unknown;
+            } | null;
+            usage: components["schemas"]["Usage"];
+        };
+        /** Issue */
+        Issue: {
+            /**
+             * Code
+             * @enum {string}
+             */
+            code: "unknown_evidence_id" | "missing_citation" | "type_not_supported" | "unsupported_number" | "wrong_section_type" | "unknown_claim_id" | "wrong_reference_kind";
+            /** Detail */
+            detail: string;
+            /**
+             * Path
+             * @description Where in the output, e.g. "weaknesses[1].statement"
+             */
+            path: string;
         };
         /** Metric */
         Metric: {
@@ -1137,6 +1375,32 @@ export interface components {
              */
             status: "ready" | "not_ready";
         };
+        /** RegisteredClaim */
+        RegisteredClaim: {
+            /** Agent */
+            agent: string;
+            /**
+             * Claim Id
+             * @description Stable within a run, e.g. "RSK-03"
+             */
+            claim_id: string;
+            /**
+             * Confidence
+             * @enum {string}
+             */
+            confidence: "high" | "medium" | "low";
+            /** Evidence Ids */
+            evidence_ids: string[];
+            /** Path */
+            path: string;
+            /** Statement */
+            statement: string;
+            /**
+             * Statement Type
+             * @enum {string}
+             */
+            statement_type: "FACT" | "CALCULATED_METRIC" | "FORECAST" | "ASSUMPTION" | "AI_INTERPRETATION";
+        };
         /** RiskAssessment */
         RiskAssessment: {
             /** Label */
@@ -1407,6 +1671,17 @@ export interface components {
             /** Type */
             type: string;
         };
+        /** SingleAgentResponse */
+        SingleAgentResponse: {
+            /**
+             * Dependencies
+             * @description Upstream agents that had to run first (the red team and the senior agent work from the analysts' verified findings)
+             */
+            dependencies: {
+                [key: string]: components["schemas"]["AgentRun"];
+            };
+            result: components["schemas"]["AgentRun"];
+        };
         /**
          * SourceRef
          * @description Which records a value was computed from.
@@ -1549,6 +1824,48 @@ export interface components {
             level: "none" | "low" | "medium" | "high" | "critical";
             /** Rules */
             rules: string[];
+        };
+        /** Usage */
+        Usage: {
+            /**
+             * Calls
+             * @default 0
+             */
+            calls: number;
+            /**
+             * Input Tokens
+             * @default 0
+             */
+            input_tokens: number;
+            /**
+             * Output Tokens
+             * @default 0
+             */
+            output_tokens: number;
+        };
+        /** VerificationReport */
+        VerificationReport: {
+            /**
+             * Attempts Issues
+             * @description Issues found at each attempt, for audit
+             */
+            attempts_issues?: components["schemas"]["Issue"][][];
+            /** Claims Checked */
+            claims_checked: number;
+            /**
+             * Issues
+             * @description Issues in the final output (empty when passed)
+             */
+            issues: components["schemas"]["Issue"][];
+            /** Numbers Checked */
+            numbers_checked: number;
+            /** Passed */
+            passed: boolean;
+            /**
+             * Pruned
+             * @description Statements removed because they still failed after the repair attempts
+             */
+            pruned?: string[];
         };
         /** WarningBrief */
         WarningBrief: {
@@ -1809,6 +2126,79 @@ export interface operations {
             };
         };
     };
+    run_one_api_v1_entities__entity_id__agents__agent_name__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Entity (subject) id */
+                entity_id: string;
+                /** @description e.g. "risk_investigation" */
+                agent_name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AgentRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SingleAgentResponse"];
+                };
+            };
+            /** @description Error (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    evidence_pack_api_v1_entities__entity_id__evidence_pack_get: {
+        parameters: {
+            query?: {
+                /** @description Calculate as at the end of this day. Defaults to the end of the data. */
+                as_of?: string | null;
+            };
+            header?: never;
+            path: {
+                /** @description Entity (subject) id */
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvidencePack"];
+                };
+            };
+            /** @description Error (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     financial_metrics_api_v1_entities__entity_id__financial_metrics_get: {
         parameters: {
             query?: {
@@ -1868,6 +2258,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Metric"];
+                };
+            };
+            /** @description Error (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    intelligence_api_v1_entities__entity_id__intelligence_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Entity (subject) id */
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AgentRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntelligenceReport"];
                 };
             };
             /** @description Error (application/problem+json) */
@@ -2050,6 +2476,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WarningsReport"];
+                };
+            };
+            /** @description Error (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    agent_catalogue_api_v1_meta_agents_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentInfo"][];
                 };
             };
             /** @description Error (application/problem+json) */

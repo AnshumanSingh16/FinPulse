@@ -249,6 +249,26 @@ conversions like ratio↔percent); evidence pack determinism.
 **Exit criteria**: verifier catches 100% of the adversarial suite; tools return only scoped,
 ID-bearing evidence.
 
+**Progress (Phases 7 and 8, first part)**
+- Done:
+  - A deterministic evidence pack (about 150 hashed, citable items across every engine).
+  - A Claude adapter: official SDK, structured outputs, adaptive thinking, refusal fallback,
+    and typed error mapping.
+  - A deterministic verifier: citations, statement types, every number checked against the
+    cited evidence with display rounding but no arithmetic, sections and references.
+  - A repair loop with pruning.
+  - Seven agents: Financial Profile, Credit Intelligence, Early Warning Investigation, Risk
+    Investigation, Stress-Test Interpretation, Red Team and Senior Financial Intelligence.
+  - An orchestrator: analysts in parallel, then the red team, then the senior agent.
+  - Endpoints for the evidence pack, the intelligence report, single agents and the agent
+    catalogue.
+  - Tests with a scripted model. See [docs/AI_AGENTS.md](docs/AI_AGENTS.md).
+- Deferred:
+  - Running and tuning the prompts against the live model.
+  - Read-only agent tools.
+  - Persisted investigations, background execution, SSE and budgets.
+  - The recorded-response replay fixtures.
+
 ## Phase 8 — Agents & orchestration
 
 **Build**

@@ -7,16 +7,20 @@ history.
 > trustworthy, and detect if their financial health is deteriorating before a traditional credit
 > system would?
 
-**Status: deterministic core complete.** The platform foundation is in place, along with:
+**Status: deterministic core and AI agent layer built.** The platform foundation is in place,
+along with:
 
 - a deterministic synthetic-data layer: five fictional entities, led by the demo business
   **Sharma Electricals**;
 - an analytics engine with 25 financial metrics;
 - the **Financial Passport**: six dimensions and a prototype Financial Health score;
 - the **early-warning engine**: 18 configurable rules that detect deterioration;
-- the **stress-testing engine**: cash projections under ten scenarios.
+- the **stress-testing engine**: cash projections under ten scenarios;
+- the **AI agent layer**: seven Claude agents that interpret those verified results, every
+  claim cited and every number checked by a deterministic verifier.
 
-AI agents are not built yet — see [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md).
+The agents need an `ANTHROPIC_API_KEY`; everything else runs without one. Plan and progress:
+[DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md).
 
 ## Core principle
 
@@ -34,7 +38,7 @@ packages/contracts/   Shared API contract: OpenAPI exported from FastAPI + gener
 infra/                docker-compose for local PostgreSQL
 scripts/              dev helpers (run API + web together, db init/seed/reset)
 docs/                 SYNTHETIC_DATA.md · FINANCIAL_METRICS.md · FINANCIAL_PASSPORT.md ·
-                      EARLY_WARNING.md · STRESS_TESTING.md
+                      EARLY_WARNING.md · STRESS_TESTING.md · AI_AGENTS.md
 ```
 
 Details: [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md).
@@ -199,6 +203,31 @@ Sharma Electricals, revenue −20%, 6 months from 30 Sep 2026
 ```
 
 See [docs/STRESS_TESTING.md](docs/STRESS_TESTING.md) for the methodology and how to add scenarios.
+
+## AI agents
+
+> AI interpretation of deterministic results. Agents never calculate; every number they state
+> must appear in the evidence they cite.
+
+```
+GET  /api/v1/entities/{entity_id}/evidence-pack      what the agents may use (no AI)
+POST /api/v1/entities/{entity_id}/intelligence       all seven agents → verified report
+POST /api/v1/entities/{entity_id}/agents/{agent}     one agent (+ its dependencies)
+```
+
+There are seven agents:
+
+- **Financial Profile**, **Credit Intelligence**, **Early Warning Investigation**, **Risk
+  Investigation** and **Stress-Test Interpretation** run in parallel.
+- A **Red Team** then challenges their verified conclusions.
+- A **Senior Financial Intelligence** agent writes the final report. It separates **FACT**,
+  **CALCULATED METRIC**, **FORECAST**, **ASSUMPTION** and **AI INTERPRETATION**, and cites
+  evidence ids for every claim.
+
+A deterministic verifier checks every claim's citations, type and numbers. Arithmetic such as a
+difference of two cited figures is rejected. A failing claim is sent back for repair, then
+dropped. Set `ANTHROPIC_API_KEY` (model `claude-opus-5-5` by default) to enable them. See
+[docs/AI_AGENTS.md](docs/AI_AGENTS.md).
 
 ## How the frontend talks to the backend
 

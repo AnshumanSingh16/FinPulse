@@ -1,6 +1,185 @@
 {
   "components": {
     "schemas": {
+      "AgentErrorInfo": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "AgentErrorInfo",
+        "type": "object"
+      },
+      "AgentInfo": {
+        "properties": {
+          "depends_on": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Depends On",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "output_schema": {
+            "additionalProperties": true,
+            "title": "Output Schema",
+            "type": "object"
+          },
+          "prompt_version": {
+            "title": "Prompt Version",
+            "type": "string"
+          },
+          "purpose": {
+            "title": "Purpose",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "title",
+          "purpose",
+          "depends_on",
+          "prompt_version",
+          "output_schema"
+        ],
+        "title": "AgentInfo",
+        "type": "object"
+      },
+      "AgentRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Defaults to the end of the data",
+            "title": "As Of"
+          }
+        },
+        "title": "AgentRequest",
+        "type": "object"
+      },
+      "AgentRun": {
+        "properties": {
+          "agent": {
+            "title": "Agent",
+            "type": "string"
+          },
+          "attempts": {
+            "default": 0,
+            "title": "Attempts",
+            "type": "integer"
+          },
+          "claims": {
+            "items": {
+              "$ref": "#/components/schemas/RegisteredClaim"
+            },
+            "title": "Claims",
+            "type": "array"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentErrorInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "evidence_items": {
+            "description": "Number of evidence items the agent was given",
+            "title": "Evidence Items",
+            "type": "integer"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "output": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The agent's verified output",
+            "title": "Output"
+          },
+          "prompt_version": {
+            "title": "Prompt Version",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "succeeded",
+              "failed",
+              "skipped"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/Usage"
+          },
+          "verification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VerificationReport"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "agent",
+          "title",
+          "status",
+          "output",
+          "prompt_version",
+          "evidence_items"
+        ],
+        "title": "AgentRun",
+        "type": "object"
+      },
       "AppliedShock": {
         "properties": {
           "description": {
@@ -1003,6 +1182,130 @@
         "title": "Evidence",
         "type": "object"
       },
+      "EvidenceItem": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "fact",
+              "calculated_metric",
+              "forecast",
+              "assumption"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "data",
+              "analytics",
+              "passport",
+              "early_warning",
+              "stress"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "tags": {
+            "description": "For selecting items per agent",
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "text": {
+            "description": "A deterministic statement of the item, numbers as displayed",
+            "title": "Text",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "values": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Values",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "source",
+          "title",
+          "text"
+        ],
+        "title": "EvidenceItem",
+        "type": "object"
+      },
+      "EvidencePack": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "engine_versions": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Engine Versions",
+            "type": "object"
+          },
+          "entity": {
+            "$ref": "#/components/schemas/EntityRef"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "pack_version": {
+            "title": "Pack Version",
+            "type": "string"
+          },
+          "sha256": {
+            "description": "Hash of the items: identical inputs give identical packs",
+            "title": "Sha256",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entity",
+          "as_of",
+          "pack_version",
+          "engine_versions",
+          "sha256",
+          "items"
+        ],
+        "title": "EvidencePack",
+        "type": "object"
+      },
       "FactorConfig": {
         "additionalProperties": false,
         "properties": {
@@ -1563,6 +1866,108 @@
           "dimensions"
         ],
         "title": "HistoryPoint",
+        "type": "object"
+      },
+      "IntelligenceReport": {
+        "properties": {
+          "agents": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/AgentRun"
+            },
+            "title": "Agents",
+            "type": "object"
+          },
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "disclaimer": {
+            "title": "Disclaimer",
+            "type": "string"
+          },
+          "entity": {
+            "$ref": "#/components/schemas/EntityRef"
+          },
+          "evidence_items": {
+            "title": "Evidence Items",
+            "type": "integer"
+          },
+          "evidence_pack_sha256": {
+            "title": "Evidence Pack Sha256",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "complete",
+              "partial",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "synthesis": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The Senior Financial Intelligence Agent's verified synthesis",
+            "title": "Synthesis"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/Usage"
+          }
+        },
+        "required": [
+          "entity",
+          "as_of",
+          "status",
+          "evidence_pack_sha256",
+          "evidence_items",
+          "agents",
+          "synthesis",
+          "usage",
+          "disclaimer"
+        ],
+        "title": "IntelligenceReport",
+        "type": "object"
+      },
+      "Issue": {
+        "properties": {
+          "code": {
+            "enum": [
+              "unknown_evidence_id",
+              "missing_citation",
+              "type_not_supported",
+              "unsupported_number",
+              "wrong_section_type",
+              "unknown_claim_id",
+              "wrong_reference_kind"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "path": {
+            "description": "Where in the output, e.g. \"weaknesses[1].statement\"",
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "code",
+          "detail"
+        ],
+        "title": "Issue",
         "type": "object"
       },
       "Metric": {
@@ -2349,6 +2754,65 @@
         "title": "ReadinessResponse",
         "type": "object"
       },
+      "RegisteredClaim": {
+        "properties": {
+          "agent": {
+            "title": "Agent",
+            "type": "string"
+          },
+          "claim_id": {
+            "description": "Stable within a run, e.g. \"RSK-03\"",
+            "title": "Claim Id",
+            "type": "string"
+          },
+          "confidence": {
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ],
+            "title": "Confidence",
+            "type": "string"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "statement": {
+            "title": "Statement",
+            "type": "string"
+          },
+          "statement_type": {
+            "enum": [
+              "FACT",
+              "CALCULATED_METRIC",
+              "FORECAST",
+              "ASSUMPTION",
+              "AI_INTERPRETATION"
+            ],
+            "title": "Statement Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "claim_id",
+          "agent",
+          "path",
+          "statement",
+          "statement_type",
+          "evidence_ids",
+          "confidence"
+        ],
+        "title": "RegisteredClaim",
+        "type": "object"
+      },
       "RiskAssessment": {
         "properties": {
           "label": {
@@ -3038,6 +3502,27 @@
         "title": "ShockTypeOut",
         "type": "object"
       },
+      "SingleAgentResponse": {
+        "properties": {
+          "dependencies": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/AgentRun"
+            },
+            "description": "Upstream agents that had to run first (the red team and the senior agent work from the analysts' verified findings)",
+            "title": "Dependencies",
+            "type": "object"
+          },
+          "result": {
+            "$ref": "#/components/schemas/AgentRun"
+          }
+        },
+        "required": [
+          "result",
+          "dependencies"
+        ],
+        "title": "SingleAgentResponse",
+        "type": "object"
+      },
       "SourceRef": {
         "description": "Which records a value was computed from.",
         "properties": {
@@ -3384,6 +3869,78 @@
           "rules"
         ],
         "title": "TimelinePoint",
+        "type": "object"
+      },
+      "Usage": {
+        "properties": {
+          "calls": {
+            "default": 0,
+            "title": "Calls",
+            "type": "integer"
+          },
+          "input_tokens": {
+            "default": 0,
+            "title": "Input Tokens",
+            "type": "integer"
+          },
+          "output_tokens": {
+            "default": 0,
+            "title": "Output Tokens",
+            "type": "integer"
+          }
+        },
+        "title": "Usage",
+        "type": "object"
+      },
+      "VerificationReport": {
+        "properties": {
+          "attempts_issues": {
+            "description": "Issues found at each attempt, for audit",
+            "items": {
+              "items": {
+                "$ref": "#/components/schemas/Issue"
+              },
+              "type": "array"
+            },
+            "title": "Attempts Issues",
+            "type": "array"
+          },
+          "claims_checked": {
+            "title": "Claims Checked",
+            "type": "integer"
+          },
+          "issues": {
+            "description": "Issues in the final output (empty when passed)",
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "numbers_checked": {
+            "title": "Numbers Checked",
+            "type": "integer"
+          },
+          "passed": {
+            "title": "Passed",
+            "type": "boolean"
+          },
+          "pruned": {
+            "description": "Statements removed because they still failed after the repair attempts",
+            "items": {
+              "type": "string"
+            },
+            "title": "Pruned",
+            "type": "array"
+          }
+        },
+        "required": [
+          "passed",
+          "claims_checked",
+          "numbers_checked",
+          "issues"
+        ],
+        "title": "VerificationReport",
         "type": "object"
       },
       "WarningBrief": {
@@ -3922,6 +4479,143 @@
         ]
       }
     },
+    "/api/v1/entities/{entity_id}/agents/{agent_name}": {
+      "post": {
+        "operationId": "run_one_api_v1_entities__entity_id__agents__agent_name__post",
+        "parameters": [
+          {
+            "description": "Entity (subject) id",
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "description": "Entity (subject) id",
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "e.g. \"risk_investigation\"",
+            "in": "path",
+            "name": "agent_name",
+            "required": true,
+            "schema": {
+              "description": "e.g. \"risk_investigation\"",
+              "title": "Agent Name",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/AgentRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Request"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleAgentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (application/problem+json)"
+          }
+        },
+        "summary": "Run one agent (and any agents whose findings it needs)",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/api/v1/entities/{entity_id}/evidence-pack": {
+      "get": {
+        "operationId": "evidence_pack_api_v1_entities__entity_id__evidence_pack_get",
+        "parameters": [
+          {
+            "description": "Entity (subject) id",
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "description": "Entity (subject) id",
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Calculate as at the end of this day. Defaults to the end of the data.",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Calculate as at the end of this day. Defaults to the end of the data.",
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidencePack"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (application/problem+json)"
+          }
+        },
+        "summary": "The verified evidence the agents read (deterministic; no AI involved)",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
     "/api/v1/entities/{entity_id}/financial-metrics": {
       "get": {
         "operationId": "financial_metrics_api_v1_entities__entity_id__financial_metrics_get",
@@ -4058,6 +4752,68 @@
         "summary": "One financial metric for an entity",
         "tags": [
           "analytics"
+        ]
+      }
+    },
+    "/api/v1/entities/{entity_id}/intelligence": {
+      "post": {
+        "operationId": "intelligence_api_v1_entities__entity_id__intelligence_post",
+        "parameters": [
+          {
+            "description": "Entity (subject) id",
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "description": "Entity (subject) id",
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/AgentRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Request"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (application/problem+json)"
+          }
+        },
+        "summary": "Run all seven agents and return the verified intelligence report",
+        "tags": [
+          "agents"
         ]
       }
     },
@@ -4437,6 +5193,42 @@
         "summary": "Early-warning signals detected by deterministic rules",
         "tags": [
           "early-warning"
+        ]
+      }
+    },
+    "/api/v1/meta/agents": {
+      "get": {
+        "operationId": "agent_catalogue_api_v1_meta_agents_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AgentInfo"
+                  },
+                  "title": "Response Agent Catalogue Api V1 Meta Agents Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (application/problem+json)"
+          }
+        },
+        "summary": "The agents, their dependencies, prompt versions and output schemas",
+        "tags": [
+          "agents",
+          "meta"
         ]
       }
     },

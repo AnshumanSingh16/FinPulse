@@ -446,6 +446,19 @@ validity.
 
 ## 10. Agent architecture
 
+> **As built (first part)** — see [docs/AI_AGENTS.md](docs/AI_AGENTS.md).
+>
+> - **Agents.** Seven agents: Financial Profile, Credit Intelligence, Early Warning
+>   Investigation, Risk Investigation, Stress-Test Interpretation, Red Team and Senior Financial
+>   Intelligence.
+> - **Input.** Each reads a subset of a deterministic, hashed evidence pack instead of calling
+>   tools.
+> - **Output.** Each returns Pydantic-schema JSON. Every claim carries a statement type (FACT /
+>   CALCULATED_METRIC / FORECAST / ASSUMPTION / AI_INTERPRETATION) and evidence ids.
+> - **Verification.** A deterministic verifier rejects any number not in the cited evidence. A
+>   repair loop and pruning follow; the verifier is the guarantee (R4).
+> - **Not built yet.** The tool loop, persistence and asynchronous execution described below.
+
 ### 10.1 Design stance
 
 - **Custom, small orchestration layer** — no LangChain/LangGraph/CrewAI/AutoGen. The workflow is a

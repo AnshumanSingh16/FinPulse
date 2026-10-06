@@ -313,6 +313,18 @@ The run-based design below (persisted runs, Monte Carlo paths) follows later.
 
 ### 4.10 Investigations (agents)
 
+**Implemented (Phases 7–8, first part), synchronous:**
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/entities/{entity_id}/evidence-pack` | The verified evidence the agents read: citable items of kind fact, calculated_metric, forecast or assumption. Deterministic (no AI). Optional `?as_of=` |
+| POST | `/entities/{entity_id}/intelligence` | Runs all seven agents. Returns an `IntelligenceReport`: each agent's verified output, claims, verification report, errors and usage, plus the senior synthesis separated into FACT / CALCULATED_METRIC / FORECAST / ASSUMPTION / AI_INTERPRETATION. Body `{"as_of"?}` |
+| POST | `/entities/{entity_id}/agents/{agent_name}` | One agent, plus the agents whose findings it needs. `404 agent_not_found` |
+| GET | `/meta/agents` | Agents, dependencies, prompt versions, output schemas |
+
+`503 llm_unavailable` when no model is configured or reachable. Methodology:
+[docs/AI_AGENTS.md](docs/AI_AGENTS.md). The persisted, asynchronous investigations below follow.
+
 | Method | Path | Description |
 |---|---|---|
 | POST | `/subjects/{id}/investigations` | Start. `412 analysis_required` without a succeeded analysis. |

@@ -117,12 +117,15 @@ apps/api/
 │   │   ├── replay.py             # record/replay adapter for tests
 │   │   └── retry.py
 │   │
-│   ├── agents/
-│   │   ├── schemas.py            # Claim, Findings, DraftReport, Challenges, Rebuttal
-│   │   ├── specs.py              # AgentSpec registry (role, prompt, tools, output schema, budget)
-│   │   ├── runner.py             # tool-use loop, repair attempt, budget enforcement
-│   │   ├── prompts/<agent>/v1.md
-│   │   └── tools/                # read-only tools; each = args model + handler + scope guard
+│   ├── agents/                   # AI layer (see docs/AI_AGENTS.md)
+│   │   ├── evidence.py           # deterministic evidence pack: citable, typed, hashed items
+│   │   ├── numbers.py · verifier.py  # number reading; claim verification, pruning
+│   │   ├── llm.py                # LLMClient protocol; Claude adapter (structured outputs)
+│   │   ├── schemas.py            # Claim + each agent's output; AgentRun, IntelligenceReport
+│   │   ├── prompts.py            # shared rules + one role prompt per agent
+│   │   ├── base.py               # AgentSpec, run_agent: verify → repair → prune
+│   │   ├── catalogue.py          # the seven AgentSpecs
+│   │   └── orchestrator.py       # analysts ∥ → red team → senior synthesis
 │   │
 │   ├── orchestration/
 │   │   ├── workflow.py           # Phase/StepSpec definitions; investigation_v1
