@@ -1,0 +1,28 @@
+# env — only .env.example is committed
+.env
+.env.*
+!.env.example
+
+# node
+node_modules/
+.next/
+next-env.d.ts
+*.tsbuildinfo
+coverage/
+
+# python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# editors / os
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json

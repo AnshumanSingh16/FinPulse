@@ -12,11 +12,12 @@ finpulse/
 ├── docs/
 │   ├── adr/                      # one file per architecture decision (0001-custom-orchestration.md …)
 │   └── methodology/              # generated from the registries (metrics, scoring, rules, scenarios)
-├── contracts/
-│   └── openapi.json              # exported from FastAPI; source for frontend types
 ├── apps/
 │   ├── api/                      # Python backend + worker (one package, two entrypoints)
 │   └── web/                      # Next.js frontend
+├── packages/
+│   └── contracts/                # @finpulse/contracts: openapi.json exported from FastAPI +
+│                                 # schema.gen.ts generated from it (shared API types)
 ├── infra/
 │   ├── docker-compose.yml        # postgres, api, worker, web
 │   └── postgres/init.sql         # pgcrypto; local roles
@@ -193,9 +194,10 @@ apps/web/
 │   │       ├── subjects/ · portfolio/ · methodology/
 │   ├── lib/
 │   │   ├── api/
-│   │   │   ├── schema.d.ts                     # GENERATED from contracts/openapi.json
-│   │   │   ├── client.ts                       # typed fetch, auth header, problem+json → ApiError
-│   │   │   └── server.ts                       # server-component helpers
+│   │   │   ├── client.ts                       # openapi-fetch + @finpulse/contracts types, unwrap()
+│   │   │   ├── errors.ts                       # problem+json / network failure → ApiError
+│   │   │   ├── server.ts                       # client for Server Components (FINPULSE_API_URL)
+│   │   │   └── browser.ts                      # client for Client Components (NEXT_PUBLIC_API_URL)
 │   │   ├── format/                             # money, percent, date, score band
 │   │   ├── hooks/                              # useJob, useInvestigationEvents (SSE)
 │   │   └── auth/                               # Supabase session helpers
@@ -226,6 +228,6 @@ apps/web/
 | Architecture lint | `import-linter` |
 | Tests | `pytest`, `pytest-asyncio`, `hypothesis`, `syrupy` (snapshots) |
 | JS | `npm`, ESLint, `tsc --noEmit`, Vitest, Playwright |
-| Contracts | `openapi-typescript` |
+| Contracts | `openapi-typescript`, `openapi-fetch` |
 | Local stack | Docker Compose |
 | CI | GitHub Actions: lint → typecheck → unit/property → integration (Postgres service) → evaluation gates → web build → e2e (replay LLM) |

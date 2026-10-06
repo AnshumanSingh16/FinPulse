@@ -52,6 +52,17 @@ alongside Phase 2 using the generated OpenAPI types (pages land as their endpoin
 **Exit criteria**: `make dev` brings up the stack; logged-in user sees an empty shell; CI green;
 error responses match `API_SPEC §3` (tested).
 
+**Progress**
+- Done: monorepo (npm workspaces + uv), shared `@finpulse/contracts` package with OpenAPI
+  export and generated types, `Settings` from one root `.env`, structlog logging with request IDs
+  and redaction, problem+json errors, `/health` and `/ready` (database check), async SQLAlchemy
+  engine + Alembic (no tables yet), typed web API client, dashboard shell with live
+  connectivity checks, docker-compose Postgres, CI (lint, format, types, tests incl. Postgres,
+  build, contract drift).
+- Remaining: Supabase Auth (JWT verification, `/me`, login page), Alembic baseline tables
+  (`organizations`, `users`, `jobs`, `audit_events`), containerised api/worker/web in compose,
+  import-linter contract (added with the first pure engine package in Phase 1).
+
 ## Phase 1 — Domain & synthetic data
 
 **Build**

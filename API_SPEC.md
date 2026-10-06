@@ -2,7 +2,7 @@
 
 > Status: **design, not implemented.** This is the contract the FastAPI backend will expose and
 > the Next.js frontend will consume. Once built, the generated OpenAPI document
-> (`contracts/openapi.json`) is authoritative and this file describes intent and conventions.
+> (`packages/contracts/openapi.json`) is authoritative and this file describes intent and conventions.
 
 ## 1. Boundaries
 
@@ -21,7 +21,9 @@ Browser ──▶ Next.js (apps/web) ──▶ FastAPI /api/v1 ──▶ engines
 
 ## 2. Conventions
 
-- **Base path:** `/api/v1`. Breaking changes → `/api/v2`.
+- **Base path:** `/api/v1` for all business endpoints. Breaking changes → `/api/v2`.
+  Operational probes (`/health`, `/ready`) are unversioned at the root so infrastructure can
+  reach them without knowing the API version.
 - **Auth:** `Authorization: Bearer <JWT>` on every endpoint except `/health` and `/ready`.
   Roles: `viewer` (read), `analyst` (read + run analyses/stress/investigations + alert actions),
   `admin` (+ backtests, org settings).
@@ -76,10 +78,12 @@ Browser ──▶ Next.js (apps/web) ──▶ FastAPI /api/v1 ──▶ engines
 
 ### 4.1 System
 
+`/health` and `/ready` are at the root (no `/api/v1` prefix); `/me` is versioned.
+
 | Method | Path | Description |
 |---|---|---|
-| GET | `/health` | Liveness. `200 {"status":"ok"}` |
-| GET | `/ready` | Readiness: DB reachable, migrations at head, registry synced. `503` otherwise, with failing checks listed. |
+| GET | `/health` | Liveness. `200 {"status":"ok","service","version","environment","timestamp"}`. Never touches dependencies. **Implemented.** |
+| GET | `/ready` | Readiness: `{status: "ready"\|"not_ready", checks: [{name, status, latency_ms, detail}]}`; `503` when any check fails. **Implemented** with the database check; migrations-at-head and registry-synced checks are added when those exist. |
 | GET | `/me` | Current user, org, role |
 
 ### 4.2 Methodology registry (read-only, from code-synced reference tables)
@@ -327,6 +331,7 @@ its evidence ID.
 
 ## 6. OpenAPI & type generation
 
-- FastAPI generates OpenAPI 3.1; CI exports it to `contracts/openapi.json`.
-- `apps/web` runs `openapi-typescript` → `src/lib/api/schema.d.ts`.
-- CI fails if either generated file differs from what's committed (contract drift check).
+- FastAPI generates OpenAPI 3.1; `npm run contracts:generate` exports it to
+  `packages/contracts/openapi.json` and runs `openapi-typescript` →
+  `packages/contracts/src/schema.gen.ts`, consumed by the web app as `@finpulse/contracts`.
+- CI regenerates both and fails if either differs from what's committed (contract drift check).

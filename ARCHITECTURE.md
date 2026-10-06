@@ -98,7 +98,7 @@ Deployable units in the MVP:
 | Unit | Runtime | Responsibility |
 |---|---|---|
 | `web` | Node (Next.js App Router) | UI, auth session, server-side data fetching. Holds **no** financial logic. |
-| `api` | Python 3.12, FastAPI, Uvicorn | HTTP API, validation, auth verification, enqueueing work. |
+| `api` | Python 3.12+, FastAPI, Uvicorn | HTTP API, validation, auth verification, enqueueing work. |
 | `worker` | Same image as `api`, different entrypoint | Executes jobs: synthetic generation, analysis runs, stress tests, investigations. |
 | `db` | PostgreSQL 15+ | All state, including the job queue. |
 
@@ -118,7 +118,7 @@ generated API types.
 - Renders data produced by the backend. **The frontend does not calculate financial metrics,
   scores or thresholds.** Its only numeric work is formatting (currency, %, dates) and chart
   scaling.
-- API types are **generated** from the backend OpenAPI schema (`contracts/openapi.json`), never
+- API types are **generated** from the backend OpenAPI schema (`packages/contracts/openapi.json` → `@finpulse/contracts`), never
   hand-written, so the contract cannot drift silently. CI fails if the generated file is stale.
 
 ### 4.2 Route map
@@ -166,7 +166,7 @@ lib/hooks/              TanStack Query hooks for polling jobs, SSE subscription 
 
 ## 5. Backend architecture (`apps/api`)
 
-**Stack:** Python 3.12 · FastAPI · Pydantic v2 · SQLAlchemy 2.0 (async, psycopg 3) · Alembic ·
+**Stack:** Python 3.12+ · FastAPI · Pydantic v2 · SQLAlchemy 2.0 (async, psycopg 3) · Alembic ·
 NumPy / pandas (analytics only) · structlog · httpx · pytest + Hypothesis · `uv` for packaging.
 
 ### 5.1 Layered design

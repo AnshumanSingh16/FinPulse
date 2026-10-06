@@ -1,0 +1,10 @@
+# Python is formatted by ruff
+apps/api/
+# Generated contract files are written by tools and checked for drift in CI
+packages/contracts/openapi.json
+packages/contracts/src/schema.gen.ts
+# Design docs keep their hand-aligned tables
+*.md
+node_modules/
+.next/
+package-lock.json

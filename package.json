@@ -1,0 +1,29 @@
+{
+  "name": "finpulse",
+  "private": true,
+  "description": "FinPulse monorepo: Next.js web app, FastAPI backend, shared API contracts",
+  "packageManager": "npm@10.9.4",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "workspaces": [
+    "apps/web",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:web": "npm run dev -w @finpulse/web",
+    "dev:api": "uv run --project apps/api python -m finpulse",
+    "build": "npm run build -w @finpulse/web",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "contracts:generate": "uv run --project apps/api python -m finpulse.openapi packages/contracts/openapi.json && npm run generate -w @finpulse/contracts"
+  },
+  "devDependencies": {
+    "prettier": "^3.9.9",
+    "prettier-plugin-tailwindcss": "^0.8.1"
+  }
+}
