@@ -143,6 +143,7 @@ metric definitions are in [docs/FINANCIAL_METRICS.md](docs/FINANCIAL_METRICS.md)
 |---|---|---|
 | GET | `/entities` | Entities in the caller's organisation: `id`, `display_name`, `kind`, `segment`, `data_origin` |
 | GET | `/entities/{entity_id}/financial-metrics` | Full report: `entity`, `as_of`, `currency`, `engine_version`, `coverage`, `metrics[]` (25), `series[]` (monthly revenue, expenses, net cash flow, month-end balance). Optional `?as_of=YYYY-MM-DD` (default: end of the data). |
+| GET | `/entities/{entity_id}/financial-metrics/history` | Metric values recomputed at each month-end: `metrics[]` (definitions), `points[]` (`as_of`, `values{code: value|null}`). `?months=12` (1–24), repeatable `?codes=` (default: all), optional `?as_of=`. Used by the frontend's history charts; the UI never derives values itself |
 | GET | `/entities/{entity_id}/financial-metrics/{metric_code}` | One metric |
 | GET | `/meta/financial-metrics` | Metric definitions: code, name, family, unit, version, method |
 
@@ -319,11 +320,14 @@ The run-based design below (persisted runs, Monte Carlo paths) follows later.
 |---|---|---|
 | GET | `/entities/{entity_id}/evidence-pack` | The verified evidence the agents read: citable items of kind fact, calculated_metric, forecast or assumption. Deterministic (no AI). Optional `?as_of=` |
 | POST | `/entities/{entity_id}/investigate` | Runs the full investigation workflow and returns the `Investigation` record. Body `{"as_of"?}`. No free-text questions. See [docs/INVESTIGATIONS.md](docs/INVESTIGATIONS.md). The record contains: <ul><li>stages with timestamps</li><li>triggered warnings and the metrics used</li><li>agent analyses</li><li>disagreements and red-team findings</li><li>the final assessment, separated into FACT / CALCULATED_METRIC / FORECAST / ASSUMPTION / AI_INTERPRETATION</li><li>recommendations and confidence</li><li>evidence references, the claim audit and the event log</li></ul> |
-| GET | `/investigations` · `/investigations/{id}` · `/investigations/{id}/events` | Recent investigations (in memory), one record, its event log. `404 investigation_not_found` |
+| POST | `/entities/{entity_id}/investigations` | Starts the same workflow in the background and returns `202` with an `InvestigationProgress`. Body `{"as_of"?}` |
+| GET | `/investigations/{id}/progress` | Live state of a background run, built from the orchestrator's real events: `status` (running · completed · failed), `current_stage`, completed `stages[]`, per-agent `agents[]` (pending · running · succeeded · failed · skipped, claims, attempts), `events[]`, `error{code,message}`. When completed the full record is at `/investigations/{id}`. `404 investigation_not_found` |
+| GET | `/investigations` · `/investigations/{id}` · `/investigations/{id}/events` | Recent investigations (in memory; `?entity_id=` filters), one record, its event log. `404 investigation_not_found` |
 | POST | `/entities/{entity_id}/agents/{agent_name}` | One agent, plus the agents whose findings it needs. `404 agent_not_found` |
 | GET | `/meta/agents` | Agents, dependencies, prompt versions, output schemas |
 
-`503 llm_unavailable` when no model is configured or reachable. Methodology:
+`503 llm_unavailable` when no model is configured or reachable (for a background run, the progress
+reports `status: failed` with `error.code: llm_unavailable` after the deterministic stages). Methodology:
 [docs/AI_AGENTS.md](docs/AI_AGENTS.md). The persisted, asynchronous investigations below follow.
 
 | Method | Path | Description |

@@ -7,7 +7,7 @@ history.
 > trustworthy, and detect if their financial health is deteriorating before a traditional credit
 > system would?
 
-**Status: deterministic core and AI agent layer built.** The platform foundation is in place,
+**Status: deterministic core, AI agent layer and frontend built.** The platform foundation is in place,
 along with:
 
 - a deterministic synthetic-data layer: five fictional entities, led by the demo business
@@ -17,7 +17,16 @@ along with:
 - the **early-warning engine**: 18 configurable rules that detect deterioration;
 - the **stress-testing engine**: cash projections under ten scenarios;
 - the **AI agent layer**: seven Claude agents that interpret those verified results, every
-  claim cited and every number checked by a deterministic verifier.
+  claim cited and every number checked by a deterministic verifier;
+- the **frontend** (`apps/web`): a risk-intelligence workspace with seven views per entity,
+  all reading the live API:
+  - Overview
+  - Financial Passport
+  - Early Warning Center
+  - Financial Health
+  - Stress Test
+  - AI Investigation, which shows the agent pipeline live
+  - Evidence, which traces any AI claim to the metrics and records behind it
 
 The agents need an `ANTHROPIC_API_KEY`; everything else runs without one. Plan and progress:
 [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md).
@@ -57,7 +66,7 @@ make setup               # uv sync + npm install
 make db-up               # optional: local Postgres in Docker (matches .env.example)
 make db-init             # create the database if missing + apply migrations
 make db-seed             # load the synthetic entities (idempotent)
-make dev                 # API on http://127.0.0.1:8000, web on http://localhost:3000
+make dev                 # API on http://127.0.0.1:8000, web on http://localhost:3000 (open it for the demo)
 ```
 
 Open http://localhost:3000. The overview page shows three live checks:

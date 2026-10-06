@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
 from finpulse.agents.llm import AnthropicLLM, LLMClient
 from finpulse.config import Settings
+from finpulse.investigation.progress import ProgressTracker
 from finpulse.investigation.store import InvestigationStore
 from finpulse.persistence.db import session_scope
 from finpulse.persistence.repositories.financial_data import (
@@ -64,6 +65,14 @@ def get_investigation_store(request: Request) -> InvestigationStore:
     return store
 
 
+def get_progress_tracker(request: Request) -> ProgressTracker:
+    tracker: ProgressTracker | None = getattr(request.app.state, "progress", None)
+    if tracker is None:
+        tracker = ProgressTracker(request.app.state.settings.investigations_keep)
+        request.app.state.progress = tracker
+    return tracker
+
+
 SettingsDep = Annotated[Settings, Depends(get_app_settings)]
 EngineDep = Annotated[AsyncEngine, Depends(get_engine)]
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
@@ -71,3 +80,4 @@ OrgDep = Annotated[uuid.UUID, Depends(get_current_org_id)]
 DataSourceDep = Annotated[FinancialDataSource, Depends(get_financial_data_source)]
 LLMDep = Annotated[LLMClient, Depends(get_llm_client)]
 StoreDep = Annotated[InvestigationStore, Depends(get_investigation_store)]
+TrackerDep = Annotated[ProgressTracker, Depends(get_progress_tracker)]

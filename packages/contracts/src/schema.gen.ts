@@ -72,6 +72,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/entities/{entity_id}/financial-metrics/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Metric values at each month-end (recomputed as of each date) */
+        get: operations["financial_metric_history_api_v1_entities__entity_id__financial_metrics_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/entities/{entity_id}/financial-metrics/{metric_code}": {
         parameters: {
             query?: never;
@@ -100,6 +117,23 @@ export interface paths {
         put?: never;
         /** Run a complete financial investigation and return its structured record */
         post: operations["investigate_api_v1_entities__entity_id__investigate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/entities/{entity_id}/investigations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start an investigation in the background; follow it via /progress */
+        post: operations["start_investigation_api_v1_entities__entity_id__investigations_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -237,6 +271,23 @@ export interface paths {
         };
         /** The investigation's timestamped event log */
         get: operations["get_events_api_v1_investigations__investigation_id__events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/investigations/{investigation_id}/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Live progress of a background investigation (stages, agents, events) */
+        get: operations["progress_api_v1_investigations__investigation_id__progress_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -389,6 +440,25 @@ export interface components {
             prompt_version: string;
             /** Purpose */
             purpose: string;
+            /** Title */
+            title: string;
+        };
+        /** AgentProgress */
+        AgentProgress: {
+            /** Agent */
+            agent: string;
+            /** Attempts */
+            attempts?: number | null;
+            /** Claims */
+            claims?: number | null;
+            /** Error */
+            error?: string | null;
+            /**
+             * State
+             * @default pending
+             * @enum {string}
+             */
+            state: "pending" | "running" | "succeeded" | "failed" | "skipped";
             /** Title */
             title: string;
         };
@@ -1338,6 +1408,53 @@ export interface components {
              */
             stage: "financial_data" | "deterministic_analytics" | "financial_passport" | "early_warning_detection" | "stress_testing" | "evidence_assembly" | "specialized_investigation" | "disagreement_detection" | "red_team_challenge" | "senior_synthesis" | "final_assessment";
         };
+        /**
+         * InvestigationProgress
+         * @description A running (or finished) investigation's live state, built from its real events.
+         */
+        InvestigationProgress: {
+            /** Agents */
+            agents: components["schemas"]["AgentProgress"][];
+            /**
+             * As Of
+             * Format: date
+             */
+            as_of: string;
+            /** Current Stage */
+            current_stage: ("financial_data" | "deterministic_analytics" | "financial_passport" | "early_warning_detection" | "stress_testing" | "evidence_assembly" | "specialized_investigation" | "disagreement_detection" | "red_team_challenge" | "senior_synthesis" | "final_assessment") | null;
+            /**
+             * Entity Id
+             * Format: uuid
+             */
+            entity_id: string;
+            /** Entity Name */
+            entity_name: string;
+            error?: components["schemas"]["ProgressError"] | null;
+            /** Events */
+            events: components["schemas"]["InvestigationEvent"][];
+            /**
+             * Investigation Id
+             * Format: uuid
+             */
+            investigation_id: string;
+            /** Stages */
+            stages: components["schemas"]["StageRecord"][];
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "running" | "completed" | "failed";
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
         /** InvestigationSummary */
         InvestigationSummary: {
             /**
@@ -1462,6 +1579,32 @@ export interface components {
             unit: "INR" | "ratio" | "days" | "months" | "score" | "count";
             /** Version */
             version: number;
+        };
+        /** MetricHistory */
+        MetricHistory: {
+            entity: components["schemas"]["EntityRef"];
+            /** Metrics */
+            metrics: components["schemas"]["MetricDefinitionOut"][];
+            /**
+             * Points
+             * @description Oldest first: month-ends, then as_of
+             */
+            points: components["schemas"]["MetricHistoryPoint"][];
+        };
+        /** MetricHistoryPoint */
+        MetricHistoryPoint: {
+            /**
+             * As Of
+             * Format: date
+             */
+            as_of: string;
+            /**
+             * Values
+             * @description Null where the metric is unavailable
+             */
+            values: {
+                [key: string]: string | null;
+            };
         };
         /** MetricRef */
         MetricRef: {
@@ -1638,6 +1781,13 @@ export interface components {
              * @description URI identifying the error type
              */
             type: string;
+        };
+        /** ProgressError */
+        ProgressError: {
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
         };
         /** ProjectedMonth */
         ProjectedMonth: {
@@ -2709,6 +2859,45 @@ export interface operations {
             };
         };
     };
+    financial_metric_history_api_v1_entities__entity_id__financial_metrics_history_get: {
+        parameters: {
+            query?: {
+                /** @description Calculate as at the end of this day. Defaults to the end of the data. */
+                as_of?: string | null;
+                /** @description Points, including as_of */
+                months?: number;
+                /** @description Metric codes (default: all) */
+                codes?: string[] | null;
+            };
+            header?: never;
+            path: {
+                /** @description Entity (subject) id */
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetricHistory"];
+                };
+            };
+            /** @description Error (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     financial_metric_api_v1_entities__entity_id__financial_metrics__metric_code__get: {
         parameters: {
             query?: {
@@ -2769,6 +2958,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Investigation"];
+                };
+            };
+            /** @description Error (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    start_investigation_api_v1_entities__entity_id__investigations_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Entity (subject) id */
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["InvestigateRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvestigationProgress"];
                 };
             };
             /** @description Error (application/problem+json) */
@@ -2966,7 +3191,10 @@ export interface operations {
     };
     list_investigations_api_v1_investigations_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Only this entity's */
+                entity_id?: string | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -3044,6 +3272,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["InvestigationEvent"][];
+                };
+            };
+            /** @description Error (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    progress_api_v1_investigations__investigation_id__progress_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Investigation id */
+                investigation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvestigationProgress"];
                 };
             };
             /** @description Error (application/problem+json) */

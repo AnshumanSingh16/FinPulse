@@ -22,7 +22,27 @@
   --border: oklch(0.91 0.008 264);
   --input: oklch(0.91 0.008 264);
   --ring: oklch(0.6 0.1 264);
-  --sidebar: oklch(0.97 0.004 264);
+  --sidebar: oklch(0.22 0.03 262);
+  --sidebar-foreground: oklch(0.93 0.01 262);
+  --sidebar-muted: oklch(0.7 0.02 262);
+  --sidebar-accent: oklch(0.3 0.035 262);
+
+  /* Charts: validated reference palette (light steps). Text never uses these. */
+  --chart-surface: oklch(1 0 0);
+  --chart-1: #2a78d6;
+  --chart-2: #eb6834;
+  --chart-3: #1baf7a;
+  --chart-negative: #e34948;
+  --chart-grid: #e1e0d9;
+  --chart-axis: #c3c2b7;
+  --chart-ink-muted: #898781;
+  /* Status: reserved for meaning (always with icon + label). */
+  --status-good: #0ca30c;
+  --status-warning: #fab219;
+  --status-serious: #ec835a;
+  --status-critical: #d03b3b;
+  --status-info: #6b7a99;
+  --text-good: #006300;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -45,7 +65,21 @@
     --border: oklch(1 0 0 / 12%);
     --input: oklch(1 0 0 / 15%);
     --ring: oklch(0.6 0.08 264);
-    --sidebar: oklch(0.19 0.016 265);
+    --sidebar: oklch(0.15 0.02 265);
+    --sidebar-foreground: oklch(0.93 0.01 262);
+    --sidebar-muted: oklch(0.66 0.02 262);
+    --sidebar-accent: oklch(0.24 0.03 262);
+
+    --chart-surface: oklch(0.21 0.018 265);
+    --chart-1: #3987e5;
+    --chart-2: #d95926;
+    --chart-3: #199e70;
+    --chart-negative: #e66767;
+    --chart-grid: #2c2c2a;
+    --chart-axis: #383835;
+    --chart-ink-muted: #898781;
+    --status-info: #8a97b3;
+    --text-good: #0ca30c;
   }
 }
 
@@ -75,6 +109,19 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-negative: var(--chart-negative);
+  --color-status-good: var(--status-good);
+  --color-status-warning: var(--status-warning);
+  --color-status-serious: var(--status-serious);
+  --color-status-critical: var(--status-critical);
+  --color-status-info: var(--status-info);
+  --color-text-good: var(--text-good);
 }
 
 @layer base {
@@ -84,4 +131,18 @@
   body {
     @apply bg-background font-sans text-foreground antialiased;
   }
+  /* Numbers that align in columns (tables, axis ticks) use tabular figures. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Recharts: recessive chrome, never the series colour on text. */
+.recharts-cartesian-axis-tick-value {
+  fill: var(--chart-ink-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.recharts-surface:focus {
+  outline: none;
 }

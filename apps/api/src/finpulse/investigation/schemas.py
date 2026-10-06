@@ -229,3 +229,37 @@ class InvestigationSummary(BaseModel):
             started_at=inv.started_at,
             duration_ms=inv.duration_ms,
         )
+
+
+AgentState = Literal["pending", "running", "succeeded", "failed", "skipped"]
+
+
+class AgentProgress(BaseModel):
+    agent: str
+    title: str
+    state: AgentState = "pending"
+    claims: int | None = None
+    attempts: int | None = None
+    error: str | None = None
+
+
+class ProgressError(BaseModel):
+    code: str
+    message: str
+
+
+class InvestigationProgress(BaseModel):
+    """A running (or finished) investigation's live state, built from its real events."""
+
+    investigation_id: uuid.UUID
+    entity_id: uuid.UUID
+    entity_name: str
+    as_of: dt.date
+    status: Literal["running", "completed", "failed"]
+    started_at: dt.datetime
+    updated_at: dt.datetime
+    current_stage: StageName | None
+    stages: list[StageRecord]
+    agents: list[AgentProgress]
+    events: list[InvestigationEvent]
+    error: ProgressError | None = None

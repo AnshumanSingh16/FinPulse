@@ -228,6 +228,33 @@ apps/web/
     └── e2e/                                    # Playwright
 ```
 
+**As built (Phase 6/9 first cut).** Routes are per entity rather than under `(app)/subjects`:
+
+```
+apps/web/src/
+├── app/
+│   ├── layout.tsx                              # loads entities, renders the AppShell
+│   ├── page.tsx                                # portfolio
+│   ├── system/page.tsx                         # API / database status
+│   └── entities/[entityId]/
+│       ├── layout.tsx                          # entity header, entity switcher, as-of picker
+│       ├── loading.tsx · error.tsx
+│       ├── page.tsx                            # overview
+│       ├── passport/ · warnings/ · health/ · stress/ · investigation/ · evidence/
+├── components/
+│   ├── shell/                                  # sidebar, nav, entity controls
+│   ├── fp/                                     # badges, panels, stat tiles, meters, risk timeline
+│   ├── charts/time-series.tsx                  # Recharts line/area + diverging bars, table toggle
+│   ├── stress/stress-lab.tsx                   # scenario builder + before → after results
+│   ├── investigation/                          # live runner, pipeline, claim cards, report
+│   └── evidence/evidence-card.tsx
+└── lib/
+    ├── api/finpulse.ts                         # cached server-side reads, one per endpoint
+    ├── format.ts · presentation.ts             # display only: no financial arithmetic
+    ├── shock-form.ts                           # stress-scenario form from JSON Schema
+    └── evidence-link.ts · page.ts
+```
+
 ## 4. Ownership map
 
 | Concern | Lives in | Never in |

@@ -74,8 +74,15 @@ class _Stage:
 class Recorder:
     """Collects stage records and events, and mirrors each event to the structured log."""
 
-    def __init__(self, investigation_id: uuid.UUID, entity: str, clock: Clock) -> None:
+    def __init__(
+        self,
+        investigation_id: uuid.UUID,
+        entity: str,
+        clock: Clock,
+        listener: Callable[[Recorder], None] | None = None,
+    ) -> None:
         self.clock = clock
+        self.listener = listener  # told after every event (live progress)
         self.stages: list[StageRecord] = []
         self.events: list[InvestigationEvent] = []
         self.log = log.bind(investigation_id=str(investigation_id), entity=entity)
@@ -93,6 +100,11 @@ class Recorder:
             )
         )
         getattr(self.log, level)(event, stage=self.current, message=message, **data)
+        if self.listener is not None:
+            try:
+                self.listener(self)
+            except Exception:  # progress reporting must never break an investigation
+                self.log.exception("progress_listener_failed")
 
     @asynccontextmanager
     async def stage(self, name: StageName, title: str) -> AsyncIterator[_Stage]:
@@ -164,9 +176,16 @@ class InvestigationOrchestrator:
         self.llm = llm
         self.clock = clock
 
-    async def investigate(self, data: FinancialData, as_of: date) -> Investigation:
-        investigation_id = uuid.uuid4()
-        rec = Recorder(investigation_id, data.display_name, self.clock)
+    async def investigate(
+        self,
+        data: FinancialData,
+        as_of: date,
+        *,
+        investigation_id: uuid.UUID | None = None,
+        listener: Callable[[Recorder], None] | None = None,
+    ) -> Investigation:
+        investigation_id = investigation_id or uuid.uuid4()
+        rec = Recorder(investigation_id, data.display_name, self.clock, listener)
         started, t0 = self.clock(), time.perf_counter()
         rec.event(
             "investigation_started",
@@ -256,12 +275,15 @@ class InvestigationOrchestrator:
         # --- AI stages -------------------------------------------------------------------------
         runs: dict[str, AgentRun] = {}
         async with rec.stage("specialized_investigation", "Specialized AI investigation") as st:
-            results = await asyncio.gather(
-                *(run_agent(AGENTS[n], self.llm, pack) for n in ANALYSTS)
-            )
+
+            async def analyse(name: str) -> AgentRun:
+                rec.event("agent_started", f"{AGENTS[name].title} started.", agent=name)
+                run = await run_agent(AGENTS[name], self.llm, pack)
+                _agent_event(rec, run)  # as each finishes, for live progress
+                return run
+
+            results = await asyncio.gather(*(analyse(n) for n in ANALYSTS))
             runs.update(zip(ANALYSTS, results, strict=True))
-            for run in results:
-                _agent_event(rec, run)
             ok = [r for r in results if r.status == "succeeded"]
             st.details = {
                 r.agent: {
@@ -355,6 +377,7 @@ class InvestigationOrchestrator:
                     known_refs=refs,
                     requirements=analysis.red_team_requirements(requests, disagreements),
                 )
+                rec.event("agent_started", "Red-Team Agent started.", agent="red_team")
                 red = await run_agent(AGENTS["red_team"], self.llm, pack, verified, context)
                 runs["red_team"] = red
                 _agent_event(rec, red)
@@ -403,6 +426,11 @@ class InvestigationOrchestrator:
                     ),
                     known_refs=refs,
                     requirements=analysis.senior_requirements(disagreements, red),
+                )
+                rec.event(
+                    "agent_started",
+                    "Senior Financial Intelligence Agent started.",
+                    agent="senior_synthesis",
                 )
                 senior = await run_agent(
                     AGENTS["senior_synthesis"], self.llm, pack, upstream, context

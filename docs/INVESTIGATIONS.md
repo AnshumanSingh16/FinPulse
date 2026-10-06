@@ -115,6 +115,17 @@ listed in `confidence.adjustments`.
 
 ## Inspecting an investigation during a demo
 
+- **Web.** The AI Investigation view starts a run with `POST /api/v1/entities/{id}/investigations`.
+  It returns `202` at once, and the run continues in the background. The view then polls
+  `GET /api/v1/investigations/{id}/progress` and shows:
+  - each stage and agent as the orchestrator reports it (pending, running, ✓, ✗ or skipped,
+    with claim counts and attempts);
+  - the event log.
+
+  When the run completes, the view opens the full record. The progress is built only from the
+  orchestrator's own events, through a listener on its recorder; nothing is estimated. The
+  Evidence view traces any claim to the evidence items it cites.
+
 - **API.** Recent investigations are kept in memory (`INVESTIGATIONS_KEEP`, default 50) and
   listed by `GET /api/v1/investigations`. Set `INVESTIGATIONS_DIR` to also write each one as a
   JSON file.
@@ -137,7 +148,8 @@ listed in `confidence.adjustments`.
 
 ## Limits
 
-- Synchronous: the request returns when the investigation is complete. A real run makes at least
-  seven calls to Claude and takes minutes.
+- `POST …/investigate` is synchronous: the request returns when the investigation is complete. A
+  real run makes at least seven calls to Claude and takes minutes. The background variant
+  (`POST …/investigations` plus `/progress`) keeps progress in memory, in the API process only.
 - Investigations are kept in memory (and optionally as files), not in PostgreSQL.
 - Not yet run against the live model. Every test uses a scripted model.

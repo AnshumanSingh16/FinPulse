@@ -62,4 +62,17 @@ export type HealthImpact = Schemas["HealthImpact"];
 export type StressEvidence = Schemas["Evidence"];
 export type ScenarioCatalogue = Schemas["ScenarioCatalogue"];
 
+export type MetricHistory = Schemas["MetricHistory"];
+export type MetricHistoryPoint = Schemas["MetricHistoryPoint"];
+export type ScoringModel = Schemas["ScoringModel"];
+export type InvestigationProgress = Schemas["InvestigationProgress"];
+export type AgentProgress = Schemas["AgentProgress"];
+export type TriggeredWarning = Schemas["TriggeredWarning"];
+export type MetricUsed = Schemas["MetricUsed"];
+export type EvidenceReference = Schemas["EvidenceReference"];
+export type ConfidenceAssessment = Schemas["ConfidenceAssessment"];
+export type ClaimAudit = Schemas["ClaimAudit"];
+export type ReviewRequest = Schemas["ReviewRequest"];
+export type RedTeamFindings = Schemas["RedTeamFindings"];
+
 export type ApiPath = keyof paths;

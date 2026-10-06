@@ -154,3 +154,58 @@ async def test_saved_investigation_renders_for_the_demo(tmp_path: Path) -> None:
     ):
         assert heading in text
     assert "investigation_completed" in text
+
+
+async def wait_for(c: httpx.AsyncClient, investigation_id: str) -> dict:  # type: ignore[type-arg]
+    import asyncio
+
+    for _ in range(200):
+        body = (await c.get(f"/api/v1/investigations/{investigation_id}/progress")).json()
+        if body["status"] != "running":
+            return body  # type: ignore[no-any-return]
+        await asyncio.sleep(0.02)
+    raise AssertionError("investigation did not finish")
+
+
+async def test_background_investigation_reports_live_progress(client: httpx.AsyncClient) -> None:
+    started = await client.post(f"/api/v1/entities/{SHARMA.entity_id}/investigations")
+
+    assert started.status_code == 202
+    body = started.json()
+    assert body["status"] == "running"
+    assert [a["agent"] for a in body["agents"]][-1] == "senior_synthesis"
+
+    done = await wait_for(client, body["investigation_id"])
+
+    assert done["status"] == "completed" and done["error"] is None
+    assert all(a["state"] == "succeeded" and a["claims"] for a in done["agents"])
+    assert [s["stage"] for s in done["stages"]][-1] == "final_assessment"
+    assert {"agent_started", "agent_completed"} <= {e["event"] for e in done["events"]}
+    full = await client.get(f"/api/v1/investigations/{body['investigation_id']}")
+    assert full.status_code == 200 and full.json()["status"] == "completed"
+    mine = (
+        await client.get("/api/v1/investigations", params={"entity_id": str(SHARMA.entity_id)})
+    ).json()
+    others = (
+        await client.get("/api/v1/investigations", params={"entity_id": str(ANANYA.entity_id)})
+    ).json()
+    assert [i["investigation_id"] for i in mine] == [body["investigation_id"]] and others == []
+
+
+async def test_background_investigation_failure_is_reported() -> None:
+    async for c in make_client(DownLLM()):
+        body = (await c.post(f"/api/v1/entities/{SHARMA.entity_id}/investigations")).json()
+        done = await wait_for(c, body["investigation_id"])
+
+        assert done["status"] == "failed"
+        assert done["error"]["code"] == "llm_unavailable"
+        assert "ANTHROPIC_API_KEY" in done["error"]["message"]
+        assert (
+            await c.get(f"/api/v1/investigations/{body['investigation_id']}")
+        ).status_code == 404
+
+
+async def test_unknown_progress_is_404(client: httpx.AsyncClient) -> None:
+    response = await client.get(f"/api/v1/investigations/{uuid.uuid4()}/progress")
+
+    assert response.status_code == 404

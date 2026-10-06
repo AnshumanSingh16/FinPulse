@@ -61,6 +61,69 @@
         "title": "AgentInfo",
         "type": "object"
       },
+      "AgentProgress": {
+        "properties": {
+          "agent": {
+            "title": "Agent",
+            "type": "string"
+          },
+          "attempts": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attempts"
+          },
+          "claims": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claims"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "state": {
+            "default": "pending",
+            "enum": [
+              "pending",
+              "running",
+              "succeeded",
+              "failed",
+              "skipped"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent",
+          "title"
+        ],
+        "title": "AgentProgress",
+        "type": "object"
+      },
       "AgentRequest": {
         "additionalProperties": false,
         "properties": {
@@ -2525,6 +2588,119 @@
         "title": "InvestigationEvent",
         "type": "object"
       },
+      "InvestigationProgress": {
+        "description": "A running (or finished) investigation's live state, built from its real events.",
+        "properties": {
+          "agents": {
+            "items": {
+              "$ref": "#/components/schemas/AgentProgress"
+            },
+            "title": "Agents",
+            "type": "array"
+          },
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "current_stage": {
+            "anyOf": [
+              {
+                "enum": [
+                  "financial_data",
+                  "deterministic_analytics",
+                  "financial_passport",
+                  "early_warning_detection",
+                  "stress_testing",
+                  "evidence_assembly",
+                  "specialized_investigation",
+                  "disagreement_detection",
+                  "red_team_challenge",
+                  "senior_synthesis",
+                  "final_assessment"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Stage"
+          },
+          "entity_id": {
+            "format": "uuid",
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "entity_name": {
+            "title": "Entity Name",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProgressError"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/InvestigationEvent"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "investigation_id": {
+            "format": "uuid",
+            "title": "Investigation Id",
+            "type": "string"
+          },
+          "stages": {
+            "items": {
+              "$ref": "#/components/schemas/StageRecord"
+            },
+            "title": "Stages",
+            "type": "array"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "running",
+              "completed",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "investigation_id",
+          "entity_id",
+          "entity_name",
+          "as_of",
+          "status",
+          "started_at",
+          "updated_at",
+          "current_stage",
+          "stages",
+          "agents",
+          "events"
+        ],
+        "title": "InvestigationProgress",
+        "type": "object"
+      },
       "InvestigationSummary": {
         "properties": {
           "as_of": {
@@ -2805,6 +2981,66 @@
           "method"
         ],
         "title": "MetricDefinitionOut",
+        "type": "object"
+      },
+      "MetricHistory": {
+        "properties": {
+          "entity": {
+            "$ref": "#/components/schemas/EntityRef"
+          },
+          "metrics": {
+            "items": {
+              "$ref": "#/components/schemas/MetricDefinitionOut"
+            },
+            "title": "Metrics",
+            "type": "array"
+          },
+          "points": {
+            "description": "Oldest first: month-ends, then as_of",
+            "items": {
+              "$ref": "#/components/schemas/MetricHistoryPoint"
+            },
+            "title": "Points",
+            "type": "array"
+          }
+        },
+        "required": [
+          "entity",
+          "metrics",
+          "points"
+        ],
+        "title": "MetricHistory",
+        "type": "object"
+      },
+      "MetricHistoryPoint": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "values": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "description": "Null where the metric is unavailable",
+            "title": "Values",
+            "type": "object"
+          }
+        },
+        "required": [
+          "as_of",
+          "values"
+        ],
+        "title": "MetricHistoryPoint",
         "type": "object"
       },
       "MetricRef": {
@@ -3226,6 +3462,24 @@
           "code"
         ],
         "title": "ProblemDetails",
+        "type": "object"
+      },
+      "ProgressError": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ProgressError",
         "type": "object"
       },
       "ProjectedMonth": {
@@ -5648,6 +5902,105 @@
         ]
       }
     },
+    "/api/v1/entities/{entity_id}/financial-metrics/history": {
+      "get": {
+        "operationId": "financial_metric_history_api_v1_entities__entity_id__financial_metrics_history_get",
+        "parameters": [
+          {
+            "description": "Entity (subject) id",
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "description": "Entity (subject) id",
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Calculate as at the end of this day. Defaults to the end of the data.",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Calculate as at the end of this day. Defaults to the end of the data.",
+              "title": "As Of"
+            }
+          },
+          {
+            "description": "Points, including as_of",
+            "in": "query",
+            "name": "months",
+            "required": false,
+            "schema": {
+              "default": 12,
+              "description": "Points, including as_of",
+              "maximum": 24,
+              "minimum": 1,
+              "title": "Months",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Metric codes (default: all)",
+            "in": "query",
+            "name": "codes",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Metric codes (default: all)",
+              "title": "Codes"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricHistory"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (application/problem+json)"
+          }
+        },
+        "summary": "Metric values at each month-end (recomputed as of each date)",
+        "tags": [
+          "analytics"
+        ]
+      }
+    },
     "/api/v1/entities/{entity_id}/financial-metrics/{metric_code}": {
       "get": {
         "operationId": "financial_metric_api_v1_entities__entity_id__financial_metrics__metric_code__get",
@@ -5780,6 +6133,68 @@
           }
         },
         "summary": "Run a complete financial investigation and return its structured record",
+        "tags": [
+          "investigations"
+        ]
+      }
+    },
+    "/api/v1/entities/{entity_id}/investigations": {
+      "post": {
+        "operationId": "start_investigation_api_v1_entities__entity_id__investigations_post",
+        "parameters": [
+          {
+            "description": "Entity (subject) id",
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "description": "Entity (subject) id",
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/InvestigateRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Request"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvestigationProgress"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (application/problem+json)"
+          }
+        },
+        "summary": "Start an investigation in the background; follow it via /progress",
         "tags": [
           "investigations"
         ]
@@ -6167,6 +6582,27 @@
     "/api/v1/investigations": {
       "get": {
         "operationId": "list_investigations_api_v1_investigations_get",
+        "parameters": [
+          {
+            "description": "Only this entity's",
+            "in": "query",
+            "name": "entity_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only this entity's",
+              "title": "Entity Id"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -6288,6 +6724,51 @@
           }
         },
         "summary": "The investigation's timestamped event log",
+        "tags": [
+          "investigations"
+        ]
+      }
+    },
+    "/api/v1/investigations/{investigation_id}/progress": {
+      "get": {
+        "operationId": "progress_api_v1_investigations__investigation_id__progress_get",
+        "parameters": [
+          {
+            "description": "Investigation id",
+            "in": "path",
+            "name": "investigation_id",
+            "required": true,
+            "schema": {
+              "description": "Investigation id",
+              "format": "uuid",
+              "title": "Investigation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvestigationProgress"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (application/problem+json)"
+          }
+        },
+        "summary": "Live progress of a background investigation (stages, agents, events)",
         "tags": [
           "investigations"
         ]

@@ -13,6 +13,7 @@ from typing import Annotated
 from fastapi import APIRouter, Path, Query
 
 from finpulse.analytics import CATALOGUE, compute_report
+from finpulse.analytics.history import MAX_HISTORY_MONTHS, MetricHistory, metric_history
 from finpulse.analytics.schemas import FinancialMetricsReport, Metric, MetricDefinitionOut
 from finpulse.api.deps import DataSourceDep, OrgDep
 from finpulse.api.schemas.entities import EntitySummary
@@ -50,6 +51,33 @@ async def financial_metrics(
     entity_id: EntityId, source: DataSourceDep, org_id: OrgDep, as_of: AsOf = None
 ) -> FinancialMetricsReport:
     return await _report(source, org_id, entity_id, as_of)
+
+
+@router.get(
+    "/entities/{entity_id}/financial-metrics/history",
+    response_model=MetricHistory,
+    tags=["analytics"],
+    summary="Metric values at each month-end (recomputed as of each date)",
+)
+async def financial_metric_history(
+    entity_id: EntityId,
+    source: DataSourceDep,
+    org_id: OrgDep,
+    as_of: AsOf = None,
+    months: Annotated[
+        int, Query(ge=1, le=MAX_HISTORY_MONTHS, description="Points, including as_of")
+    ] = 12,
+    codes: Annotated[list[str] | None, Query(description="Metric codes (default: all)")] = None,
+) -> MetricHistory:
+    unknown = sorted(set(codes or []) - set(CATALOGUE))
+    if unknown:
+        raise NotFoundError(
+            f"Unknown metric(s): {', '.join(unknown)}.",
+            code="metric_not_found",
+            extra={"known": sorted(CATALOGUE)},
+        )
+    data = await load_entity(source, org_id, entity_id)
+    return metric_history(data, resolve_as_of(data, as_of), months, codes)
 
 
 @router.get(

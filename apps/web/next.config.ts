@@ -13,6 +13,8 @@ loadEnvConfig(repoRoot, process.env.NODE_ENV !== "production", console, true);
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Don't write AGENTS.md / CLAUDE.md into the app directory during development.
+  agentRules: false,
   poweredByHeader: false,
   // The contracts package ships TypeScript source.
   transpilePackages: ["@finpulse/contracts"],

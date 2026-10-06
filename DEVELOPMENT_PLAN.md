@@ -220,6 +220,22 @@ subject on CI hardware).
 
 Built incrementally alongside Phases 2–5.
 
+**Progress.** Implemented in `apps/web`. Every view reads the live API, and the frontend does no
+financial arithmetic:
+- **Portfolio**: all entities, ranked by early-warning index.
+- **Overview**: Financial Health, risk level, runway, liquidity, major warnings, risk trajectory,
+  strengths and risks.
+- **Financial Passport**: score, bands, history, six dimensions with factors, and score-change
+  explanations.
+- **Early Warning Center**: warnings, timeline, threshold, evidence, and all rules evaluated.
+- **Financial Health**: revenue, expenses, cash flow, receivables, payables, debt and liquidity,
+  with 12-month histories from `/financial-metrics/history`.
+- **Stress Test**: preset or custom shocks built from the scenario schemas, before → after
+  cards, and the projected cash chart.
+
+Charts carry a table view, and status always appears as icon plus label. Still to do: the
+transactions page, the methodology and evaluation pages, and Playwright e2e tests.
+
 **Build**: portfolio overview, subject list/new (persona generator form), passport page (radar +
 dimension cards + factor drill-down + reason codes + confidence), health timeline (metric series
 with signal markers), transactions, alerts (ack/resolve), stress lab (scenario form from
@@ -296,6 +312,19 @@ disputed claims; live eval groundedness ≥ 95% of claims verified before red-te
 calibrated).
 
 ## Phase 9 — Investigation UI
+
+**Progress.** Implemented in `apps/web` on the background run plus
+`/investigations/{id}/progress`; the UI polls rather than using SSE.
+- **AI Investigation**: the live pipeline shows the deterministic engines, the five specialists,
+  disagreement detection, red team, senior synthesis, and the final assessment. Each step's
+  state comes from the API.
+- **Report**: claims grouped by statement type, with evidence chips; recommendations; red-team
+  challenges with the senior agent's resolutions; disagreements; agent analyses; metrics used;
+  and the audit.
+- **Evidence**: trace any claim to its evidence items, with each metric's method, components and
+  source tables, and other claims citing the same evidence. You can also browse the whole pack.
+- **Without `ANTHROPIC_API_KEY`**: the run is shown failing honestly with `llm_unavailable`
+  after the deterministic stages.
 
 **Build**: start-investigation dialog (question presets + free text), live phase/step trace via
 SSE, claim cards with verification badge and evidence chips (resolved via `/evidence`), red-team

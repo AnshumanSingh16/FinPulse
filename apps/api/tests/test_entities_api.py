@@ -218,3 +218,12 @@ async def test_metrics_from_postgres_equal_metrics_from_the_generator() -> None:
                 )
             assert body["series"] == expected["series"]
             assert body["coverage"] == expected["coverage"]
+
+
+async def test_metric_history_endpoint(client: httpx.AsyncClient) -> None:
+    url = f"/api/v1/entities/{SHARMA.entity_id}/financial-metrics/history"
+    body = (await client.get(url, params={"months": 6, "codes": ["debt.outstanding"]})).json()
+
+    assert len(body["points"]) == 6 and set(body["points"][-1]["values"]) == {"debt.outstanding"}
+    assert (await client.get(url, params={"codes": ["nope"]})).status_code == 404
+    assert (await client.get(url, params={"months": 0})).status_code == 422
