@@ -11,6 +11,7 @@
 // Each step is a plain command printed before it runs, so it can be repeated by hand.
 import { spawnSync } from "node:child_process";
 import { copyFileSync, existsSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -48,6 +49,16 @@ if (major < 22 || (major === 22 && minor < 12)) {
   fail(
     `Node.js 22.12 or newer is required (found ${process.versions.node}). Get it from https://nodejs.org`,
   );
+}
+// The uv installer adds its folder to PATH only for new terminals: look there too.
+if (!has("uv")) {
+  const home = os.homedir();
+  for (const dir of [path.join(home, ".local", "bin"), path.join(home, ".cargo", "bin")]) {
+    if (existsSync(path.join(dir, isWindows ? "uv.exe" : "uv"))) {
+      process.env.PATH = `${dir}${path.delimiter}${process.env.PATH ?? ""}`;
+      break;
+    }
+  }
 }
 if (!has("uv")) {
   fail(
