@@ -128,6 +128,9 @@ async function canListen(port) {
 }
 
 // Docker's own errors when a host port is taken or reserved: try the next port.
+// What connecting to someone else's PostgreSQL looks like (different users or databases).
+const WRONG_SERVER =
+  /password authentication failed|role "finpulse" does not exist|database "finpulse" does not exist|no pg_hba\.conf entry|connection refused|server closed the connection/i;
 const PORT_PROBLEM =
   /port is already allocated|ports are not available|address already in use|bind/i;
 
@@ -148,34 +151,52 @@ if (firstTry.ok) {
     );
   }
   const current = Number(dockerUrl[1]);
+  const urlFor = (port) => `postgresql://finpulse:finpulse@127.0.0.1:${port}/finpulse`;
+  // Unusual ports first: 5432 and 5433 are where installed PostgreSQL servers usually live.
+  const candidates = [current, 55432, 54329, 45432, 35432, 25432, 15432, 5442, 5434, 5433];
   let port = null;
-  const candidates = [current, 5433, 5434, 5442, 15432, 25432, 35432, 45432, 54329, 55432];
+  let migrated = null;
   for (const candidate of [...new Set(candidates)]) {
     if (!(await canListen(candidate))) continue;
     say(`Starting PostgreSQL in Docker on port ${candidate} (the first run downloads it)`);
     process.env.FINPULSE_DB_PORT = String(candidate);
     const up = quiet("docker", ["compose", "-f", "infra/docker-compose.yml", "up", "-d", "--wait"]);
-    if (up.ok) {
+    if (!up.ok) {
+      if (!PORT_PROBLEM.test(up.output)) {
+        process.stdout.write(up.output);
+        fail("Could not start the Docker database. Is Docker Desktop running?");
+      }
+      console.log(`  Port ${candidate} is in use or reserved on this machine; trying another.`);
+      continue;
+    }
+    // Make sure the server answering on this port is the container just started, not another
+    // PostgreSQL installed on this machine that shares the port (seen on Windows).
+    process.env.DATABASE_URL = urlFor(candidate);
+    const init = quiet("uv", ["run", "finpulse", "db", "init"], api);
+    if (init.ok) {
       port = candidate;
+      migrated = init.output;
       break;
     }
-    if (!PORT_PROBLEM.test(up.output)) {
-      process.stdout.write(up.output);
-      fail("Could not start the Docker database. Is Docker Desktop running?");
+    if (!WRONG_SERVER.test(init.output)) {
+      process.stdout.write(init.output);
+      fail("The database is running but migrations failed; see the error above.");
     }
-    console.log(`  Port ${candidate} is in use or reserved on this machine; trying another.`);
+    console.log(
+      `  Another PostgreSQL server answers on port ${candidate} (probably one installed on this\n` +
+        "  machine), not the FinPulse database; trying another port.",
+    );
+    quiet("docker", ["compose", "-f", "infra/docker-compose.yml", "down"]);
   }
-  if (port === null) fail("No free local port for the Docker database; set DATABASE_URL in .env.");
+  if (port === null)
+    fail("No usable local port for the Docker database; set DATABASE_URL in .env.");
+  process.stdout.write(migrated);
   if (port !== current) {
-    const url = `postgresql://finpulse:finpulse@127.0.0.1:${port}/finpulse`;
     writeFileSync(
       envPath,
-      readFileSync(envPath, "utf8").replace(DOCKER_URL, `DATABASE_URL=${url}`),
+      readFileSync(envPath, "utf8").replace(DOCKER_URL, `DATABASE_URL=${urlFor(port)}`),
     );
-    console.log(`  Port ${current} is not available here; .env now uses DATABASE_URL=${url}`);
-  }
-  if (!run("uv", ["run", "finpulse", "db", "init"], api)) {
-    fail("The database is running but migrations failed; see the error above.");
+    console.log(`  .env now uses DATABASE_URL=${urlFor(port)}`);
   }
 }
 
