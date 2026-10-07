@@ -118,7 +118,7 @@ def test_results_are_deterministic(code: str) -> None:
 
 
 def test_a_past_stress_test_never_sees_later_data() -> None:
-    d = data("sharma_electricals")
+    d = data("mehra_lighting")
     as_of = date(2025, 12, 31)
     request = StressTestRequest(preset="major_customer_stops_paying_60_days")
 
@@ -139,26 +139,26 @@ def test_freelancer_has_no_supplier_to_stress() -> None:
 # --- the stories ------------------------------------------------------------------------------
 
 
-def test_sharma_electricals_is_already_on_the_edge() -> None:
-    base = run("sharma_electricals", "revenue_down_10").baseline
+def test_mehra_lighting_is_already_on_the_edge() -> None:
+    base = run("mehra_lighting", "revenue_down_10").baseline
 
     assert base.risk.level == "critical"
     assert base.failure_point is not None and base.failure_point.date < date(2026, 11, 1)
     for preset in ("revenue_down_30", "operating_expenses_up_15", "major_supplier_cost_up_10"):
-        stressed = run("sharma_electricals", preset).stressed
+        stressed = run("mehra_lighting", preset).stressed
         assert stressed.failure_point is not None
         assert stressed.failure_point.date <= base.failure_point.date
 
 
-def test_sharma_six_months_ago_would_have_survived_a_10pct_fall() -> None:
-    d = data("sharma_electricals")
+def test_mehra_six_months_ago_would_have_survived_a_10pct_fall() -> None:
+    d = data("mehra_lighting")
     r = run_stress_test(d, date(2025, 10, 31), StressTestRequest(preset="revenue_down_10"), MODEL)
 
     assert r.stressed.failure_point is None
 
 
 def test_new_debt_postpones_failure_but_adds_burden() -> None:
-    r = run("sharma_electricals", "new_debt")
+    r = run("mehra_lighting", "new_debt")
 
     assert r.baseline.failure_point is not None and r.stressed.failure_point is None
     # The loan clears the overdraft, but its EMIs cut repayment capacity and shorten the runway.

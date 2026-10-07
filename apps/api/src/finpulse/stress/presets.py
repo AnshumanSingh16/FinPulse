@@ -19,15 +19,15 @@ PRESETS: dict[str, tuple[str, list[dict[str, Any]]]] = {
         [{"type": "revenue_decline", "decline_pct": "0.30"}],
     ),
     "major_customer_stops_paying_30_days": (
-        "Major customer stops paying for 30 days",
+        "Largest customer delays payment by 30 days",
         [{"type": "customer_payment_stop", "days": 30}],
     ),
     "major_customer_stops_paying_60_days": (
-        "Major customer stops paying for 60 days",
+        "Largest customer delays payment by 60 days",
         [{"type": "customer_payment_stop", "days": 60}],
     ),
     "major_customer_stops_paying_90_days": (
-        "Major customer stops paying for 90 days",
+        "Largest customer delays payment by 90 days",
         [{"type": "customer_payment_stop", "days": 90}],
     ),
     "operating_expenses_up_15": (

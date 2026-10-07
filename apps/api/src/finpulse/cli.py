@@ -9,9 +9,14 @@
     finpulse investigate run [CODE] [--as-of D] [-o FILE] [--events]
                                          run a full investigation on a synthetic scenario
                                          (calls the AI agents: needs ANTHROPIC_API_KEY)
+    finpulse investigate run --demo      the same, with the scripted demo agents (no API key;
+                                         Sharma Electricals only; see docs/DEMO.md)
     finpulse investigate show FILE [--events]  print a saved investigation
+    finpulse demo reset [--api URL]      restore the exact demo state: re-seed every synthetic
+                                         entity and clear the running API's investigations
 
-Everything except `investigate run` is deterministic Python and never calls an LLM.
+Everything except `investigate run` (without --demo) is deterministic Python and never calls an
+LLM.
 """
 
 from __future__ import annotations
@@ -246,12 +251,50 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--as-of", help="YYYY-MM-DD (default: end of the data)")
     p.add_argument("-o", "--out", help="also save the investigation as JSON")
     p.add_argument("--events", action="store_true", help="print the full event log")
+    p.add_argument(
+        "--demo", action="store_true", help="use the scripted demo agents (no API key needed)"
+    )
     p.set_defaults(handler=investigate_run)
     p = inv_cmds.add_parser("show", help="print a saved investigation")
     p.add_argument("file")
     p.add_argument("--events", action="store_true", help="print the full event log")
     p.set_defaults(handler=investigate_show)
+
+    demo = groups.add_parser("demo", help="the deterministic Sharma Electricals demo")
+    demo_cmds = demo.add_subparsers(dest="cmd", required=True)
+    p = demo_cmds.add_parser("reset", help="re-seed every entity and clear investigations")
+    p.add_argument(
+        "--api",
+        help="running API to clear (default: http://API_HOST:API_PORT from the settings)",
+    )
+    p.set_defaults(handler=demo_reset)
     return parser
+
+
+# --- demo ---------------------------------------------------------------------------------------
+
+
+def demo_reset(args: argparse.Namespace, settings: Settings) -> None:
+    """Re-seed the database (works without the API), then ask a running API to forget its
+    investigations. The data is regenerated from the scenario specs and seeds, so the result is
+    identical every time (the fingerprints printed are pinned by the test suite)."""
+    import httpx
+
+    if not settings.demo_allowed:
+        raise SystemExit("the demo reset is disabled here (production, or DEMO_ENABLED=false)")
+    db_seed(argparse.Namespace(scenario=None), settings)
+    api = (args.api or f"http://{settings.api_host}:{settings.api_port}").rstrip("/")
+    try:
+        response = httpx.post(f"{api}/api/v1/demo/reset", json={"seed": False}, timeout=10)
+        response.raise_for_status()
+        body = response.json()
+        _say(
+            f"cleared the API at {api}: {body['investigations_cleared']} investigation(s), "
+            f"{body['runs_cleared']} run(s)"
+        )
+    except httpx.HTTPError as exc:
+        _say(f"API at {api} not cleared ({type(exc).__name__}); restart it to clear investigations")
+    _say("demo state restored")
 
 
 # --- investigate --------------------------------------------------------------------------------
@@ -272,10 +315,12 @@ def investigate_run(args: argparse.Namespace, settings: Settings) -> None:
     if as_of is None:
         _say("The scenario has no data.")
         sys.exit(1)
+    from finpulse.agents.llm import LLMClient
+    from finpulse.demo import DemoScriptLLM
+
+    llm: LLMClient = DemoScriptLLM(pace_seconds=0) if args.demo else AnthropicLLM(settings)
     try:
-        investigation = asyncio.run(
-            InvestigationOrchestrator(AnthropicLLM(settings)).investigate(data, as_of)
-        )
+        investigation = asyncio.run(InvestigationOrchestrator(llm).investigate(data, as_of))
     except AppError as exc:
         _say(f"Investigation failed: {exc.detail or exc}")
         sys.exit(1)

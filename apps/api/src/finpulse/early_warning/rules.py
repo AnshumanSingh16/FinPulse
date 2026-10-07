@@ -686,6 +686,147 @@ class CashDecline(Rule):
         )
 
 
+class LiquidityDeteriorationParams(RuleParams):
+    lookback_months: int
+    average_days: int
+    revenue_months: int
+    min_days_increase: Decimal
+    min_overdue_share: Decimal
+
+
+@register
+class LiquidityDeterioration(Rule):
+    """Cash draining into unpaid invoices: the bank balance falls while receivables rise.
+
+    The liquidity ratio counts receivables as liquid, so it can hold steady (or even improve)
+    while the cash a business can actually spend drains away. This rule measures that shift
+    directly: the fall in cash plus the rise in receivables over the lookback, in months of
+    revenue. It stays clear unless a meaningful share of receivables is overdue (invoices not yet
+    due are not a liquidity problem), and it is reported as worsening only if collection time also
+    lengthened, so receivables rising with healthy sales growth alone is not deterioration."""
+
+    code = "liquidity_deterioration"
+    about = "Cash falling while receivables rise: liquidity moving into unpaid invoices."
+    category = "liquidity"
+    metric = "receivables.outstanding"
+    direction = "above"
+    Params = LiquidityDeteriorationParams
+
+    def evaluate(self, h: History, as_of: date, p: Any) -> Finding | Skip:
+        then = months_back(as_of, p.lookback_months)
+        ctx = h.at(as_of).ctx
+        start = then - timedelta(days=p.average_days - 1)
+        if ctx.first_date is None or ctx.first_date > start:
+            return Skip("insufficient_data", f"Needs history from {day(start)}.")
+        now_rec = h.at(as_of).metric(self.metric)
+        if now_rec.availability == "not_applicable":
+            return Skip("not_applicable", now_rec.notes[0])
+        rec_now, rec_then = now_rec.value, h.at(then).value(self.metric)
+        if rec_now is None or rec_then is None:
+            return Skip("insufficient_data", "Receivables are not available at both dates.")
+        revenue_ends = [months_back(as_of, i) for i in range(p.revenue_months)]
+        revenues = [h.at(d).value("revenue.monthly") for d in revenue_ends]
+        if any(r is None for r in revenues):
+            return Skip("insufficient_data", "Monthly revenue is not available.")
+        revenue = sum((r for r in revenues if r is not None), Decimal(0)) / len(revenues)
+        if revenue <= 0:
+            return Skip("insufficient_data", "No revenue to compare with.")
+
+        def average(end: date) -> Decimal:
+            """The 30-day average balance in whole rupees, so the figure reads the same in the
+            text, in the evidence values and wherever the UI shows it."""
+            days = [end - timedelta(days=i) for i in range(p.average_days)]
+            paise = Decimal(sum(ctx.balance_at(d) for d in days)) / len(days)
+            return inr(int(q(paise / 100, "1")) * 100)
+
+        cash_now, cash_then = average(as_of), average(then)
+        cash_fall, rec_rise = cash_then - cash_now, rec_now - rec_then
+        if cash_fall <= 0:
+            return Skip("clear", "The average cash balance has not fallen.")
+        if rec_rise <= 0:
+            return Skip("clear", "Receivables have not risen.")
+        overdue = now_rec.components.get("overdue_share")
+        if isinstance(overdue, Decimal) and overdue < p.min_overdue_share:
+            return Skip(
+                "clear",
+                f"Receivables rose, but only {q(overdue * 100, '1')}% are overdue: invoices "
+                "not yet due are not a liquidity problem.",
+            )
+        shift = cash_fall + rec_rise
+        dso_now = h.at(as_of).value("receivables.days")
+        dso_then = h.at(then).value("receivables.days")
+        months = q(shift / revenue, "0.01")
+        text = (
+            f"Over {p.lookback_months} months the average cash balance fell from "
+            f"{fmt(cash_then, 'INR')} to {fmt(cash_now, 'INR')} while receivables rose from "
+            f"{fmt(rec_then, 'INR')} to {fmt(rec_now, 'INR')}: {fmt(shift, 'INR')} "
+            f"({months} months of revenue) has moved out of the bank into unpaid invoices."
+        )
+        if dso_now is not None and dso_then is not None:
+            text += f" Collection time went from {q(dso_then, '1')} to {q(dso_now, '1')} days."
+        if isinstance(overdue, Decimal):
+            text += f" {q(overdue * 100, '1')}% of receivables are overdue."
+        ratio = h.at(as_of).value("liquidity.ratio")
+        if ratio is not None:
+            text += (
+                f" The liquidity ratio ({q(ratio, '0.01')}×) counts receivables as liquid, so it "
+                "does not show this."
+            )
+        return Finding(
+            measure=q(shift / revenue),
+            measure_label="(Fall in cash + rise in receivables) ÷ average monthly revenue",
+            measure_unit="months",
+            deteriorating=dso_now is None
+            or dso_then is None
+            or dso_now - dso_then >= p.min_days_increase,
+            title="Liquidity deterioration",
+            persistent_title="Cash tied up in growing receivables",
+            description=text,
+            current=rec_now,
+            previous=rec_then,
+            current_period=as_of_period(as_of),
+            previous_period=as_of_period(then),
+            evidence=[
+                metric_evidence(
+                    h,
+                    as_of,
+                    self.metric,
+                    "receivables_now",
+                    f"Receivables at {day(as_of)}, aged.",
+                    ("overdue_share", "overdue_31_60_days", "overdue_61_90_days"),
+                ),
+                metric_evidence(
+                    h, then, self.metric, "receivables_then", f"Receivables at {day(then)}."
+                ),
+                WarningEvidence(
+                    id="cash_average",
+                    text=f"Average daily cash balance over the {p.average_days} days to each date.",
+                    values={"now": cash_now, "then": cash_then},
+                    metric_codes=["cash.balance"],
+                ),
+                WarningEvidence(
+                    id="revenue",
+                    text=f"Average monthly revenue over {months_text(sorted(revenue_ends))}.",
+                    values={"average_monthly_revenue": q(revenue, "0.01")},
+                    metric_codes=["revenue.monthly"],
+                ),
+                WarningEvidence(
+                    id="collection_days",
+                    text="Receivable days (DSO) at each date.",
+                    values={"now": dso_now, "then": dso_then},
+                    metric_codes=["receivables.days"],
+                ),
+                metric_evidence(
+                    h,
+                    as_of,
+                    "liquidity.ratio",
+                    "liquidity_ratio",
+                    "Liquidity ratio (receivables counted as liquid).",
+                ),
+            ],
+        )
+
+
 # --- receivables ---------------------------------------------------------------------------------
 
 

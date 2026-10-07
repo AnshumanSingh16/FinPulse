@@ -9,14 +9,17 @@ from __future__ import annotations
 
 import uuid
 from datetime import date
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Body, Path, Query
 from pydantic import BaseModel, ConfigDict, Field
 
-from finpulse.api.deps import DataSourceDep, LLMDep, OrgDep, StoreDep, TrackerDep
+from finpulse.agents.llm import LLMClient
+from finpulse.api.deps import DataSourceDep, LLMDep, OrgDep, SettingsDep, StoreDep, TrackerDep
 from finpulse.api.routers.entities import EntityId
-from finpulse.core.errors import NotFoundError
+from finpulse.config import Settings
+from finpulse.core.errors import ForbiddenError, NotFoundError
+from finpulse.demo import DemoScriptLLM
 from finpulse.investigation.orchestrator import InvestigationOrchestrator
 from finpulse.investigation.schemas import (
     Investigation,
@@ -34,6 +37,19 @@ class InvestigateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     as_of: date | None = Field(default=None, description="Defaults to the end of the data")
+    mode: Literal["live", "demo"] = Field(
+        default="live",
+        description="demo: answer with the scripted demo agents (Sharma Electricals only; see "
+        "docs/DEMO.md) instead of the language model. The record is marked ai_mode=demo_script.",
+    )
+
+
+def choose_llm(llm: LLMClient, settings: Settings, request: InvestigateRequest | None) -> LLMClient:
+    if request is None or request.mode == "live":
+        return llm
+    if not settings.demo_allowed:
+        raise ForbiddenError("The scripted demo is disabled here.", code="demo_disabled")
+    return DemoScriptLLM(settings.demo_script_pace)
 
 
 @router.post(
@@ -47,11 +63,13 @@ async def investigate(
     org_id: OrgDep,
     llm: LLMDep,
     store: StoreDep,
+    settings: SettingsDep,
     request: Annotated[InvestigateRequest | None, Body()] = None,
 ) -> Investigation:
+    chosen = choose_llm(llm, settings, request)
     data = await load_entity(source, org_id, entity_id)
     as_of = resolve_as_of(data, request.as_of if request else None)
-    investigation = await InvestigationOrchestrator(llm).investigate(data, as_of)
+    investigation = await InvestigationOrchestrator(chosen).investigate(data, as_of)
     store.save(investigation)
     return investigation
 
@@ -69,11 +87,13 @@ async def start_investigation(
     llm: LLMDep,
     store: StoreDep,
     tracker: TrackerDep,
+    settings: SettingsDep,
     request: Annotated[InvestigateRequest | None, Body()] = None,
 ) -> InvestigationProgress:
+    chosen = choose_llm(llm, settings, request)
     data = await load_entity(source, org_id, entity_id)
     as_of = resolve_as_of(data, request.as_of if request else None)
-    return tracker.start(llm, data, as_of, store)
+    return tracker.start(chosen, data, as_of, store)
 
 
 @router.get(

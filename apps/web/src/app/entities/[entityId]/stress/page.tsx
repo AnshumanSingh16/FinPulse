@@ -4,12 +4,13 @@ import { PageHeader } from "@/components/fp/layout";
 import { ApiErrorPanel } from "@/components/fp/states";
 import { StressLab } from "@/components/stress/stress-lab";
 import { getStressCatalogue } from "@/lib/api/finpulse";
-import { entityContext, type EntityPageProps } from "@/lib/page";
+import { entityContext, one, type EntityPageProps } from "@/lib/page";
 
 export const metadata: Metadata = { title: "Stress Test" };
 
 export default async function StressPage(props: EntityPageProps) {
-  const { entityId, asOf } = await entityContext(props);
+  const { entityId, asOf, search } = await entityContext(props);
+  const initialPreset = one(search.preset);
   let catalogue;
   try {
     catalogue = await getStressCatalogue();
@@ -23,10 +24,11 @@ export default async function StressPage(props: EntityPageProps) {
         description="Project cash month by month under hypothetical shocks — before and after. Every figure comes from the deterministic stress engine; scenarios are not forecasts."
       />
       <StressLab
-        key={`${entityId}:${asOf ?? ""}`}
+        key={`${entityId}:${asOf ?? ""}:${initialPreset ?? ""}`}
         catalogue={catalogue}
         entityId={entityId}
         asOf={asOf}
+        initialPreset={initialPreset}
       />
     </div>
   );

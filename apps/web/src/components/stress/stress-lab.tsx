@@ -41,10 +41,13 @@ export function StressLab({
   catalogue,
   entityId,
   asOf,
+  initialPreset,
 }: {
   catalogue: ScenarioCatalogue;
   entityId: string;
   asOf?: string;
+  /** Preset to load and run first (e.g. from a demo link); defaults to a 20% revenue fall. */
+  initialPreset?: string;
 }) {
   const types = useMemo(
     () =>
@@ -57,6 +60,7 @@ export function StressLab({
     [catalogue],
   );
   const firstPreset =
+    catalogue.presets.find((p) => p.code === initialPreset)?.code ??
     catalogue.presets.find((p) => p.code === "revenue_down_20")?.code ??
     catalogue.presets[0]?.code ??
     "";

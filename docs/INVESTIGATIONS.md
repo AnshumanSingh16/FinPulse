@@ -181,6 +181,14 @@ listed in `confidence.adjustments`.
   disagreements and red-team challenges, the final assessment by statement type, the
   recommendations, confidence with its reasons, the audit and the timed event log.
 
+## Demo mode
+
+`{"mode": "demo"}` on `POST /api/v1/entities/{id}/investigations` (or `finpulse investigate run
+--demo`) runs the same workflow with `finpulse.demo.DemoScriptLLM` in place of the model: answers
+written in advance for the Sharma Electricals story, with every number read from the agent's own
+evidence and checked by the same verifier. The record is marked `ai_mode: "demo_script"`, each
+agent run's `model` is `finpulse-demo-script-1`, and the UI labels it. See [DEMO.md](DEMO.md).
+
 ## Limits
 
 - `POST …/investigate` is synchronous: the request returns when the investigation is complete. A

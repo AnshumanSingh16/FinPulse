@@ -34,6 +34,8 @@ StageName = Literal[
 StageStatus = Literal["completed", "completed_with_issues", "failed", "skipped"]
 EventLevel = Literal["info", "warning", "error"]
 ConfidenceLevel = Literal["high", "medium", "low"]
+# "demo_script": the agents' answers came from the scripted demo (finpulse.demo), not a model.
+AIMode = Literal["live", "demo_script"]
 
 
 class StageRecord(BaseModel):
@@ -253,6 +255,11 @@ class Investigation(BaseModel):
     entity: EntityRef
     as_of: dt.date
     workflow_version: str
+    ai_mode: AIMode = Field(
+        default="live",
+        description="live: answers from the language model. demo_script: scripted demo answers "
+        "(still verified), not a model",
+    )
     status: InvestigationStatus
     started_at: dt.datetime
     completed_at: dt.datetime
@@ -287,6 +294,7 @@ class InvestigationSummary(BaseModel):
     entity_id: uuid.UUID
     entity_name: str
     as_of: dt.date
+    ai_mode: AIMode = "live"
     status: InvestigationStatus
     risk_level: str
     confidence: ConfidenceLevel
@@ -301,6 +309,7 @@ class InvestigationSummary(BaseModel):
             entity_id=inv.entity_id,
             entity_name=inv.entity.display_name,
             as_of=inv.as_of,
+            ai_mode=inv.ai_mode,
             status=inv.status,
             risk_level=inv.final_assessment.risk_level,
             confidence=inv.confidence.level,
@@ -322,6 +331,7 @@ class InvestigationProgress(BaseModel):
     entity_id: uuid.UUID
     entity_name: str
     as_of: dt.date
+    ai_mode: AIMode = "live"
     status: Literal["running", "completed", "failed"]
     started_at: dt.datetime
     updated_at: dt.datetime

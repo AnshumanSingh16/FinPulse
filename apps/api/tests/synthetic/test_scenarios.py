@@ -91,8 +91,8 @@ def test_deteriorating_msme_declines_before_the_bureau_notices() -> None:
 
 
 def test_deteriorating_msme_loses_its_largest_customer() -> None:
-    spec = SCENARIOS[PRIMARY_DEMO]
-    ds = dataset_for(PRIMARY_DEMO)
+    spec = SCENARIOS["mehra_lighting"]
+    ds = dataset_for("mehra_lighting")
     (shock,) = [s for s in spec.shocks if isinstance(s, CustomerVolumeShock)]
     customer = next(c.id for c in ds.counterparties if c.name == "Shree Ganesh Builders")
     onset = ds.ground_truth.onset_date

@@ -22,7 +22,8 @@ finpulse/
 │   ├── docker-compose.yml        # postgres, api, worker, web
 │   └── postgres/init.sql         # pgcrypto; local roles
 ├── docs/SYNTHETIC_DATA.md        # the synthetic dataset: entities, structure, guarantees, how to extend
-├── scripts/                      # dev.mjs (API + web), db-init.sh, db-seed.sh, db-reset.sh
+├── docs/DEMO.md                  # the deterministic Sharma Electricals demo and how to reset it
+├── scripts/                      # dev.mjs (API + web), db-init.sh, db-seed.sh, db-reset.sh, demo-reset.sh
 ├── .github/workflows/ci.yml
 ├── .env.example
 └── Makefile                      # one-word entrypoints: make dev / test / lint / gen
@@ -54,6 +55,7 @@ apps/api/
 │   │   └── results.py            # MetricResult, PassportResult, Signal, StressResult
 │   │
 │   ├── synthetic/                # PURE: seeded day-by-day simulation (see docs/SYNTHETIC_DATA.md)
+│   ├── demo/                     # the demo story's walkthrough and its scripted, verified agents
 │   │   ├── spec.py               # ScenarioSpec + shocks: the knobs a scenario sets
 │   │   ├── engine.py             # simulation: sales, invoices, bills, payroll, tax, loans, cash
 │   │   ├── scenarios/            # one module per entity (sharma_electricals.py, …) + registry
@@ -241,6 +243,7 @@ apps/web/src/
 │       ├── loading.tsx · error.tsx
 │       ├── page.tsx                            # overview
 │       ├── passport/ · warnings/ · health/ · stress/ · investigation/ · evidence/
+│   └── demo/page.tsx                           # demo walkthrough, reset and the brief
 ├── components/
 │   ├── shell/                                  # sidebar, nav, entity controls
 │   ├── fp/                                     # badges, panels, stat tiles, meters, risk timeline

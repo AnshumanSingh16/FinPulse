@@ -320,7 +320,7 @@ The run-based design below (persisted runs, Monte Carlo paths) follows later.
 |---|---|---|
 | GET | `/entities/{entity_id}/evidence-pack` | The verified evidence the agents read: citable items of kind fact, calculated_metric, forecast or assumption. Deterministic (no AI). Optional `?as_of=` |
 | POST | `/entities/{entity_id}/investigate` | Runs the full investigation workflow and returns the `Investigation` record. Body `{"as_of"?}`. No free-text questions. See [docs/INVESTIGATIONS.md](docs/INVESTIGATIONS.md). The record contains: <ul><li>stages with timestamps</li><li>triggered warnings and the metrics used</li><li>agent analyses</li><li>disagreements and red-team findings</li><li>the final assessment, separated into FACT / CALCULATED_METRIC / FORECAST / ASSUMPTION / AI_INTERPRETATION</li><li>recommendations and confidence</li><li>evidence references, the claim audit and the event log</li></ul> |
-| POST | `/entities/{entity_id}/investigations` | Starts the same workflow in the background and returns `202` with an `InvestigationProgress`. Body `{"as_of"?}` |
+| POST | `/entities/{entity_id}/investigations` | Starts the same workflow in the background and returns `202` with an `InvestigationProgress`. Body `{"as_of"?, "mode"?}`: `mode: "demo"` answers with the scripted demo agents instead of the model (Sharma Electricals only; `403 demo_disabled` in production) and marks the record `ai_mode: "demo_script"`. See [docs/DEMO.md](docs/DEMO.md) |
 | GET | `/investigations/{id}/progress` | Live state of a background run, built from the orchestrator's real events: `status` (running · completed · failed), `current_stage`, completed `stages[]`, per-agent `agents[]` (pending · running · succeeded · failed · skipped, claims, attempts), `events[]`, `error{code,message}`, and `timeline` (the eight user-facing steps with
 state, timing and highlights, plus per-agent focus, key finding, evidence ids, verifier counts and
 red-team challenges; also stored on the finished record). When completed the full record is at `/investigations/{id}`. `404 investigation_not_found` |
@@ -372,6 +372,13 @@ Claim item:
   "challenges": []
 }
 ```
+
+### 4.10a Demo *(implemented)*
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/demo` | The demo entity (`entity_id`, `as_of`), its narrative, the stress preset it uses and the six walkthrough steps; `enabled` is false in production |
+| POST | `/demo/reset` | Restores the exact demo state: re-seeds every synthetic entity (deterministic; returns the fingerprints) and clears kept and running investigations. Body `{"seed"?: true}`. `403 demo_disabled` in production or with `DEMO_ENABLED=false` |
 
 ### 4.11 Evidence resolution
 

@@ -11,7 +11,8 @@ Loader and CLI: `apps/api/src/finpulse/persistence/seed.py`, `apps/api/src/finpu
 
 | Code | Entity | Archetype | History | What happens |
 |---|---|---|---|---|
-| `sharma_electricals` | **Sharma Electricals**, Lucknow — electrical goods retail and contractor supply. **Primary demo.** | Deteriorating MSME | 18 months, Apr 2025 – Sep 2026 | Sound for seven months. From Nov 2025 its largest customer (a builder) pays ~45 days later, then almost stops ordering; copper-linked costs rise; walk-in sales decline; other customers slow down. Two digital loans that don't report to the bureau bridge the gap; drawings stop; suppliers are stretched; the account lives in its overdraft; digital-loan auto-debits bounce in Aug–Sep 2026. **The bureau record stays clean**: its only reported loan is still paid on time. |
+| `sharma_electricals` | **Sharma Electricals**, Lucknow — electrical goods retail and contractor supply. **Primary demo** ([DEMO.md](DEMO.md)). | Strained MSME | 18 months, Apr 2025 – Sep 2026 | Thin credit history (one small bank equipment loan, always paid). Sound and growing through 2025 with ₹12–13 lakh in the bank. From Dec 2025 its largest customer, a builder, more than doubles its orders while paying a little later every two months; other customers drift later from June. Revenue keeps growing, but receivables more than double, collection time stretches from ~30 to ~46 days, cash falls to ~₹7.4 lakh and the builder reaches 37% of revenue. Nothing has gone wrong yet: medium risk, led by liquidity deterioration. |
+| `mehra_lighting` | Mehra Lighting & Electricals, Kanpur — electrical goods retail and contractor supply | Deteriorating MSME | 18 months, Apr 2025 – Sep 2026 | Sound for seven months. From Nov 2025 its largest customer (a builder) pays ~45 days later, then almost stops ordering; copper-linked costs rise; walk-in sales decline; other customers slow down. Two digital loans that don't report to the bureau bridge the gap; drawings stop; suppliers are stretched; the account lives in its overdraft; digital-loan auto-debits bounce in Aug–Sep 2026. **The bureau record stays clean**: its only reported loan is still paid on time. |
 | `kaveri_packaging` | Kaveri Packaging Solutions, Coimbatore — corrugated boxes | Healthy MSME | 15 months | Eight diversified, punctual customers; steady growth; equipment loan always paid on time; never overdrawn. |
 | `annapurna_kitchen` | Annapurna Home Kitchen, Pune — cloud kitchen | Thin-file but healthy MSME | 12 months | One year old, has never borrowed, so a bureau has no record at all. Weekly delivery-platform payouts, a corporate catering contract and direct UPI orders, growing ~3.5% a month; cash buffer grows steadily. |
 | `rapid_mobile_hub` | Rapid Mobile Hub, Delhi — mobile phones and accessories | High-risk MSME | 15 months | Thin margins and volatile sales; lives at its overdraft limit; heavy ATM withdrawals and online gaming spend; resellers pay late and in parts; four lenders; repeated auto-debit bounces throughout. |
@@ -19,17 +20,22 @@ Loader and CLI: `apps/api/src/finpulse/persistence/seed.py`, `apps/api/src/finpu
 
 All names, banks, lenders and platforms are fictional.
 
-`finpulse synthetic summary sharma_electricals` prints the month-by-month picture. Some
-highlights for the primary demo (₹ lakh, rounded):
+`finpulse synthetic summary sharma_electricals` prints the month-by-month picture. The primary
+demo, month-end figures (₹ lakh, rounded):
 
-| | Apr–Oct 2025 (before onset) | Apr–Sep 2026 (after) |
+| | 2025 | Sep 2026 |
 |---|---|---|
-| Average monthly sales | 12.1 | 8.0 |
-| Largest customer's share of invoicing | > 40% | < 15% |
-| Month-end balance | +3.7 to +6.1 | −1.7 to +2.4 (overdraft) |
-| Loans | 1 bank term loan | + 2 unreported digital loans |
-| Auto-debit bounces | 0 | 3 (Aug–Sep) |
-| Bureau delinquencies reported | 0 | 0 |
+| Monthly revenue | about 9.5 | 13.4 |
+| Receivables outstanding | 5.6 (Apr) – 6.3 (Jan 2026) | 14.8 |
+| Receivable days | about 30 | 45.8 |
+| Cash balance | 12–13 | 7.4 |
+| Largest customer's share of revenue (6 months) | 23% (Jan 2026) | 37% |
+| Loans · bounces · bureau delinquencies | 1 bank loan · 0 · 0 | unchanged |
+
+Mehra Lighting & Electricals keeps FinPulse's earlier, more severe demo story (identical
+parameters and seed): sales fall from about ₹12.1 to ₹8.0 lakh a month after onset, the largest
+customer's share drops from over 40% to under 15%, it borrows twice from unreported digital
+lenders and its auto-debits bounce in Aug–Sep 2026, while the bureau still shows nothing.
 
 ## 2. Dataset structure
 
@@ -112,7 +118,7 @@ and bounces all emerge from the simulation.
 | Loan schedules repay exactly the principal; disbursements and every paid EMI are bank transactions; bounce charges match bounces; debt outstanding = borrowed − principal repaid | ″ |
 | Bureau events only for reporting lenders, and DPD events match real days past due | ″ |
 | The monthly summary reconciles with the ledger | ″ |
-| Each scenario behaves like its archetype (e.g. the deteriorating MSME's sales fall > 25% after onset, it bounces only after onset, and the bureau still shows nothing) | `test_scenarios.py` |
+| Each scenario behaves like its archetype (e.g. Mehra's sales fall > 25% after onset, it bounces only after onset, and the bureau still shows nothing) | `test_scenarios.py` |
 | Seeding into PostgreSQL is idempotent, and the same reconciliations hold in SQL | `tests/test_seed_db.py` |
 
 ## 5. Commands

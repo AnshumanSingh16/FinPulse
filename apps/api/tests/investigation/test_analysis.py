@@ -12,10 +12,10 @@ from finpulse.investigation import analysis
 from finpulse.investigation.schemas import ReviewCoverage
 from finpulse.scoring import load_model, with_monthly_change
 from tests.agents.fakes import FakeLLM, claim, item, pack_for, valid_output
-from tests.test_entities_api import SHARMA
+from tests.test_entities_api import MEHRA
 
-PACK = pack_for()
-PASSPORT = with_monthly_change(SHARMA, PACK.as_of, load_model())
+PACK = pack_for("mehra_lighting")
+PASSPORT = with_monthly_change(MEHRA, PACK.as_of, load_model())
 
 
 def output(agent: str, **changes: Any) -> dict[str, Any]:
@@ -231,7 +231,7 @@ async def test_metrics_and_evidence_references() -> None:
 def test_deterministic_fallback_quotes_evidence_verbatim() -> None:
     from finpulse.early_warning import load_config, risk_summary
 
-    summary = risk_summary(SHARMA, PACK.as_of, load_config())
+    summary = risk_summary(MEHRA, PACK.as_of, load_config())
 
     final = analysis.final_assessment(None, PACK, summary, PASSPORT)
 

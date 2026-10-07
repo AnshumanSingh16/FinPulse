@@ -95,7 +95,8 @@ tests pin them.
 
 | Entity | Baseline | Typical scenario outcome |
 |---|---|---|
-| **Sharma Electricals** | **Critical**: funds run out ~13 Oct 2026 | Shocks bring failure earlier (revenue −30% → 8 Oct; customer stop → 4 Oct). `new_debt` avoids failure (→ High) but cuts repayment capacity |
+| **Sharma Electricals** (demo) | Low | Fragile to one customer: the largest customer delaying payment 60 days takes it to **High** (overdrawn at −₹2,50,470 in Nov 2026), 90 days to **Critical** (funds run out ~16 Dec 2026); a 20% revenue fall keeps it Low |
+| Mehra Lighting & Electricals | **Critical**: funds run out ~13 Oct 2026 | Shocks bring failure earlier (revenue −30% → 8 Oct; customer stop → 4 Oct). `new_debt` avoids failure (→ High) but cuts repayment capacity |
 | Rapid Mobile Hub | High | Most shocks tip it into **Critical** (revenue −20% → funds out ~24 Oct) |
 | Kaveri Packaging | Low | Stays Low under all ten; Financial Health falls by up to 13 points (revenue −30%) |
 | Annapurna Home Kitchen | Low | Stays Low; no debt, so a rate rise changes nothing |

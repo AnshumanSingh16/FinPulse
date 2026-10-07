@@ -1,14 +1,17 @@
-"""Sharma Electricals — the primary demo entity (deteriorating MSME).
+"""Sharma Electricals — the primary demo entity: an MSME whose growth is quietly draining its cash.
 
-An electrical goods shop in Lucknow that also supplies contractors and builders. For its first
-seven months (April–October 2025) it is a sound business. From November 2025 its largest
-customer, a builder whose project has stalled, first pays much later and then all but stops
-ordering; copper-linked purchase costs rise; from February 2026 walk-in sales drift down as a
-large-format store opens nearby, and other customers start paying later too. The owner bridges
-the gap with two digital loans (February and May 2026) that do not report to the credit bureau,
-stops taking drawings, stretches suppliers and lives in the overdraft. By September 2026 the
-digital-loan auto-debits are bouncing. The credit bureau, which only sees the bank term loan —
-still paid on time — shows a clean record throughout.
+An electrical goods shop in Lucknow that also supplies contractors and builders. It has little
+traditional credit history: one small equipment loan from its bank, always paid on time, is all a
+credit bureau would see. Through 2025 it is a sound, steadily growing business with about ₹12–13
+lakh in the bank. From December 2025 its largest customer, Shree Ganesh Builders, scales up a
+housing project and more than doubles its orders over the next ten months, so revenue keeps
+growing (about ₹9.5 lakh a month in 2025, ₹13.4 lakh by September 2026) and the builder becomes
+more than a third of sales. But the builder pays a little later every two months — by August 2026
+about 15 days past its 30-day terms — and from June the other customers drift a few days later
+too. Receivables more than double, collection time stretches from about 30 to about 46 days, and
+cash falls to about ₹7.4 lakh as the business funds its customers' working capital. Nothing has
+gone wrong yet: every instalment and supplier bill is paid, and the six-month outlook is
+comfortable unless the builder stops paying.
 """
 
 from datetime import date
@@ -17,7 +20,6 @@ from finpulse.core.money import rupees
 from finpulse.synthetic.categories import Category, Channel, CounterpartyKind
 from finpulse.synthetic.spec import (
     AccountSpec,
-    CostInflationShock,
     CounterSalesSpec,
     CustomerSpec,
     CustomerVolumeShock,
@@ -26,22 +28,21 @@ from finpulse.synthetic.spec import (
     OwnerSpec,
     PaymentDelayShock,
     RecurringExpenseSpec,
-    SalesTrendShock,
     ScenarioSpec,
     SupplierSpec,
     TaxSpec,
     VariableExpenseSpec,
 )
 
-# Lucknow electricals: summer peak (fans, coolers), monsoon dip, festive peak (Diwali lighting).
-SEASONALITY = (0.90, 0.90, 1.00, 1.10, 1.25, 1.20, 0.90, 0.85, 0.95, 1.15, 1.20, 0.95)
+# Lucknow electricals: a mild summer peak (fans, coolers), monsoon dip and festive peak (Diwali).
+SEASONALITY = (0.96, 0.95, 1.00, 1.04, 1.08, 1.06, 0.97, 0.95, 0.98, 1.05, 1.08, 0.98)
 SUMMER_POWER = (0.8, 0.8, 0.9, 1.1, 1.4, 1.5, 1.3, 1.2, 1.1, 0.9, 0.8, 0.8)
 
 SHARMA_ELECTRICALS = ScenarioSpec(
     code="sharma_electricals",
     display_name="Sharma Electricals",
     kind="business",
-    archetype="deteriorating_msme",
+    archetype="strained_msme",
     segment="electrical_retail_and_contract_supply",
     narrative=__doc__.split("\n\n", 1)[1].strip().replace("\n", " "),
     start=date(2025, 4, 1),
@@ -55,16 +56,17 @@ SHARMA_ELECTRICALS = ScenarioSpec(
         "years_in_business": 9,
         "employees": 3,
         "gst_registered": True,
+        "credit_history": "thin: one bank equipment loan since 2024",
     },
     account=AccountSpec(
         institution="Ganga Valley Bank",
-        opening_balance=rupees(300_000),
-        overdraft_limit=rupees(200_000),
+        opening_balance=rupees(1_100_000),
+        overdraft_limit=rupees(500_000),
         overdraft_rate=0.13,
         branch="Aminabad",
     ),
     owner=OwnerSpec(
-        name="Rakesh Sharma", monthly_drawings=rupees(65_000), min_buffer=rupees(100_000)
+        name="Rakesh Sharma", monthly_drawings=rupees(85_000), min_buffer=rupees(100_000)
     ),
     invoice_prefix="SE",
     counter_sales=CounterSalesSpec(daily_mean=rupees(18_000), cv=0.35, upi_share=0.62),
@@ -72,11 +74,11 @@ SHARMA_ELECTRICALS = ScenarioSpec(
         CustomerSpec(
             "shree_ganesh",
             "Shree Ganesh Builders",
-            rupees(320_000),
+            rupees(260_000),
             5,
             terms_days=30,
-            pay_delay_mean_days=3,
-            pay_delay_sd_days=4,
+            pay_delay_mean_days=2,
+            pay_delay_sd_days=3,
         ),
         CustomerSpec(
             "verma_contractors",
@@ -115,7 +117,7 @@ SHARMA_ELECTRICALS = ScenarioSpec(
         ),
     ),
     seasonality=SEASONALITY,
-    monthly_growth=0.006,
+    monthly_growth=0.010,
     cogs_ratio=0.78,
     suppliers=(
         SupplierSpec(
@@ -182,49 +184,35 @@ SHARMA_ELECTRICALS = ScenarioSpec(
     ),
     loans=(
         LoanSpec(
-            "term_loan",
+            "equipment_loan",
             "Ganga Valley Bank",
-            "term_loan",
-            rupees(800_000),
-            0.115,
-            48,
-            disburse_month=-10,
+            "equipment_loan",
+            rupees(350_000),
+            0.11,
+            36,
+            disburse_month=-6,
             emi_day=5,
             represent_after_days=4,
-        ),
-        LoanSpec(
-            "quickcred",
-            "QuickCred Finance",
-            "digital_unsecured",
-            rupees(300_000),
-            0.26,
-            12,
-            disburse_month=10,
-            disburse_day=18,
-            emi_day=3,
-            reports_to_bureau=False,
-            processing_fee_rate=0.025,
-        ),
-        LoanSpec(
-            "rupiya_now",
-            "Rupiya Now",
-            "digital_unsecured",
-            rupees(150_000),
-            0.30,
-            9,
-            disburse_month=13,
-            disburse_day=22,
-            emi_day=2,
-            reports_to_bureau=False,
-            processing_fee_rate=0.03,
         ),
     ),
     tax=TaxSpec(gst_rate=0.18),
     shocks=(
-        PaymentDelayShock(start_month=7, extra_days=45, customer="shree_ganesh"),
-        CostInflationShock(start_month=8, cogs_ratio_delta=0.05),
-        CustomerVolumeShock("shree_ganesh", start_month=9, factor=0.1, ramp_months=3),
-        SalesTrendShock(start_month=10, monthly_change=-0.05),
-        PaymentDelayShock(start_month=11, extra_days=15),
+        # The builder's housing project: orders ramp up to 2.2× over ten months.
+        CustomerVolumeShock(
+            "shree_ganesh",
+            start_month=8,
+            factor=2.2,
+            ramp_months=10,
+            deterioration=False,
+            mechanism="customer_concentration_growth",
+        ),
+        # ...and it pays a little later every two months (cumulative: 3, 7, 11, 15 days late).
+        PaymentDelayShock(start_month=10, extra_days=3, customer="shree_ganesh"),
+        PaymentDelayShock(start_month=12, extra_days=4, customer="shree_ganesh"),
+        PaymentDelayShock(start_month=14, extra_days=4, customer="shree_ganesh"),
+        PaymentDelayShock(start_month=16, extra_days=4, customer="shree_ganesh"),
+        # Other customers drift a few days later from June.
+        PaymentDelayShock(start_month=14, extra_days=2),
+        PaymentDelayShock(start_month=16, extra_days=2),
     ),
 )

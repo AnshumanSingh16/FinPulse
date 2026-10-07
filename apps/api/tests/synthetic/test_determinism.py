@@ -39,4 +39,4 @@ def test_fingerprint_is_pinned_for_the_primary_demo() -> None:
     assert fingerprint(ds) == PINNED_SHARMA_FINGERPRINT
 
 
-PINNED_SHARMA_FINGERPRINT = "d75cc4b4b8ba6484268d126f4448439807b4b323cbccfd3df4ba197ad99725ec"
+PINNED_SHARMA_FINGERPRINT = "424091445717bd5596cd03ff462169bb83f5c5d1030ccd48d4fae19e850b8bc2"

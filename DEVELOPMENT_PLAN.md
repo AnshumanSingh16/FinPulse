@@ -325,6 +325,11 @@ calibrated).
   source tables, and other claims citing the same evidence. You can also browse the whole pack.
 - **Without `ANTHROPIC_API_KEY`**: the run is shown failing honestly with `llm_unavailable`
   after the deterministic stages.
+- **Deterministic demo** (docs/DEMO.md): Sharma Electricals rewritten as the demo story
+  (growth draining cash, medium risk, liquidity deterioration; the earlier collapse story kept as
+  Mehra Lighting & Electricals); a 19th early-warning rule, `liquidity_deterioration`; a
+  verified, clearly labelled demo-script mode for the agents; `/demo` walkthrough and brief;
+  `make demo-reset` / `POST /api/v1/demo/reset`; the story pinned by `tests/demo/`.
 
 **Build**: start-investigation dialog (question presets + free text), live phase/step trace via
 SSE, claim cards with verification badge and evidence chips (resolved via `/evidence`), red-team

@@ -7,9 +7,10 @@ import { RiskBadge } from "@/components/fp/badges";
 import { PageHeader, Panel } from "@/components/fp/layout";
 import { ApiErrorPanel, EmptyState } from "@/components/fp/states";
 import { InvestigationReport } from "@/components/investigation/report";
-import { InvestigationRunner } from "@/components/investigation/runner";
+import { DemoNotice, InvestigationRunner } from "@/components/investigation/runner";
 import { TimelineView } from "@/components/investigation/timeline";
 import {
+  getDemo,
   getEntities,
   getEvidencePack,
   getInvestigation,
@@ -25,12 +26,15 @@ export default async function InvestigationPage(props: EntityPageProps) {
   const { entityId, asOf, search } = await entityContext(props);
   let list: InvestigationSummary[];
   let entityName = "this entity";
+  let demoAvailable = false;
   try {
-    const [l, entities] = await Promise.all([
+    const [l, entities, demo] = await Promise.all([
       listInvestigations(entityId),
       getEntities().catch(() => []),
+      getDemo().catch(() => null),
     ]);
     list = l;
+    demoAvailable = Boolean(demo?.enabled && demo.entity_id === entityId);
     entityName = entities.find((e) => e.id === entityId)?.display_name ?? entityName;
   } catch (error) {
     return <ApiErrorPanel error={error} what="investigations" />;
@@ -62,7 +66,12 @@ export default async function InvestigationPage(props: EntityPageProps) {
         description="A structured financial investigation, not a chat. Engines compute every number, and agents may only interpret verified evidence. Each step below corresponds to real backend execution."
       />
 
-      <InvestigationRunner entityId={entityId} entityName={entityName} asOf={asOf} />
+      <InvestigationRunner
+        entityId={entityId}
+        entityName={entityName}
+        asOf={asOf}
+        demoAvailable={demoAvailable}
+      />
 
       {loadError ? <ApiErrorPanel error={loadError} what="the investigation" /> : null}
 
@@ -72,6 +81,7 @@ export default async function InvestigationPage(props: EntityPageProps) {
             title="Investigation timeline"
             description={`Recorded run of ${formatDateTime(inv.started_at)} · ${(inv.duration_ms / 1000).toFixed(1)} s · ${inv.usage.calls} model calls. Each step is rebuilt from the run's own stage records and events.`}
           >
+            {inv.ai_mode === "demo_script" ? <DemoNotice className="mb-5" /> : null}
             {inv.timeline ? (
               <TimelineView
                 timeline={inv.timeline}

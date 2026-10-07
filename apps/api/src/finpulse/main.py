@@ -17,6 +17,7 @@ from finpulse.api.errors import register_exception_handlers
 from finpulse.api.middleware import REQUEST_ID_HEADER, RequestContextMiddleware
 from finpulse.api.routers import (
     agents,
+    demo,
     entities,
     investigations,
     passport,
@@ -82,5 +83,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(warnings.router)
     app.include_router(agents.router)
     app.include_router(investigations.router)
+    app.include_router(demo.router)
 
     return app

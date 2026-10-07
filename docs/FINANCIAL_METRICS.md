@@ -91,7 +91,7 @@ The last five were added for the Financial Passport ([FINANCIAL_PASSPORT.md](FIN
 
 From `GET …/financial-metrics` at the end of each entity's data:
 
-| | Sharma Electricals | Kaveri (healthy) | Annapurna (thin file) | Rapid Mobile (high risk) | Ananya (freelancer) |
+| | Mehra Lighting | Kaveri (healthy) | Annapurna (thin file) | Rapid Mobile (high risk) | Ananya (freelancer) |
 |---|---|---|---|---|---|
 | Revenue growth | −20.0% | +0.5% | +7.0% | +3.8% | +25.9% |
 | Cash balance | −₹1.68L | ₹27.7L | ₹12.7L | −₹1.86L | ₹9.5L |
@@ -101,7 +101,12 @@ From `GET …/financial-metrics` at the end of each entity's data:
 | Liquidity ratio | 0.43 | 1.94 | 19.0 | 0.14 | 51.7 |
 | Financial buffer | 0.0 months | 0.8 months | 2.2 months | 0.0 months | 9.2 months |
 
-Sharma's own trajectory: at 31 Oct 2025, the last month before its decline, its balance was
+Sharma Electricals, the demo entity, reads differently (docs/DEMO.md): revenue growth +10.9%,
+cash ₹7.4L, runway 40.2 months, receivable days 45.8 (up from about 30 in January), payment
+consistency 1.00, liquidity ratio 1.33 and a 0.5-month buffer — healthy on most single measures,
+which is the point of the story.
+
+Mehra's own trajectory: at 31 Oct 2025, the last month before its decline, its balance was
 positive, its liquidity ratio more than twice today's, and there were no bounce charges. All of
 that is checked in `tests/analytics/test_engine.py`.
 

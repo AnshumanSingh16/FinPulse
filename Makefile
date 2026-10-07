@@ -1,5 +1,5 @@
 # Thin wrappers so common tasks are one word. Each target is a plain command you can run yourself.
-.PHONY: help setup env db-up db-down db-init db-seed db-reset dev dev-api dev-web migrate contracts format lint typecheck test build check
+.PHONY: help setup env db-up db-down db-init db-seed db-reset demo-reset dev dev-api dev-web migrate contracts format lint typecheck test build check
 
 API := apps/api
 
@@ -39,6 +39,9 @@ db-seed: ## Load all synthetic scenarios (idempotent)
 
 db-reset: ## Drop all tables, re-migrate and re-seed (refuses in production)
 	scripts/db-reset.sh
+
+demo-reset: ## Restore the exact demo state: re-seed all entities, clear API investigations
+	scripts/demo-reset.sh
 
 contracts: ## Regenerate OpenAPI + TypeScript types after changing backend schemas
 	npm run contracts:generate

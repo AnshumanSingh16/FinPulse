@@ -362,6 +362,9 @@ export function InvestigationReport({
                 ? "Senior agent synthesis"
                 : "Deterministic fallback (no AI synthesis)"}
             </ToneBadge>
+            {inv.ai_mode === "demo_script" ? (
+              <ToneBadge tone="warning">Demo script, not a live model</ToneBadge>
+            ) : null}
             <span>As of {formatDate(inv.as_of)}</span>
             <span>·</span>
             <span>Run {formatDateTime(inv.started_at)}</span>

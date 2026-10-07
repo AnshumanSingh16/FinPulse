@@ -13,7 +13,7 @@ from finpulse.main import create_app
 from tests.agents.fakes import FakeLLM, pack_for
 from tests.conftest import client_for, make_settings
 from tests.test_agents_api import DownLLM
-from tests.test_entities_api import ANANYA, SHARMA, InMemorySource
+from tests.test_entities_api import ANANYA, MEHRA, InMemorySource
 
 REQUIRED = {
     "investigation_id",
@@ -37,7 +37,7 @@ REQUIRED = {
 
 async def make_client(llm: object, **settings: object) -> AsyncIterator[httpx.AsyncClient]:
     app = create_app(make_settings(**settings))
-    source = InMemorySource(SHARMA, ANANYA)
+    source = InMemorySource(MEHRA, ANANYA)
     app.dependency_overrides[get_financial_data_source] = lambda: source
     app.dependency_overrides[get_llm_client] = lambda: llm
     async for c in client_for(app):
@@ -46,11 +46,11 @@ async def make_client(llm: object, **settings: object) -> AsyncIterator[httpx.As
 
 @pytest.fixture
 async def client() -> AsyncIterator[httpx.AsyncClient]:
-    async for c in make_client(FakeLLM(pack_for())):
+    async for c in make_client(FakeLLM(pack_for("mehra_lighting"))):
         yield c
 
 
-def url(entity: uuid.UUID = SHARMA.entity_id) -> str:
+def url(entity: uuid.UUID = MEHRA.entity_id) -> str:
     return f"/api/v1/entities/{entity}/investigate"
 
 
@@ -60,7 +60,7 @@ async def test_investigate_returns_the_complete_record(client: httpx.AsyncClient
     assert response.status_code == 200
     body = response.json()
     assert set(body) >= REQUIRED
-    assert body["entity_id"] == str(SHARMA.entity_id)
+    assert body["entity_id"] == str(MEHRA.entity_id)
     assert body["status"] == "completed"
     assert body["triggered_warnings"][0]["severity"] == "critical"
     assert body["final_assessment"]["risk_level"] == "critical"
@@ -110,7 +110,9 @@ async def test_without_a_model_investigate_is_503() -> None:
 
 
 async def test_investigations_are_written_to_disk_when_configured(tmp_path: Path) -> None:
-    async for c in make_client(FakeLLM(pack_for()), INVESTIGATIONS_DIR=str(tmp_path)):
+    async for c in make_client(
+        FakeLLM(pack_for("mehra_lighting")), INVESTIGATIONS_DIR=str(tmp_path)
+    ):
         body = (await c.post(url())).json()
 
     saved = json.loads((tmp_path / f"{body['investigation_id']}.json").read_text())
@@ -118,7 +120,7 @@ async def test_investigations_are_written_to_disk_when_configured(tmp_path: Path
 
 
 async def test_store_keeps_only_the_most_recent() -> None:
-    async for c in make_client(FakeLLM(pack_for()), INVESTIGATIONS_KEEP=1):
+    async for c in make_client(FakeLLM(pack_for("mehra_lighting")), INVESTIGATIONS_KEEP=1):
         await c.post(url())
         latest = (await c.post(url())).json()
         listed = (await c.get("/api/v1/investigations")).json()
@@ -129,7 +131,9 @@ async def test_store_keeps_only_the_most_recent() -> None:
 async def test_saved_investigation_renders_for_the_demo(tmp_path: Path) -> None:
     from finpulse.cli import main
 
-    async for c in make_client(FakeLLM(pack_for()), INVESTIGATIONS_DIR=str(tmp_path)):
+    async for c in make_client(
+        FakeLLM(pack_for("mehra_lighting")), INVESTIGATIONS_DIR=str(tmp_path)
+    ):
         body = (await c.post(url())).json()
     path = tmp_path / f"{body['investigation_id']}.json"
 
@@ -168,7 +172,7 @@ async def wait_for(c: httpx.AsyncClient, investigation_id: str) -> dict:  # type
 
 
 async def test_background_investigation_reports_live_progress(client: httpx.AsyncClient) -> None:
-    started = await client.post(f"/api/v1/entities/{SHARMA.entity_id}/investigations")
+    started = await client.post(f"/api/v1/entities/{MEHRA.entity_id}/investigations")
 
     assert started.status_code == 202
     body = started.json()
@@ -188,7 +192,7 @@ async def test_background_investigation_reports_live_progress(client: httpx.Asyn
     # The live timeline and the stored one are the same.
     assert full.json()["timeline"] == done["timeline"]
     mine = (
-        await client.get("/api/v1/investigations", params={"entity_id": str(SHARMA.entity_id)})
+        await client.get("/api/v1/investigations", params={"entity_id": str(MEHRA.entity_id)})
     ).json()
     others = (
         await client.get("/api/v1/investigations", params={"entity_id": str(ANANYA.entity_id)})
@@ -198,7 +202,7 @@ async def test_background_investigation_reports_live_progress(client: httpx.Asyn
 
 async def test_background_investigation_failure_is_reported() -> None:
     async for c in make_client(DownLLM()):
-        body = (await c.post(f"/api/v1/entities/{SHARMA.entity_id}/investigations")).json()
+        body = (await c.post(f"/api/v1/entities/{MEHRA.entity_id}/investigations")).json()
         done = await wait_for(c, body["investigation_id"])
 
         assert done["status"] == "failed"

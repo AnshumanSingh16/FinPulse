@@ -14,10 +14,10 @@ from finpulse.core.errors import LLMUnavailableError
 from finpulse.investigation.orchestrator import InvestigationOrchestrator
 from finpulse.investigation.schemas import Investigation
 from tests.agents.fakes import STANCES, FakeLLM, pack_for, valid_output
-from tests.test_entities_api import SHARMA
+from tests.test_entities_api import MEHRA
 
-PACK = pack_for()
-AS_OF = default_as_of(SHARMA)
+PACK = pack_for("mehra_lighting")
+AS_OF = default_as_of(MEHRA)
 STAGES = [
     "financial_data",
     "deterministic_analytics",
@@ -52,7 +52,7 @@ class Clock:
 
 async def investigate(llm: FakeLLM) -> Investigation:
     assert AS_OF is not None
-    return await InvestigationOrchestrator(llm, clock=Clock()).investigate(SHARMA, AS_OF)
+    return await InvestigationOrchestrator(llm, clock=Clock()).investigate(MEHRA, AS_OF)
 
 
 @pytest.fixture(autouse=True)
@@ -66,7 +66,7 @@ async def test_complete_investigation() -> None:
     inv = await investigate(FakeLLM(PACK))
 
     assert inv.status == "completed"
-    assert inv.entity_id == SHARMA.entity_id and inv.as_of == AS_OF
+    assert inv.entity_id == MEHRA.entity_id and inv.as_of == AS_OF
     assert [s.stage for s in inv.stages] == STAGES
     assert all(s.status == "completed" for s in inv.stages)
     assert inv.started_at < inv.completed_at

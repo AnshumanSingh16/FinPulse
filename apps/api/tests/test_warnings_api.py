@@ -10,7 +10,7 @@ from finpulse.api.deps import get_financial_data_source
 from finpulse.early_warning import RULES
 from finpulse.main import create_app
 from tests.conftest import client_for, make_settings
-from tests.test_entities_api import ANANYA, SHARMA, InMemorySource
+from tests.test_entities_api import ANANYA, MEHRA, InMemorySource
 
 PROBLEM = "application/problem+json"
 FIELDS = {
@@ -31,13 +31,13 @@ FIELDS = {
 @pytest.fixture
 async def client() -> AsyncIterator[httpx.AsyncClient]:
     app = create_app(make_settings())
-    source = InMemorySource(SHARMA, ANANYA)
+    source = InMemorySource(MEHRA, ANANYA)
     app.dependency_overrides[get_financial_data_source] = lambda: source
     async for c in client_for(app):
         yield c
 
 
-def url(what: str, entity: uuid.UUID = SHARMA.entity_id) -> str:
+def url(what: str, entity: uuid.UUID = MEHRA.entity_id) -> str:
     return f"/api/v1/entities/{entity}/{what}"
 
 

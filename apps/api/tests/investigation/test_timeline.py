@@ -11,7 +11,7 @@ from finpulse.core.errors import LLMUnavailableError
 from finpulse.investigation.orchestrator import InvestigationOrchestrator, Recorder
 from finpulse.investigation.timeline import STEPS, build_timeline
 from tests.agents.fakes import STANCES, FakeLLM
-from tests.investigation.test_orchestrator import AS_OF, PACK, SHARMA, Clock, investigate
+from tests.investigation.test_orchestrator import AS_OF, MEHRA, PACK, Clock, investigate
 
 TITLES = [
     "Collecting financial evidence",
@@ -125,7 +125,7 @@ async def test_unreachable_model_skips_later_steps() -> None:
     assert AS_OF is not None
     with pytest.raises(LLMUnavailableError):
         await InvestigationOrchestrator(llm, clock=Clock()).investigate(
-            SHARMA, AS_OF, listener=seen.append
+            MEHRA, AS_OF, listener=seen.append
         )
     rec = seen[-1]
 

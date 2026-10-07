@@ -1,7 +1,7 @@
 "use client";
 
 import type { EntitySummary } from "@finpulse/contracts";
-import { Activity, Briefcase, Menu, ServerCog, X } from "lucide-react";
+import { Activity, Briefcase, Menu, Presentation, ServerCog, X } from "lucide-react";
 import Link from "next/link";
 import { useParams, usePathname, useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -71,6 +71,9 @@ function SidebarBody({ entities }: { entities: EntitySummary[] }) {
       <nav aria-label="Main" className="flex flex-col gap-0.5">
         <NavLink href="/" active={pathname === "/"} icon={Briefcase}>
           Portfolio
+        </NavLink>
+        <NavLink href="/demo" active={pathname === "/demo"} icon={Presentation}>
+          Demo walkthrough
         </NavLink>
       </nav>
       {entityId ? (

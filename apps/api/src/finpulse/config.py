@@ -72,6 +72,16 @@ class Settings(BaseSettings):
     )
     investigations_dir: Path | None = Field(default=None, validation_alias="INVESTIGATIONS_DIR")
 
+    # The deterministic demo (docs/DEMO.md): a scripted stand-in for the agents and a reset
+    # endpoint. Never available in production.
+    demo_enabled: bool = Field(default=True, validation_alias="DEMO_ENABLED")
+    # Seconds × a per-agent factor the scripted agents wait, so the live timeline is watchable.
+    demo_script_pace: float = Field(default=1.0, ge=0, le=10, validation_alias="DEMO_SCRIPT_PACE")
+
+    @property
+    def demo_allowed(self) -> bool:
+        return self.demo_enabled and self.env != "production"
+
     @field_validator("cors_allowed_origins", mode="before")
     @classmethod
     def _split_origins(cls, value: object) -> object:

@@ -1,7 +1,7 @@
 "use client";
 
 import type { InvestigationProgress } from "@finpulse/contracts";
-import { AlertCircle, CheckCircle2, Loader2, Play, Radio } from "lucide-react";
+import { AlertCircle, CheckCircle2, FileCode2, Loader2, Play, Radio } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -32,10 +32,13 @@ export function InvestigationRunner({
   entityId,
   entityName,
   asOf,
+  demoAvailable = false,
 }: {
   entityId: string;
   entityName: string;
   asOf?: string;
+  /** The scripted demo agents can investigate this entity (see docs/DEMO.md). */
+  demoAvailable?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -81,7 +84,7 @@ export function InvestigationRunner({
     [pathname, router, search],
   );
 
-  const start = async () => {
+  const start = async (mode: "live" | "demo") => {
     setStarting(true);
     setError(null);
     setProgress(null);
@@ -90,7 +93,7 @@ export function InvestigationRunner({
       const p = await unwrap(
         getBrowserApiClient().POST("/api/v1/entities/{entity_id}/investigations", {
           params: { path: { entity_id: entityId } },
-          body: asOf ? { as_of: asOf } : {},
+          body: { mode, ...(asOf ? { as_of: asOf } : {}) },
         }),
       );
       setProgress(p);
@@ -122,26 +125,39 @@ export function InvestigationRunner({
             assessment.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={start}
-          disabled={running}
-          className={cn(
-            "flex shrink-0 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm",
-            "hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-80",
-          )}
-        >
-          {running ? (
-            <Loader2 className="size-4 animate-spin" aria-hidden />
-          ) : (
-            <Play className="size-4" aria-hidden />
-          )}
-          {running
-            ? "Investigating…"
-            : progress || done
-              ? "Run a new investigation"
-              : "Start investigation"}
-        </button>
+        <div className="flex shrink-0 flex-col items-stretch gap-2 sm:items-end">
+          <button
+            type="button"
+            onClick={() => start(demoAvailable ? "demo" : "live")}
+            disabled={running}
+            className={cn(
+              "flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm",
+              "hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-80",
+            )}
+          >
+            {running ? (
+              <Loader2 className="size-4 animate-spin" aria-hidden />
+            ) : (
+              <Play className="size-4" aria-hidden />
+            )}
+            {running
+              ? "Investigating…"
+              : demoAvailable
+                ? "Run demo investigation"
+                : progress || done
+                  ? "Run a new investigation"
+                  : "Start investigation"}
+          </button>
+          {demoAvailable && !running ? (
+            <button
+              type="button"
+              onClick={() => start("live")}
+              className="text-xs text-sidebar-muted underline-offset-2 hover:text-sidebar-foreground hover:underline"
+            >
+              Live run with the language model (needs ANTHROPIC_API_KEY)
+            </button>
+          ) : null}
+        </div>
       </div>
 
       {progress ? (
@@ -168,7 +184,9 @@ export function InvestigationRunner({
             </span>
           ) : null}
           <span className="ml-auto text-[11px] text-muted-foreground">
-            Every state is reported by the API as it happens. Nothing is simulated.
+            {progress.ai_mode === "demo_script"
+              ? "Demo script: answers pre-written for this demo, paced for presentation and verified like a model's. Every state is reported by the API."
+              : "Every state is reported by the API as it happens. Nothing is simulated."}
           </span>
         </div>
       ) : null}
@@ -210,6 +228,7 @@ export function InvestigationRunner({
             </div>
           </div>
         ) : null}
+        {progress?.ai_mode === "demo_script" ? <DemoNotice /> : null}
         {progress ? (
           <>
             <TimelineView timeline={progress.timeline} ctx={{ entityId, asOf }} />
@@ -236,5 +255,24 @@ export function InvestigationRunner({
         ) : null}
       </div>
     </section>
+  );
+}
+
+export function DemoNotice({ className }: { className?: string }) {
+  return (
+    <div
+      className={cn(
+        "flex gap-2.5 rounded-lg border border-status-warning/50 bg-status-warning/10 p-3 text-xs",
+        className,
+      )}
+    >
+      <FileCode2 className="mt-0.5 size-4 shrink-0" aria-hidden />
+      <p className="text-pretty">
+        <span className="font-semibold">Demo script, not a live model.</span> The orchestrator,
+        verifier, disagreement detection and red-team requirements run for real; the agents&apos;
+        answers were written in advance for this demo story. Every number in them is read from the
+        engines&apos; evidence and passes the same verifier as a model&apos;s output.
+      </p>
+    </div>
   );
 }

@@ -39,5 +39,11 @@ class InvestigationStore:
     def get(self, investigation_id: uuid.UUID) -> Investigation | None:
         return self._items.get(investigation_id)
 
+    def clear(self) -> int:
+        """Forget every kept investigation (for the demo reset). Files on disk are left alone."""
+        count = len(self._items)
+        self._items.clear()
+        return count
+
     def summaries(self) -> list[InvestigationSummary]:
         return [InvestigationSummary.of(i) for i in reversed(self._items.values())]

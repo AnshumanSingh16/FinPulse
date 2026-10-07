@@ -94,6 +94,20 @@ lookback_months = 3
 min_change = 0.20
 change_basis = "relative"
 
+[rules.liquidity_deterioration]
+# (Fall in the average cash balance + rise in receivables) ÷ average monthly revenue, over the
+# lookback: how much liquidity moved out of the bank and into unpaid invoices. Clear unless cash
+# fell AND receivables rose. Worsening only if receivable days also rose by min_days_increase
+# (otherwise receivables are just growing with sales; reported one severity lower). Clear when
+# under min_overdue_share of receivables is overdue: invoices not yet due are not a cash problem.
+enabled = true
+tiers = { low = 0.15, medium = 0.30, high = 0.60, critical = 1.00 }
+lookback_months = 3
+average_days = 30
+revenue_months = 3
+min_days_increase = 5
+min_overdue_share = 0.20
+
 # --- receivables ------------------------------------------------------------------------------
 
 [rules.receivables_growth]

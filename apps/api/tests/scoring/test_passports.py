@@ -53,12 +53,14 @@ def test_scores_trace_back_to_metrics(code: str) -> None:
     p = score_passport(report, MODEL)
     metrics = {m.code: m for m in report.metrics}
 
-    total = Decimal(0)
+    # Rounding bound: the score is shown to 0.1 (±0.05) and each contribution to 0.01 (±0.005).
+    total, factors = Decimal(0), 0
     for dimension in p.dimensions:
         assert dimension.score is not None
+        factors += len(dimension.factors)
         assert abs(
             sum(f.contribution_to_dimension for f in dimension.factors) - dimension.score
-        ) <= Decimal("0.05")
+        ) <= Decimal("0.05") + Decimal("0.005") * len(dimension.factors)
         for f in dimension.factors:
             source = metrics[f.metric_code]
             assert (f.metric_value, f.metric_period, f.metric_availability) == (
@@ -67,7 +69,7 @@ def test_scores_trace_back_to_metrics(code: str) -> None:
                 source.availability,
             )
             total += f.contribution_to_overall
-    assert abs(total - score(p)) <= Decimal("0.05")
+    assert abs(total - score(p)) <= Decimal("0.05") + Decimal("0.005") * factors
     assert 0 <= score(p) <= 100
 
 
@@ -93,9 +95,9 @@ def test_thin_file_is_not_penalised_for_having_no_credit_history() -> None:
     assert score(p) >= score(passport("kaveri_packaging"))
 
 
-def test_sharma_electricals_declines_and_the_passport_says_why() -> None:
-    before = passport("sharma_electricals", date(2025, 10, 31))
-    after = passport("sharma_electricals")
+def test_mehra_lighting_declines_and_the_passport_says_why() -> None:
+    before = passport("mehra_lighting", date(2025, 10, 31))
+    after = passport("mehra_lighting")
 
     assert score(before) - score(after) >= 20
     assert dim(after, "financial_resilience") < 20 and dim(after, "cash_flow_stability") < 35
@@ -158,7 +160,7 @@ def test_history_is_ordered_and_ends_at_the_current_passport(code: str) -> None:
         assert change.delta == (b.score - a.score)  # type: ignore[operator]
 
 
-@pytest.mark.parametrize("code", ["sharma_electricals", "rapid_mobile_hub"])
+@pytest.mark.parametrize("code", ["mehra_lighting", "rapid_mobile_hub"])
 def test_history_points_never_see_later_data(code: str) -> None:
     d = data(code)
     h = passport_history(d, default_as_of(d), 18, MODEL)  # type: ignore[arg-type]
@@ -169,8 +171,8 @@ def test_history_points_never_see_later_data(code: str) -> None:
         assert {x.code: x.score for x in alone.dimensions} == point.dimensions
 
 
-def test_sharma_history_tells_the_decline() -> None:
-    d = data("sharma_electricals")
+def test_mehra_history_tells_the_decline() -> None:
+    d = data("mehra_lighting")
     h = passport_history(d, default_as_of(d), 18, MODEL)  # type: ignore[arg-type]
     by_month = {p.as_of: p.score for p in h.points}
 
@@ -181,7 +183,7 @@ def test_sharma_history_tells_the_decline() -> None:
 
 
 def test_current_passport_explains_the_last_month() -> None:
-    d = data("sharma_electricals")
+    d = data("mehra_lighting")
     as_of = default_as_of(d)
     assert as_of is not None
 

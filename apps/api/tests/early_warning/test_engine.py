@@ -100,7 +100,7 @@ def test_results_are_deterministic(code: str) -> None:
     assert detect_warnings(d, as_of, CONFIG) == warnings(code)
 
 
-@pytest.mark.parametrize("code", ["sharma_electricals", "rapid_mobile_hub"])
+@pytest.mark.parametrize("code", ["mehra_lighting", "rapid_mobile_hub"])
 @pytest.mark.parametrize("as_of", [date(2026, 1, 31), date(2026, 5, 20)])
 def test_a_past_run_never_sees_later_data(code: str, as_of: date) -> None:
     d = data(code)
@@ -110,8 +110,8 @@ def test_a_past_run_never_sees_later_data(code: str, as_of: date) -> None:
 
 
 def test_warning_ids_are_stable_while_the_condition_lasts() -> None:
-    aug = {w.rule: w for w in warnings("sharma_electricals", date(2026, 8, 31)).warnings}
-    sep = {w.rule: w for w in warnings("sharma_electricals", date(2026, 9, 30)).warnings}
+    aug = {w.rule: w for w in warnings("mehra_lighting", date(2026, 8, 31)).warnings}
+    sep = {w.rule: w for w in warnings("mehra_lighting", date(2026, 9, 30)).warnings}
 
     ongoing = [r for r in sep if r in aug and sep[r].first_detected_on < date(2026, 9, 30)]
     assert ongoing
@@ -123,29 +123,29 @@ def test_warning_ids_are_stable_while_the_condition_lasts() -> None:
 # --- the stories -----------------------------------------------------------------------------
 
 
-def test_sharma_is_flagged_months_before_its_crisis() -> None:
+def test_mehra_is_flagged_months_before_its_crisis() -> None:
     """Deterioration starts Nov 2025 (ground truth); loan auto-debits bounce from Aug 2026 while
     the credit bureau still shows a clean record."""
-    s = summary("sharma_electricals")
+    s = summary("mehra_lighting")
 
     assert s.risk_level == "critical"
     assert s.first_warning_on is not None and s.first_warning_on <= date(2025, 12, 31)
     assert LEVELS.index(level_at(s, date(2025, 12, 31))) >= LEVELS.index("high")
-    rules = {w.rule for w in warnings("sharma_electricals").warnings}
+    rules = {w.rule for w in warnings("mehra_lighting").warnings}
     assert {"runway_shrinking", "liquidity_decline", "repayment_slippage"} <= rules
     assert s.trend.direction == "worsening"
 
 
-def test_sharma_major_customer_loss_names_the_builder() -> None:
-    report = warnings("sharma_electricals", date(2026, 3, 31))
+def test_mehra_major_customer_loss_names_the_builder() -> None:
+    report = warnings("mehra_lighting", date(2026, 3, 31))
 
     w = next(w for w in report.warnings if w.rule == "major_customer_loss")
     assert "Shree Ganesh Builders" in w.description
     assert w.severity in ("medium", "high")
 
 
-def test_sharma_receivables_stretch_is_caught_early() -> None:
-    rules = {w.rule for w in warnings("sharma_electricals", date(2025, 12, 31)).warnings}
+def test_mehra_receivables_stretch_is_caught_early() -> None:
+    rules = {w.rule for w in warnings("mehra_lighting", date(2025, 12, 31)).warnings}
 
     assert {"receivables_growth", "receivable_days_increase", "expense_acceleration"} <= rules
 
@@ -175,7 +175,7 @@ def test_chronic_high_risk_shop_stays_high_all_year() -> None:
 
 
 def test_index_is_capped_and_levels_follow_config() -> None:
-    s = summary("sharma_electricals", date(2026, 3, 31))
+    s = summary("mehra_lighting", date(2026, 3, 31))
 
     points = CONFIG.summary.points
     raw = sum(getattr(points, sev) * getattr(s.counts, sev) for sev in SEVERITIES)

@@ -15,7 +15,7 @@ warning.** The AI layer (later) will explain and investigate warnings. It cannot
 dismiss them.
 
 ```
-records ─▶ snapshots (now, 2 / 3 / 6 months ago, month-end medians) ─▶ 18 rules ─▶ measure
+records ─▶ snapshots (now, 2 / 3 / 6 months ago, month-end medians) ─▶ 19 rules ─▶ measure
                                                                                      │
           config/early_warning_v1.toml: tiers · windows · minimum changes ──────▶ grading
                                                                                      │
@@ -59,6 +59,7 @@ same values are served by `GET /api/v1/meta/early-warning-rules`.
 | `cash_decline` | cash | Fall in the 30-day average balance vs 3 months earlier, ÷ average monthly outgoings (0.25 / 0.5 / 1 / 1.5 months) | Always (it is a fall) |
 | `overdraft_reliance` | cash | Average overdraft utilisation over 90 days (25 / 50 / 75 / 90%) | Up ≥ 10 points in 3 months |
 | `liquidity_decline` | liquidity | Liquidity ratio, below (1.0 / 0.8 / 0.6 / 0.4) | Down ≥ 10% in 3 months |
+| `liquidity_deterioration` | liquidity | (Fall in the 30-day average cash balance + rise in receivables) over 3 months ÷ average monthly revenue (0.15 / 0.30 / 0.60 / 1.00 months). Clear unless cash fell **and** receivables rose, and unless ≥ 20% of receivables are overdue (invoices not yet due are not a cash problem) | Receivable days also rose ≥ 5. Catches what the liquidity ratio hides: it counts receivables as liquid, so it can look fine while cash drains into unpaid invoices |
 | `runway_shrinking` | liquidity | Cash runway in months, below (9 / 6 / 3 / 1) | Down ≥ 20% in 3 months, or the business was not burning cash before |
 | `receivables_growth` | receivables | Receivables vs the median of 3 month-ends 2–4 months earlier (+20 / 30 / 50 / 80%). Ignored if DSO < 30 days | Receivable days also rose ≥ 5 (receivables outgrew sales). Volatility-scaled |
 | `receivable_days_increase` | receivables | DSO minus its median over 6 earlier month-ends (+7 / 10 / 20 / 30 days). Ignored if DSO < 30 | Always (it is a rise) |
@@ -111,7 +112,7 @@ EMIs and tax payments are excluded.
 }
 ```
 
-(Sharma Electricals, as of 31 Dec 2025.)
+(Mehra Lighting & Electricals, as of 31 Dec 2025.)
 
 | Field | Meaning |
 |---|---|
@@ -144,13 +145,20 @@ Risk level at each month-end, Oct 2025 – Sep 2026:
 
 | Entity | O | N | D | J | F | M | A | M | J | J | A | S |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| **Sharma Electricals** (deteriorates from Nov 2025) | med | med | **high** | crit | high | high | high | med | high | high | crit | crit |
+| **Sharma Electricals** (primary demo: growth draining cash) | low | low | med | – | – | med | – | low | low | low | low | **med** |
+| Mehra Lighting & Electricals (collapses from Nov 2025) | med | med | **high** | crit | high | high | high | med | high | high | crit | crit |
 | Rapid Mobile Hub (chronic high risk) | low | med | crit | crit | crit | crit | crit | high | crit | high | crit | high |
 | Kaveri Packaging (healthy) | low | – | – | low | low | low | med | – | low | low | low | low |
 | Annapurna Home Kitchen (thin-file, healthy) | – | – | low | – | low | low | low | low | low | low | low | low |
 | Ananya Rao (freelancer, lumpy income) | med | crit | crit | med | high | med | med | med | med | high | med | med |
 
-- **Sharma Electricals.**
+- **Sharma Electricals** (the demo; docs/DEMO.md). Risk builds up instead of spiking: low through
+  mid-2026, then **medium** at 30 Sep 2026, led by **Liquidity deterioration** (average cash
+  ₹8,13,593 → ₹6,98,191 while receivables rose ₹10,18,669 → ₹14,82,538, with 25% overdue), plus
+  receivables growing faster than sales, slower collections and a largest customer at 36.7% of
+  revenue. Its liquidity ratio (1.33×) looks comfortable throughout. December 2025 (a festive stock
+  build) and March 2026 (receivables growing with the first large orders) flag briefly and clear.
+- **Mehra Lighting & Electricals.**
   - December 2025, a month after the hidden onset: receivables up 59% with flat sales, collection
     time from 31 to 48 days, expenses outpacing revenue, and a 1.7-month runway.
   - By March 2026: "Shree Ganesh Builders: ₹2,72,265 → ₹71,529 a month (−74%; the rest of sales

@@ -194,9 +194,9 @@ def test_monthly_revenue_matches_sales_documents(code: str) -> None:
 # --- the metrics tell each archetype's story --------------------------------------------------
 
 
-def test_sharma_electricals_deterioration_is_visible() -> None:
-    before = report("sharma_electricals", date(2025, 10, 31))  # last month before onset
-    after = report("sharma_electricals")
+def test_mehra_lighting_deterioration_is_visible() -> None:
+    before = report("mehra_lighting", date(2025, 10, 31))  # last month before onset
+    after = report("mehra_lighting")
 
     assert v(after, "revenue.growth") < Decimal("-0.1")
     assert v(after, "cash.balance") < 0 < v(before, "cash.balance")

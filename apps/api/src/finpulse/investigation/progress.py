@@ -36,6 +36,14 @@ class ProgressTracker:
     def get(self, investigation_id: uuid.UUID) -> InvestigationProgress | None:
         return self._items.get(investigation_id)
 
+    def clear(self) -> int:
+        """Forget every run (for the demo reset); running tasks are cancelled."""
+        for task in list(self._tasks):
+            task.cancel()
+        count = len(self._items)
+        self._items.clear()
+        return count
+
     def start(
         self,
         llm: LLMClient,
@@ -52,6 +60,7 @@ class ProgressTracker:
             entity_id=data.entity_id,
             entity_name=data.display_name,
             as_of=as_of,
+            ai_mode=getattr(llm, "ai_mode", "live"),
             status="running",
             started_at=now,
             updated_at=now,

@@ -26,6 +26,8 @@ from tests.conftest import client_for, make_settings
 
 SHARMA = to_financial_data(generate(SCENARIOS["sharma_electricals"]))
 ANANYA = to_financial_data(generate(SCENARIOS["ananya_rao_design"]))
+# The sudden-collapse story (critical warnings, bounced debits): fixtures for tests that need them.
+MEHRA = to_financial_data(generate(SCENARIOS["mehra_lighting"]))
 PROBLEM = "application/problem+json"
 
 

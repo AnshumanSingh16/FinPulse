@@ -18,7 +18,7 @@ records ──▶ analytics metrics ──▶ factor points ──▶ dimension 
            (25, with sources)     (curves)          (weighted means)       (weighted mean)
 ```
 
-Example (Sharma Electricals, 30 Sep 2026):
+Example (Mehra Lighting & Electricals, 30 Sep 2026):
 
 ```
 Financial Health: 50.6 / 100 — Watch   (confidence 1.00)
@@ -176,7 +176,7 @@ at `as_of`, oldest first.
   `model.config_sha256`) that produced it. Storing snapshots, to preserve exactly what was shown
   on a past date, is a later addition.
 
-Sharma Electricals, month-end scores (provisional while history is short):
+Mehra Lighting & Electricals, month-end scores (provisional while history is short):
 
 | 2025-04 | 05 | 06 | 07 | 08 | 09 | 10 | 11 | 12 | 2026-01 | 02 | 03 | 04 | 05 | 06 | 07 | 08 | 09 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -194,7 +194,8 @@ record stays clean.
 | Kaveri Packaging (healthy) | 84.1 | Strong | 70.1 | 99.3 | 80.7 | 75.2 | 99.0 | 82.4 |
 | Ananya Rao (freelancer) | 83.8 | Strong | 86.0 | 94.4 | 59.1 | 100.0 | 99.6 | 38.8 |
 | Rapid Mobile Hub (high risk) | 58.3 | Watch | 58.9 | 57.7 | 79.1 | 21.0 | 65.3 | 91.4 |
-| Sharma Electricals (deteriorating) | 50.6 | Watch | 26.4 | 81.9 | 55.5 | 8.2 | 65.1 | 92.1 |
+| Sharma Electricals (demo: growth draining cash) | 79.0 | Sound | 49.5 | 99.4 | 79.8 | 65.3 | 99.6 | 92.5 |
+| Mehra Lighting & Electricals (deteriorating) | 50.6 | Watch | 26.4 | 81.9 | 55.5 | 8.2 | 65.1 | 92.1 |
 
 Two things to notice:
 

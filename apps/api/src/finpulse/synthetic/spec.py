@@ -193,7 +193,12 @@ class ScenarioSpec:
     display_name: str
     kind: Literal["business", "individual"]
     archetype: Literal[
-        "healthy_msme", "thin_file_msme", "deteriorating_msme", "high_risk_msme", "freelancer"
+        "healthy_msme",
+        "thin_file_msme",
+        "strained_msme",  # growing, but growth is draining cash (early-stage deterioration)
+        "deteriorating_msme",
+        "high_risk_msme",
+        "freelancer",
     ]
     segment: str
     narrative: str  # what happens in this scenario, in plain words (the ground-truth story)

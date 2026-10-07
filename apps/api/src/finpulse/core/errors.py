@@ -35,6 +35,12 @@ class BadRequestError(AppError):
     title = "Bad request"
 
 
+class ForbiddenError(AppError):
+    status = 403
+    code = "forbidden"
+    title = "Forbidden"
+
+
 class NotFoundError(AppError):
     status = 404
     code = "not_found"

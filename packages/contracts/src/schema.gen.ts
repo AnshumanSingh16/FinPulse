@@ -4,6 +4,40 @@
  */
 
 export interface paths {
+    "/api/v1/demo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The demo walkthrough and its entity */
+        get: operations["get_demo_api_v1_demo_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/demo/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore the exact demo state: re-seed every synthetic entity, clear investigations */
+        post: operations["reset_demo_api_v1_demo_reset_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/entities": {
         parameters: {
             query?: never;
@@ -764,6 +798,64 @@ export interface components {
             /** Uncategorised Transactions */
             uncategorised_transactions: number;
         };
+        /** DemoInfo */
+        DemoInfo: {
+            /**
+             * As Of
+             * Format: date
+             */
+            as_of: string;
+            /** Enabled */
+            enabled: boolean;
+            /** Entity Code */
+            entity_code: string;
+            /**
+             * Entity Id
+             * Format: uuid
+             */
+            entity_id: string;
+            /** Entity Name */
+            entity_name: string;
+            /** Narrative */
+            narrative: string;
+            /** Steps */
+            steps: components["schemas"]["DemoStep"][];
+            /** Stress Preset */
+            stress_preset: string;
+        };
+        /** DemoResetRequest */
+        DemoResetRequest: {
+            /**
+             * Seed
+             * @default true
+             */
+            seed: boolean;
+        };
+        /** DemoResetResult */
+        DemoResetResult: {
+            /** Investigations Cleared */
+            investigations_cleared: number;
+            /**
+             * Reset At
+             * Format: date-time
+             */
+            reset_at: string;
+            /** Runs Cleared */
+            runs_cleared: number;
+            /** Seeded */
+            seeded: components["schemas"]["SeededEntity"][];
+        };
+        /** DemoStep */
+        DemoStep: {
+            /** Number */
+            number: number;
+            /** Section */
+            section: string;
+            /** Show */
+            show: string;
+            /** Title */
+            title: string;
+        };
         /** DependencyCheck */
         DependencyCheck: {
             /**
@@ -1357,6 +1449,13 @@ export interface components {
              * @description Defaults to the end of the data
              */
             as_of?: string | null;
+            /**
+             * Mode
+             * @description demo: answer with the scripted demo agents (Sharma Electricals only; see docs/DEMO.md) instead of the language model. The record is marked ai_mode=demo_script.
+             * @default live
+             * @enum {string}
+             */
+            mode: "live" | "demo";
         };
         /** Investigation */
         Investigation: {
@@ -1364,6 +1463,13 @@ export interface components {
             agent_analyses: {
                 [key: string]: components["schemas"]["AgentRun"];
             };
+            /**
+             * Ai Mode
+             * @description live: answers from the language model. demo_script: scripted demo answers (still verified), not a model
+             * @default live
+             * @enum {string}
+             */
+            ai_mode: "live" | "demo_script";
             /**
              * As Of
              * Format: date
@@ -1475,6 +1581,12 @@ export interface components {
             /** Agents */
             agents: components["schemas"]["AgentProgress"][];
             /**
+             * Ai Mode
+             * @default live
+             * @enum {string}
+             */
+            ai_mode: "live" | "demo_script";
+            /**
              * As Of
              * Format: date
              */
@@ -1517,6 +1629,12 @@ export interface components {
         };
         /** InvestigationSummary */
         InvestigationSummary: {
+            /**
+             * Ai Mode
+             * @default live
+             * @enum {string}
+             */
+            ai_mode: "live" | "demo_script";
             /**
              * As Of
              * Format: date
@@ -2265,6 +2383,18 @@ export interface components {
              */
             sha256: string;
         };
+        /** SeededEntity */
+        SeededEntity: {
+            /**
+             * Entity Id
+             * Format: uuid
+             */
+            entity_id: string;
+            /** Fingerprint */
+            fingerprint: string;
+            /** Scenario */
+            scenario: string;
+        };
         /** SeriesPoint */
         SeriesPoint: {
             period: components["schemas"]["Period"];
@@ -2850,6 +2980,68 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    get_demo_api_v1_demo_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DemoInfo"];
+                };
+            };
+            /** @description Error (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    reset_demo_api_v1_demo_reset_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["DemoResetRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DemoResetResult"];
+                };
+            };
+            /** @description Error (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     list_entities_api_v1_entities_get: {
         parameters: {
             query?: never;

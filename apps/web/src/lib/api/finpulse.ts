@@ -3,6 +3,7 @@ import "server-only";
 import { cache } from "react";
 
 import type {
+  DemoInfo,
   EntitySummary,
   EvidencePack,
   FinancialMetricsReport,
@@ -13,6 +14,7 @@ import type {
   PassportHistory,
   RiskSummary,
   ScenarioCatalogue,
+  StressTestResult,
   WarningsReport,
 } from "@finpulse/contracts";
 
@@ -135,6 +137,24 @@ export const getInvestigation = cache(function getInvestigation(
   return unwrap(
     api().GET("/api/v1/investigations/{investigation_id}", {
       params: { path: { investigation_id: investigationId } },
+    }),
+  );
+});
+
+export const getDemo = cache(function getDemo(): Promise<DemoInfo> {
+  return unwrap(api().GET("/api/v1/demo"));
+});
+
+/** A preset stress test, run on the server (deterministic; the result is not stored). */
+export const runStressPreset = cache(function runStressPreset(
+  entityId: string,
+  preset: string,
+  asOf?: AsOf,
+): Promise<StressTestResult> {
+  return unwrap(
+    api().POST("/api/v1/entities/{entity_id}/stress-test", {
+      params: { path: { entity_id: entityId } },
+      body: { preset, horizon_months: 6, ...(asOf ? { as_of: asOf } : {}) },
     }),
   );
 });

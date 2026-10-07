@@ -190,11 +190,16 @@ class InvestigationOrchestrator:
         investigation_id = investigation_id or uuid.uuid4()
         rec = Recorder(investigation_id, data.display_name, self.clock, listener)
         started, t0 = self.clock(), time.perf_counter()
+        ai_mode = getattr(self.llm, "ai_mode", "live")
         rec.event(
             "investigation_started",
-            f"Investigating {data.display_name} as of {as_of}.",
+            f"Investigating {data.display_name} as of {as_of}"
+            + (
+                " (demo script: scripted agent answers, not a model)." if ai_mode != "live" else "."
+            ),
             entity_id=str(data.entity_id),
             as_of=as_of.isoformat(),
+            ai_mode=ai_mode,
         )
 
         # --- deterministic stages ------------------------------------------------------------
@@ -557,6 +562,7 @@ class InvestigationOrchestrator:
             entity=pack.entity,
             as_of=as_of,
             workflow_version=WORKFLOW_VERSION,
+            ai_mode=ai_mode,
             status=status,
             started_at=started,
             completed_at=self.clock(),

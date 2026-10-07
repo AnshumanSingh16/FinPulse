@@ -931,6 +931,130 @@
         "title": "DataCoverage",
         "type": "object"
       },
+      "DemoInfo": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "entity_code": {
+            "title": "Entity Code",
+            "type": "string"
+          },
+          "entity_id": {
+            "format": "uuid",
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "entity_name": {
+            "title": "Entity Name",
+            "type": "string"
+          },
+          "narrative": {
+            "title": "Narrative",
+            "type": "string"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/DemoStep"
+            },
+            "title": "Steps",
+            "type": "array"
+          },
+          "stress_preset": {
+            "title": "Stress Preset",
+            "type": "string"
+          }
+        },
+        "required": [
+          "enabled",
+          "entity_id",
+          "entity_code",
+          "entity_name",
+          "as_of",
+          "stress_preset",
+          "narrative",
+          "steps"
+        ],
+        "title": "DemoInfo",
+        "type": "object"
+      },
+      "DemoResetRequest": {
+        "properties": {
+          "seed": {
+            "default": true,
+            "title": "Seed",
+            "type": "boolean"
+          }
+        },
+        "title": "DemoResetRequest",
+        "type": "object"
+      },
+      "DemoResetResult": {
+        "properties": {
+          "investigations_cleared": {
+            "title": "Investigations Cleared",
+            "type": "integer"
+          },
+          "reset_at": {
+            "format": "date-time",
+            "title": "Reset At",
+            "type": "string"
+          },
+          "runs_cleared": {
+            "title": "Runs Cleared",
+            "type": "integer"
+          },
+          "seeded": {
+            "items": {
+              "$ref": "#/components/schemas/SeededEntity"
+            },
+            "title": "Seeded",
+            "type": "array"
+          }
+        },
+        "required": [
+          "reset_at",
+          "seeded",
+          "investigations_cleared",
+          "runs_cleared"
+        ],
+        "title": "DemoResetResult",
+        "type": "object"
+      },
+      "DemoStep": {
+        "properties": {
+          "number": {
+            "title": "Number",
+            "type": "integer"
+          },
+          "section": {
+            "title": "Section",
+            "type": "string"
+          },
+          "show": {
+            "title": "Show",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "number",
+          "title",
+          "section",
+          "show"
+        ],
+        "title": "DemoStep",
+        "type": "object"
+      },
       "DependencyCheck": {
         "properties": {
           "detail": {
@@ -2459,6 +2583,16 @@
             ],
             "description": "Defaults to the end of the data",
             "title": "As Of"
+          },
+          "mode": {
+            "default": "live",
+            "description": "demo: answer with the scripted demo agents (Sharma Electricals only; see docs/DEMO.md) instead of the language model. The record is marked ai_mode=demo_script.",
+            "enum": [
+              "live",
+              "demo"
+            ],
+            "title": "Mode",
+            "type": "string"
           }
         },
         "title": "InvestigateRequest",
@@ -2472,6 +2606,16 @@
             },
             "title": "Agent Analyses",
             "type": "object"
+          },
+          "ai_mode": {
+            "default": "live",
+            "description": "live: answers from the language model. demo_script: scripted demo answers (still verified), not a model",
+            "enum": [
+              "live",
+              "demo_script"
+            ],
+            "title": "Ai Mode",
+            "type": "string"
           },
           "as_of": {
             "format": "date",
@@ -2749,6 +2893,15 @@
             "title": "Agents",
             "type": "array"
           },
+          "ai_mode": {
+            "default": "live",
+            "enum": [
+              "live",
+              "demo_script"
+            ],
+            "title": "Ai Mode",
+            "type": "string"
+          },
           "as_of": {
             "format": "date",
             "title": "As Of",
@@ -2859,6 +3012,15 @@
       },
       "InvestigationSummary": {
         "properties": {
+          "ai_mode": {
+            "default": "live",
+            "enum": [
+              "live",
+              "demo_script"
+            ],
+            "title": "Ai Mode",
+            "type": "string"
+          },
           "as_of": {
             "format": "date",
             "title": "As Of",
@@ -4716,6 +4878,30 @@
         "title": "ScoringModel",
         "type": "object"
       },
+      "SeededEntity": {
+        "properties": {
+          "entity_id": {
+            "format": "uuid",
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "fingerprint": {
+            "title": "Fingerprint",
+            "type": "string"
+          },
+          "scenario": {
+            "title": "Scenario",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scenario",
+          "entity_id",
+          "fingerprint"
+        ],
+        "title": "SeededEntity",
+        "type": "object"
+      },
       "SeriesPoint": {
         "properties": {
           "period": {
@@ -6014,6 +6200,85 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/demo": {
+      "get": {
+        "operationId": "get_demo_api_v1_demo_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DemoInfo"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (application/problem+json)"
+          }
+        },
+        "summary": "The demo walkthrough and its entity",
+        "tags": [
+          "demo"
+        ]
+      }
+    },
+    "/api/v1/demo/reset": {
+      "post": {
+        "operationId": "reset_demo_api_v1_demo_reset_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/DemoResetRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Request"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DemoResetResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (application/problem+json)"
+          }
+        },
+        "summary": "Restore the exact demo state: re-seed every synthetic entity, clear investigations",
+        "tags": [
+          "demo"
+        ]
+      }
+    },
     "/api/v1/entities": {
       "get": {
         "operationId": "list_entities_api_v1_entities_get",
