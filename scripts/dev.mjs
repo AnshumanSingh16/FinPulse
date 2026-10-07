@@ -10,11 +10,11 @@ const procs = [
   ["api", "npm", ["run", "dev:api"]],
   ["web", "npm", ["run", "dev:web"]],
 ].map(([name, cmd, args]) => {
-  const child = spawn(cmd, args, {
-    stdio: ["inherit", "pipe", "pipe"],
-    env: process.env,
-    shell: isWindows,
-  });
+  const options = { stdio: ["inherit", "pipe", "pipe"], env: process.env };
+  // On Windows pass one command line to the shell (args with `shell: true` is DEP0190).
+  const child = isWindows
+    ? spawn([cmd, ...args].join(" "), { ...options, shell: true })
+    : spawn(cmd, args, options);
   const prefix = (line) => `[${name}] ${line}`;
   for (const stream of [child.stdout, child.stderr]) {
     let buffered = "";

@@ -29,28 +29,37 @@ function fail(message) {
   process.exit(1);
 }
 
+/**
+ * spawnSync that also works on Windows, where npm/uv/docker are shims that need a shell. The
+ * command line is built here (arguments are fixed strings from this script) rather than passing
+ * args alongside `shell: true`, which Node deprecates (DEP0190).
+ */
+function exec(cmd, args, options) {
+  if (!isWindows) return spawnSync(cmd, args, options);
+  const quote = (a) => (/[\s"&|<>^()]/.test(a) ? `"${a.replace(/"/g, '\\"')}"` : a);
+  return spawnSync([cmd, ...args].map(quote).join(" "), { ...options, shell: true });
+}
+
+function show(cmd, args, cwd) {
+  const where = cwd === root ? "" : `   (in ${path.relative(root, cwd)})`;
+  console.log(`  $ ${[cmd, ...args].join(" ")}${where}`);
+}
+
 /** Run a command, streaming its output. Returns true on success. */
 function run(cmd, args, cwd = root) {
-  console.log(
-    `  $ ${[cmd, ...args].join(" ")}${cwd === root ? "" : `   (in ${path.relative(root, cwd)})`}`,
-  );
-  // A shell is needed on Windows to run npm/uv/docker shims (.cmd/.exe on PATH).
-  const result = spawnSync(cmd, args, { cwd, stdio: "inherit", shell: isWindows });
-  return result.status === 0;
+  show(cmd, args, cwd);
+  return exec(cmd, args, { cwd, stdio: "inherit" }).status === 0;
 }
 
 /** Run a command and capture its output (shown only if it matters). */
 function quiet(cmd, args, cwd = root) {
-  console.log(
-    `  $ ${[cmd, ...args].join(" ")}${cwd === root ? "" : `   (in ${path.relative(root, cwd)})`}`,
-  );
-  const result = spawnSync(cmd, args, { cwd, encoding: "utf8", shell: isWindows });
+  show(cmd, args, cwd);
+  const result = exec(cmd, args, { cwd, encoding: "utf8" });
   return { ok: result.status === 0, output: `${result.stdout ?? ""}${result.stderr ?? ""}` };
 }
 
 function has(cmd) {
-  const result = spawnSync(cmd, ["--version"], { stdio: "ignore", shell: isWindows });
-  return result.status === 0;
+  return exec(cmd, ["--version"], { stdio: "ignore" }).status === 0;
 }
 
 // 1. Prerequisites ---------------------------------------------------------------------------
@@ -105,13 +114,22 @@ const envPath = path.join(root, ".env");
 const DOCKER_URL =
   /^DATABASE_URL=postgresql:\/\/finpulse:finpulse@(?:localhost|127\.0\.0\.1):(\d+)\/finpulse\s*$/m;
 
-function canListen(port) {
+function canListenOn(port, host) {
   return new Promise((resolve) => {
     const server = net.createServer();
     server.once("error", () => resolve(false));
-    server.listen(port, "127.0.0.1", () => server.close(() => resolve(true)));
+    server.listen(port, host, () => server.close(() => resolve(true)));
   });
 }
+
+/** Free on loopback and on all interfaces (Docker Desktop on Windows binds 0.0.0.0). */
+async function canListen(port) {
+  return (await canListenOn(port, "127.0.0.1")) && (await canListenOn(port, "0.0.0.0"));
+}
+
+// Docker's own errors when a host port is taken or reserved: try the next port.
+const PORT_PROBLEM =
+  /port is already allocated|ports are not available|address already in use|bind/i;
 
 say("Preparing the database (migrations)");
 const firstTry = quiet("uv", ["run", "finpulse", "db", "init"], api);
@@ -131,18 +149,23 @@ if (firstTry.ok) {
   }
   const current = Number(dockerUrl[1]);
   let port = null;
-  for (const candidate of [current, 5433, 15432, 25432, 54329, 45432]) {
-    if (await canListen(candidate)) {
+  const candidates = [current, 5433, 5434, 5442, 15432, 25432, 35432, 45432, 54329, 55432];
+  for (const candidate of [...new Set(candidates)]) {
+    if (!(await canListen(candidate))) continue;
+    say(`Starting PostgreSQL in Docker on port ${candidate} (the first run downloads it)`);
+    process.env.FINPULSE_DB_PORT = String(candidate);
+    const up = quiet("docker", ["compose", "-f", "infra/docker-compose.yml", "up", "-d", "--wait"]);
+    if (up.ok) {
       port = candidate;
       break;
     }
+    if (!PORT_PROBLEM.test(up.output)) {
+      process.stdout.write(up.output);
+      fail("Could not start the Docker database. Is Docker Desktop running?");
+    }
+    console.log(`  Port ${candidate} is in use or reserved on this machine; trying another.`);
   }
   if (port === null) fail("No free local port for the Docker database; set DATABASE_URL in .env.");
-  say(`Starting PostgreSQL in Docker on port ${port}`);
-  process.env.FINPULSE_DB_PORT = String(port);
-  if (!run("docker", ["compose", "-f", "infra/docker-compose.yml", "up", "-d", "--wait"])) {
-    fail("Could not start the Docker database. Is Docker Desktop running?");
-  }
   if (port !== current) {
     const url = `postgresql://finpulse:finpulse@127.0.0.1:${port}/finpulse`;
     writeFileSync(
