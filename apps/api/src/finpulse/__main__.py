@@ -3,6 +3,7 @@
 import uvicorn
 
 from finpulse.config import get_settings
+from finpulse.core.aio import IS_WINDOWS
 
 
 def main() -> None:
@@ -14,6 +15,8 @@ def main() -> None:
         port=settings.api_port,
         reload=settings.is_development,
         log_config=None,  # logging is configured by the app itself
+        # psycopg's async mode cannot use Windows' default Proactor loop (core/aio.py).
+        loop="finpulse.core.aio:event_loop" if IS_WINDOWS else "auto",
     )
 
 

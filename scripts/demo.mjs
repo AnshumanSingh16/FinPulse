@@ -10,7 +10,8 @@
 //
 // Each step is a plain command printed before it runs, so it can be repeated by hand.
 import { spawnSync } from "node:child_process";
-import { copyFileSync, existsSync } from "node:fs";
+import { copyFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
+import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -36,6 +37,15 @@ function run(cmd, args, cwd = root) {
   // A shell is needed on Windows to run npm/uv/docker shims (.cmd/.exe on PATH).
   const result = spawnSync(cmd, args, { cwd, stdio: "inherit", shell: isWindows });
   return result.status === 0;
+}
+
+/** Run a command and capture its output (shown only if it matters). */
+function quiet(cmd, args, cwd = root) {
+  console.log(
+    `  $ ${[cmd, ...args].join(" ")}${cwd === root ? "" : `   (in ${path.relative(root, cwd)})`}`,
+  );
+  const result = spawnSync(cmd, args, { cwd, encoding: "utf8", shell: isWindows });
+  return { ok: result.status === 0, output: `${result.stdout ?? ""}${result.stderr ?? ""}` };
 }
 
 function has(cmd) {
@@ -88,19 +98,58 @@ say("Installing Python dependencies (first run downloads Python if needed)");
 if (!run("uv", ["sync"], api)) fail("uv sync failed.");
 
 // 4. Database --------------------------------------------------------------------------------
+// The default DATABASE_URL points at the Docker database (infra/docker-compose.yml). If nothing
+// answers there, start it, on a free port: Windows often reserves 5432 (Hyper-V/WSL port
+// ranges) or a local PostgreSQL already uses it.
+const envPath = path.join(root, ".env");
+const DOCKER_URL =
+  /^DATABASE_URL=postgresql:\/\/finpulse:finpulse@(?:localhost|127\.0\.0\.1):(\d+)\/finpulse\s*$/m;
+
+function canListen(port) {
+  return new Promise((resolve) => {
+    const server = net.createServer();
+    server.once("error", () => resolve(false));
+    server.listen(port, "127.0.0.1", () => server.close(() => resolve(true)));
+  });
+}
+
 say("Preparing the database (migrations)");
-if (!run("uv", ["run", "finpulse", "db", "init"], api)) {
-  if (!has("docker")) {
+const firstTry = quiet("uv", ["run", "finpulse", "db", "init"], api);
+if (firstTry.ok) {
+  process.stdout.write(firstTry.output);
+} else {
+  const dockerUrl = readFileSync(envPath, "utf8").match(DOCKER_URL);
+  if (!dockerUrl || !has("docker")) {
+    process.stdout.write(firstTry.output);
     fail(
-      "PostgreSQL is not reachable at the DATABASE_URL in .env, and Docker is not installed.\n" +
-        "  Either install Docker Desktop (https://www.docker.com/products/docker-desktop) and run\n" +
-        "  `npm run demo` again, or point DATABASE_URL in .env at any PostgreSQL 15+ database\n" +
-        "  (a local install or a free Supabase project).",
+      "PostgreSQL is not reachable at the DATABASE_URL in .env" +
+        (dockerUrl ? ", and Docker is not installed.\n" : ".\n") +
+        "  Either install Docker Desktop (https://www.docker.com/products/docker-desktop), start it\n" +
+        "  and run `npm run demo` again, or set DATABASE_URL in .env to any PostgreSQL 15+\n" +
+        "  database (a local install or a free Supabase project).",
     );
   }
-  say("Starting PostgreSQL in Docker");
+  const current = Number(dockerUrl[1]);
+  let port = null;
+  for (const candidate of [current, 5433, 15432, 25432, 54329, 45432]) {
+    if (await canListen(candidate)) {
+      port = candidate;
+      break;
+    }
+  }
+  if (port === null) fail("No free local port for the Docker database; set DATABASE_URL in .env.");
+  say(`Starting PostgreSQL in Docker on port ${port}`);
+  process.env.FINPULSE_DB_PORT = String(port);
   if (!run("docker", ["compose", "-f", "infra/docker-compose.yml", "up", "-d", "--wait"])) {
     fail("Could not start the Docker database. Is Docker Desktop running?");
+  }
+  if (port !== current) {
+    const url = `postgresql://finpulse:finpulse@127.0.0.1:${port}/finpulse`;
+    writeFileSync(
+      envPath,
+      readFileSync(envPath, "utf8").replace(DOCKER_URL, `DATABASE_URL=${url}`),
+    );
+    console.log(`  Port ${current} is not available here; .env now uses DATABASE_URL=${url}`);
   }
   if (!run("uv", ["run", "finpulse", "db", "init"], api)) {
     fail("The database is running but migrations failed; see the error above.");

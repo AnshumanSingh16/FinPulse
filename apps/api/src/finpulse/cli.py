@@ -27,7 +27,6 @@ LLM.
 from __future__ import annotations
 
 import argparse
-import asyncio
 import os
 import sys
 from collections.abc import Callable
@@ -40,6 +39,7 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from finpulse.config import Settings, get_settings
+from finpulse.core import aio
 from finpulse.core.money import format_inr
 from finpulse.observability.logging import configure_logging
 from finpulse.persistence.db import create_engine
@@ -94,7 +94,7 @@ def db_init(args: argparse.Namespace, settings: Settings) -> None:
     _say(f"database: {_redacted(settings)}")
     if not args.no_create:
         try:
-            created = asyncio.run(_create_database_if_missing(settings))
+            created = aio.run(_create_database_if_missing(settings))
             _say("created database" if created else "database exists")
         except Exception as exc:  # e.g. no rights on the maintenance DB; migrations may still work
             _say(f"skipped create-if-missing ({type(exc).__name__}); assuming it exists")
@@ -119,7 +119,7 @@ def db_seed(args: argparse.Namespace, settings: Settings) -> None:
         finally:
             await engine.dispose()
 
-    asyncio.run(run())
+    aio.run(run())
 
 
 def db_reset(args: argparse.Namespace, settings: Settings) -> None:
@@ -146,7 +146,7 @@ def db_counts(_: argparse.Namespace, settings: Settings) -> None:
         finally:
             await engine.dispose()
 
-    for table, count in asyncio.run(run()).items():
+    for table, count in aio.run(run()).items():
         _say(f"{table:<26} {count:>7}")
 
 
@@ -323,7 +323,7 @@ def audit_verify(_: argparse.Namespace, settings: Settings) -> None:
         finally:
             await engine.dispose()
 
-    results = asyncio.run(run())
+    results = aio.run(run())
     broken = [r for r in results if r[2] is not None]
     for inv_id, n, at in results:
         _say(f"{inv_id}  {n:>3} entries  {'ok' if at is None else f'BROKEN at seq {at}'}")
@@ -387,7 +387,7 @@ def investigate_run(args: argparse.Namespace, settings: Settings) -> None:
 
     llm: LLMClient = DemoScriptLLM(pace_seconds=0) if args.demo else AnthropicLLM(settings)
     try:
-        investigation = asyncio.run(InvestigationOrchestrator(llm).investigate(data, as_of))
+        investigation = aio.run(InvestigationOrchestrator(llm).investigate(data, as_of))
     except AppError as exc:
         _say(f"Investigation failed: {exc.detail or exc}")
         sys.exit(1)

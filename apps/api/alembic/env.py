@@ -1,6 +1,5 @@
 """Alembic environment: async migrations using the application's own settings."""
 
-import asyncio
 from logging.config import fileConfig
 
 from alembic import context
@@ -8,6 +7,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 import finpulse.persistence.models  # noqa: F401 - registers tables on Base.metadata
 from finpulse.config import get_settings
+from finpulse.core import aio
 from finpulse.persistence.base import Base
 
 config = context.config
@@ -48,4 +48,4 @@ async def run_migrations_online() -> None:
 if context.is_offline_mode():
     run_migrations_offline()
 else:
-    asyncio.run(run_migrations_online())
+    aio.run(run_migrations_online())

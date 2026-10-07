@@ -11,7 +11,8 @@ services:
       POSTGRES_PASSWORD: finpulse
       POSTGRES_DB: finpulse
     ports:
-      - "127.0.0.1:5432:5432"
+      # FINPULSE_DB_PORT: another host port when 5432 is taken or reserved (npm run demo picks one)
+      - "127.0.0.1:${FINPULSE_DB_PORT:-5432}:5432"
     volumes:
       - finpulse-db:/var/lib/postgresql/data
     healthcheck:
