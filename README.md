@@ -60,6 +60,26 @@ Details: [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md).
 
 ## Quick start
 
+**One command (Windows, macOS, Linux):**
+
+```bash
+npm run demo
+```
+
+It checks Node and uv, creates `.env` from `.env.example` if missing, and installs dependencies.
+It then applies migrations, starting the Docker database if PostgreSQL isn't reachable, seeds the
+demo data, and starts the API and web app. Open **http://localhost:3000/demo**. You need Node.js
+≥ 22.12, [uv](https://docs.astral.sh/uv/), and either Docker Desktop or a PostgreSQL database
+in `DATABASE_URL`.
+
+Install uv on Windows (PowerShell), then open a new terminal:
+
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+**Step by step (with `make`):**
+
 ```bash
 cp .env.example .env     # one config file for both apps; edit DATABASE_URL if needed
 make setup               # uv sync + npm install
