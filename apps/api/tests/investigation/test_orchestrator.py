@@ -28,6 +28,7 @@ STAGES = [
     "specialized_investigation",
     "disagreement_detection",
     "red_team_challenge",
+    "evidence_verification",
     "senior_synthesis",
     "final_assessment",
 ]

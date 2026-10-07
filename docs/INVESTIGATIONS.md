@@ -24,10 +24,37 @@ GET  /api/v1/investigations/{investigation_id}/events   its timestamped event lo
 | 7 | Specialized AI investigation | Five agents in parallel: Financial Profile, Credit Intelligence, Early Warning Investigation, Risk Investigation and Stress-Test Interpretation | ✓ |
 | 8 | Disagreement detection and review planning | Finds disagreements and chooses which assessments the red team must review | – |
 | 9 | Red-team challenge | Challenges the verified conclusions. It **must** review every significant assessment, and it assesses every disagreement | ✓ |
-| 10 | Senior Financial Intelligence | The final synthesis. It resolves disagreements, answers challenges and gives recommendations | ✓ |
-| 11 | Final assessment | Assembles the record, caps confidence, and audits claims and evidence references | – |
+| 10 | Evidence verification | Audits every verified claim (analysts and red team) before synthesis. It reports per-agent verifier results (claims passed, pruned, issues caught) and confirms every evidence reference resolves to the hashed pack | – |
+| 11 | Senior Financial Intelligence | The final synthesis. It resolves disagreements, answers challenges and gives recommendations | ✓ |
+| 12 | Final assessment | Assembles the record, caps confidence, and audits claims and evidence references | – |
 
 Each stage records its status, start and end times, duration, a one-line summary and details.
+
+### The eight user-facing steps
+
+Users see eight steps rather than twelve stages. `investigation/timeline.py` declares exactly
+which stages and agents execute each step. It rebuilds the steps from the run's stage records
+and events, for both live progress and the stored record (`timeline` on each), so the timeline
+users watch is the one that is stored.
+
+| Step | Executed by |
+|---|---|
+| 1 Collecting financial evidence | Stages 1–6 (deterministic) |
+| 2 Analyzing cash flow | Financial Profile Agent |
+| 3 Evaluating financial reliability | Credit Intelligence Agent |
+| 4 Investigating early warnings | Early Warning Investigation and Risk Investigation Agents |
+| 5 Running stress scenarios | Stress-Test Interpretation Agent, on the stress-test engine's results from step 1 |
+| 6 Red-team challenge | Disagreement detection, then the Red-Team Agent |
+| 7 Verifying evidence | The evidence verification stage (the verifier itself also runs inside every agent call) |
+| 8 Generating final assessment | Senior Financial Intelligence Agent, then the final assessment |
+
+Notes on how the steps report:
+- Steps 2–5 run **concurrently**, so they are marked as one parallel group, not a sequence.
+- A step with no recorded work is pending while the run is live, and skipped afterwards.
+- For each agent, the timeline shows its focus, its key (summary-level) verified finding with
+  confidence, every evidence item it cited, and verifier counts.
+- It also shows each red-team challenge against the agent's claims, with the senior agent's
+  ruling. These are carried on the agents' completion events, so they appear live.
 
 ## How the orchestrator keeps the investigation honest
 
@@ -118,9 +145,17 @@ listed in `confidence.adjustments`.
 - **Web.** The AI Investigation view starts a run with `POST /api/v1/entities/{id}/investigations`.
   It returns `202` at once, and the run continues in the background. The view then polls
   `GET /api/v1/investigations/{id}/progress` and shows:
-  - each stage and agent as the orchestrator reports it (pending, running, ✓, ✗ or skipped,
-    with claim counts and attempts);
-  - the event log.
+  - the eight-step timeline above, with each agent's key finding, evidence used, confidence
+    and challenges as they arrive;
+  - the latest event and the raw event log.
+
+  When the run completes, the view shows the **Investigation Report**:
+  1. Overall assessment
+  2. Key evidence (the most-cited evidence items)
+  3. Primary risks (from the Risk Investigation Agent)
+  4. Contradictory evidence (red-team challenges and disagreements, with rulings)
+  5. Stress-test results (the engine's before → after figures from the same hashed pack)
+  6. Recommended actions
 
   When the run completes, the view opens the full record. The progress is built only from the
   orchestrator's own events, through a listener on its recorder; nothing is estimated. The

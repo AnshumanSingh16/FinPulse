@@ -27,6 +27,7 @@ StageName = Literal[
     "specialized_investigation",
     "disagreement_detection",
     "red_team_challenge",
+    "evidence_verification",
     "senior_synthesis",
     "final_assessment",
 ]
@@ -171,6 +172,81 @@ class EvidencePackRef(BaseModel):
 InvestigationStatus = Literal["completed", "completed_with_gaps", "failed"]
 
 
+AgentState = Literal["pending", "running", "succeeded", "failed", "skipped"]
+StepState = Literal["pending", "running", "completed", "completed_with_issues", "failed", "skipped"]
+
+
+class KeyFinding(BaseModel):
+    """The agent's headline claim (its summary-level statement), already verified."""
+
+    claim_id: str
+    statement: str
+    statement_type: str
+    confidence: str
+    evidence_ids: list[str]
+
+
+class ChallengeNote(BaseModel):
+    """A red-team challenge against one of this agent's claims, and how it was settled."""
+
+    challenger: str = "red_team"
+    target_claim_id: str
+    severity: str
+    summary: str
+    resolution: str | None = Field(
+        default=None, description="The senior agent's ruling: upheld, partially_upheld, rejected"
+    )
+
+
+class AgentProgress(BaseModel):
+    """One agent in the investigation, from its real events."""
+
+    agent: str
+    title: str
+    focus: str = Field(default="", description="What the agent analyses (its catalogue purpose)")
+    state: AgentState = "pending"
+    started_at: dt.datetime | None = None
+    completed_at: dt.datetime | None = None
+    claims: int | None = None
+    attempts: int | None = None
+    error: str | None = None
+    stance: str | None = None
+    key_finding: KeyFinding | None = None
+    evidence_ids: list[str] = Field(
+        default_factory=list, description="Every evidence item its verified claims cite"
+    )
+    claim_ids: list[str] = Field(default_factory=list)
+    issues_caught: int | None = Field(
+        default=None, description="Verification issues found (and fixed or pruned) across attempts"
+    )
+    pruned: int | None = Field(default=None, description="Statements removed as unverifiable")
+    challenges: list[ChallengeNote] = Field(default_factory=list)
+
+
+class TimelineStep(BaseModel):
+    """One of the eight investigation steps shown to users, mapped onto real stages and agents."""
+
+    number: int
+    key: str
+    title: str
+    description: str
+    stages: list[StageName] = Field(description="Workflow stages this step covers")
+    agents: list[str] = Field(description="Agents that execute this step")
+    parallel_group: str | None = Field(
+        default=None, description="Steps sharing a group run concurrently"
+    )
+    state: StepState
+    started_at: dt.datetime | None = None
+    completed_at: dt.datetime | None = None
+    duration_ms: int | None = None
+    highlights: list[str] = Field(description="What the step established, from stage summaries")
+
+
+class InvestigationTimeline(BaseModel):
+    steps: list[TimelineStep]
+    agents: list[AgentProgress]
+
+
 class Investigation(BaseModel):
     investigation_id: uuid.UUID
     entity_id: uuid.UUID
@@ -200,6 +276,9 @@ class Investigation(BaseModel):
     claim_audit: ClaimAudit
     usage: Usage
     events: list[InvestigationEvent]
+    timeline: InvestigationTimeline | None = Field(
+        default=None, description="The eight user-facing steps, rebuilt from stages and events"
+    )
     disclaimer: str
 
 
@@ -231,18 +310,6 @@ class InvestigationSummary(BaseModel):
         )
 
 
-AgentState = Literal["pending", "running", "succeeded", "failed", "skipped"]
-
-
-class AgentProgress(BaseModel):
-    agent: str
-    title: str
-    state: AgentState = "pending"
-    claims: int | None = None
-    attempts: int | None = None
-    error: str | None = None
-
-
 class ProgressError(BaseModel):
     code: str
     message: str
@@ -261,5 +328,6 @@ class InvestigationProgress(BaseModel):
     current_stage: StageName | None
     stages: list[StageRecord]
     agents: list[AgentProgress]
+    timeline: InvestigationTimeline
     events: list[InvestigationEvent]
     error: ProgressError | None = None

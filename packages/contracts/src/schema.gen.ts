@@ -443,16 +443,51 @@ export interface components {
             /** Title */
             title: string;
         };
-        /** AgentProgress */
+        /**
+         * AgentProgress
+         * @description One agent in the investigation, from its real events.
+         */
         AgentProgress: {
             /** Agent */
             agent: string;
             /** Attempts */
             attempts?: number | null;
+            /** Challenges */
+            challenges?: components["schemas"]["ChallengeNote"][];
+            /** Claim Ids */
+            claim_ids?: string[];
             /** Claims */
             claims?: number | null;
+            /** Completed At */
+            completed_at?: string | null;
             /** Error */
             error?: string | null;
+            /**
+             * Evidence Ids
+             * @description Every evidence item its verified claims cite
+             */
+            evidence_ids?: string[];
+            /**
+             * Focus
+             * @description What the agent analyses (its catalogue purpose)
+             * @default
+             */
+            focus: string;
+            /**
+             * Issues Caught
+             * @description Verification issues found (and fixed or pruned) across attempts
+             */
+            issues_caught?: number | null;
+            key_finding?: components["schemas"]["KeyFinding"] | null;
+            /**
+             * Pruned
+             * @description Statements removed as unverifiable
+             */
+            pruned?: number | null;
+            /** Stance */
+            stance?: string | null;
+            /** Started At */
+            started_at?: string | null;
             /**
              * State
              * @default pending
@@ -562,6 +597,28 @@ export interface components {
             severity: "low" | "medium" | "high" | "critical";
             /** Warnings */
             warnings: number;
+        };
+        /**
+         * ChallengeNote
+         * @description A red-team challenge against one of this agent's claims, and how it was settled.
+         */
+        ChallengeNote: {
+            /**
+             * Challenger
+             * @default red_team
+             */
+            challenger: string;
+            /**
+             * Resolution
+             * @description The senior agent's ruling: upheld, partially_upheld, rejected
+             */
+            resolution?: string | null;
+            /** Severity */
+            severity: string;
+            /** Summary */
+            summary: string;
+            /** Target Claim Id */
+            target_claim_id: string;
         };
         /** ChangeDriver */
         ChangeDriver: {
@@ -1373,6 +1430,8 @@ export interface components {
              * @enum {string}
              */
             status: "completed" | "completed_with_gaps" | "failed";
+            /** @description The eight user-facing steps, rebuilt from stages and events */
+            timeline?: components["schemas"]["InvestigationTimeline"] | null;
             /** Triggered Warnings */
             triggered_warnings: components["schemas"]["TriggeredWarning"][];
             usage: components["schemas"]["Usage"];
@@ -1406,7 +1465,7 @@ export interface components {
              * Stage
              * @enum {string}
              */
-            stage: "financial_data" | "deterministic_analytics" | "financial_passport" | "early_warning_detection" | "stress_testing" | "evidence_assembly" | "specialized_investigation" | "disagreement_detection" | "red_team_challenge" | "senior_synthesis" | "final_assessment";
+            stage: "financial_data" | "deterministic_analytics" | "financial_passport" | "early_warning_detection" | "stress_testing" | "evidence_assembly" | "specialized_investigation" | "disagreement_detection" | "red_team_challenge" | "evidence_verification" | "senior_synthesis" | "final_assessment";
         };
         /**
          * InvestigationProgress
@@ -1421,7 +1480,7 @@ export interface components {
              */
             as_of: string;
             /** Current Stage */
-            current_stage: ("financial_data" | "deterministic_analytics" | "financial_passport" | "early_warning_detection" | "stress_testing" | "evidence_assembly" | "specialized_investigation" | "disagreement_detection" | "red_team_challenge" | "senior_synthesis" | "final_assessment") | null;
+            current_stage: ("financial_data" | "deterministic_analytics" | "financial_passport" | "early_warning_detection" | "stress_testing" | "evidence_assembly" | "specialized_investigation" | "disagreement_detection" | "red_team_challenge" | "evidence_verification" | "senior_synthesis" | "final_assessment") | null;
             /**
              * Entity Id
              * Format: uuid
@@ -1449,6 +1508,7 @@ export interface components {
              * @enum {string}
              */
             status: "running" | "completed" | "failed";
+            timeline: components["schemas"]["InvestigationTimeline"];
             /**
              * Updated At
              * Format: date-time
@@ -1496,6 +1556,13 @@ export interface components {
              */
             status: "completed" | "completed_with_gaps" | "failed";
         };
+        /** InvestigationTimeline */
+        InvestigationTimeline: {
+            /** Agents */
+            agents: components["schemas"]["AgentProgress"][];
+            /** Steps */
+            steps: components["schemas"]["TimelineStep"][];
+        };
         /** Issue */
         Issue: {
             /**
@@ -1510,6 +1577,22 @@ export interface components {
              * @description Where in the output, e.g. "weaknesses[1].statement"
              */
             path: string;
+        };
+        /**
+         * KeyFinding
+         * @description The agent's headline claim (its summary-level statement), already verified.
+         */
+        KeyFinding: {
+            /** Claim Id */
+            claim_id: string;
+            /** Confidence */
+            confidence: string;
+            /** Evidence Ids */
+            evidence_ids: string[];
+            /** Statement */
+            statement: string;
+            /** Statement Type */
+            statement_type: string;
         };
         /** Metric */
         Metric: {
@@ -2277,7 +2360,7 @@ export interface components {
              * Stage
              * @enum {string}
              */
-            stage: "financial_data" | "deterministic_analytics" | "financial_passport" | "early_warning_detection" | "stress_testing" | "evidence_assembly" | "specialized_investigation" | "disagreement_detection" | "red_team_challenge" | "senior_synthesis" | "final_assessment";
+            stage: "financial_data" | "deterministic_analytics" | "financial_passport" | "early_warning_detection" | "stress_testing" | "evidence_assembly" | "specialized_investigation" | "disagreement_detection" | "red_team_challenge" | "evidence_verification" | "senior_synthesis" | "final_assessment";
             /**
              * Started At
              * Format: date-time
@@ -2415,6 +2498,51 @@ export interface components {
             level: "none" | "low" | "medium" | "high" | "critical";
             /** Rules */
             rules: string[];
+        };
+        /**
+         * TimelineStep
+         * @description One of the eight investigation steps shown to users, mapped onto real stages and agents.
+         */
+        TimelineStep: {
+            /**
+             * Agents
+             * @description Agents that execute this step
+             */
+            agents: string[];
+            /** Completed At */
+            completed_at?: string | null;
+            /** Description */
+            description: string;
+            /** Duration Ms */
+            duration_ms?: number | null;
+            /**
+             * Highlights
+             * @description What the step established, from stage summaries
+             */
+            highlights: string[];
+            /** Key */
+            key: string;
+            /** Number */
+            number: number;
+            /**
+             * Parallel Group
+             * @description Steps sharing a group run concurrently
+             */
+            parallel_group?: string | null;
+            /**
+             * Stages
+             * @description Workflow stages this step covers
+             */
+            stages: ("financial_data" | "deterministic_analytics" | "financial_passport" | "early_warning_detection" | "stress_testing" | "evidence_assembly" | "specialized_investigation" | "disagreement_detection" | "red_team_challenge" | "evidence_verification" | "senior_synthesis" | "final_assessment")[];
+            /** Started At */
+            started_at?: string | null;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "pending" | "running" | "completed" | "completed_with_issues" | "failed" | "skipped";
+            /** Title */
+            title: string;
         };
         /** TriggeredWarning */
         TriggeredWarning: {

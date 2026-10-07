@@ -11,17 +11,16 @@ import asyncio
 import uuid
 from datetime import UTC, date, datetime
 
-from finpulse.agents.catalogue import AGENTS
 from finpulse.agents.llm import LLMClient
 from finpulse.analytics.inputs import FinancialData
 from finpulse.core.errors import AppError
 from finpulse.investigation.orchestrator import InvestigationOrchestrator, Recorder
-from finpulse.investigation.schemas import AgentProgress, InvestigationProgress, ProgressError
+from finpulse.investigation.schemas import InvestigationProgress, ProgressError
 from finpulse.investigation.store import InvestigationStore
+from finpulse.investigation.timeline import build_timeline
 from finpulse.observability.logging import get_logger
 
 log = get_logger("finpulse.investigation.progress")
-SKIPPED_STAGES = {"red_team_challenge": ["red_team"], "senior_synthesis": ["senior_synthesis"]}
 
 
 def _now() -> datetime:
@@ -47,6 +46,7 @@ class ProgressTracker:
     ) -> InvestigationProgress:
         investigation_id = uuid.uuid4()
         now = _now()
+        timeline = build_timeline([], [], running=True)
         progress = InvestigationProgress(
             investigation_id=investigation_id,
             entity_id=data.entity_id,
@@ -57,7 +57,8 @@ class ProgressTracker:
             updated_at=now,
             current_stage=None,
             stages=[],
-            agents=[AgentProgress(agent=n, title=s.title) for n, s in AGENTS.items()],
+            agents=timeline.agents,
+            timeline=timeline,
             events=[],
         )
         self._items[investigation_id] = progress
@@ -95,25 +96,18 @@ class ProgressTracker:
         else:
             store.save(investigation)
             progress.status = "completed"
-        progress.updated_at = _now()
+        _refresh(progress, running=False)
 
 
 def _apply(progress: InvestigationProgress, rec: Recorder) -> None:
     progress.stages = list(rec.stages)
     progress.events = list(rec.events)
     progress.current_stage = rec.current
+    _refresh(progress, running=True)
+
+
+def _refresh(progress: InvestigationProgress, *, running: bool) -> None:
+    """Rebuild the eight-step timeline and agent states from the recorded stages and events."""
+    progress.timeline = build_timeline(progress.stages, progress.events, running=running)
+    progress.agents = progress.timeline.agents
     progress.updated_at = _now()
-    agents = {a.agent: a for a in progress.agents}
-    event = rec.events[-1]
-    name = event.data.get("agent")
-    if event.event == "agent_started" and name in agents:
-        agents[name].state = "running"
-    elif event.event in ("agent_completed", "agent_failed") and name in agents:
-        a = agents[name]
-        a.state = "succeeded" if event.event == "agent_completed" else "failed"
-        a.claims = event.data.get("claims")
-        a.attempts = event.data.get("attempts")
-        a.error = event.data.get("error")
-    elif event.event == "stage_completed" and event.data.get("status") == "skipped":
-        for n in SKIPPED_STAGES.get(event.stage, []):
-            agents[n].state = "skipped"

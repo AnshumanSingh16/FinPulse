@@ -62,6 +62,7 @@
         "type": "object"
       },
       "AgentProgress": {
+        "description": "One agent in the investigation, from its real events.",
         "properties": {
           "agent": {
             "title": "Agent",
@@ -78,6 +79,20 @@
             ],
             "title": "Attempts"
           },
+          "challenges": {
+            "items": {
+              "$ref": "#/components/schemas/ChallengeNote"
+            },
+            "title": "Challenges",
+            "type": "array"
+          },
+          "claim_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Claim Ids",
+            "type": "array"
+          },
           "claims": {
             "anyOf": [
               {
@@ -89,6 +104,18 @@
             ],
             "title": "Claims"
           },
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
           "error": {
             "anyOf": [
               {
@@ -99,6 +126,77 @@
               }
             ],
             "title": "Error"
+          },
+          "evidence_ids": {
+            "description": "Every evidence item its verified claims cite",
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "focus": {
+            "default": "",
+            "description": "What the agent analyses (its catalogue purpose)",
+            "title": "Focus",
+            "type": "string"
+          },
+          "issues_caught": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Verification issues found (and fixed or pruned) across attempts",
+            "title": "Issues Caught"
+          },
+          "key_finding": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/KeyFinding"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pruned": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Statements removed as unverifiable",
+            "title": "Pruned"
+          },
+          "stance": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stance"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
           },
           "state": {
             "default": "pending",
@@ -377,6 +475,47 @@
           "rules"
         ],
         "title": "CategoryRisk",
+        "type": "object"
+      },
+      "ChallengeNote": {
+        "description": "A red-team challenge against one of this agent's claims, and how it was settled.",
+        "properties": {
+          "challenger": {
+            "default": "red_team",
+            "title": "Challenger",
+            "type": "string"
+          },
+          "resolution": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The senior agent's ruling: upheld, partially_upheld, rejected",
+            "title": "Resolution"
+          },
+          "severity": {
+            "title": "Severity",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "target_claim_id": {
+            "title": "Target Claim Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "target_claim_id",
+          "severity",
+          "summary"
+        ],
+        "title": "ChallengeNote",
         "type": "object"
       },
       "ChangeDriver": {
@@ -2481,6 +2620,17 @@
             "title": "Status",
             "type": "string"
           },
+          "timeline": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InvestigationTimeline"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The eight user-facing steps, rebuilt from stages and events"
+          },
           "triggered_warnings": {
             "items": {
               "$ref": "#/components/schemas/TriggeredWarning"
@@ -2571,6 +2721,7 @@
               "specialized_investigation",
               "disagreement_detection",
               "red_team_challenge",
+              "evidence_verification",
               "senior_synthesis",
               "final_assessment"
             ],
@@ -2616,6 +2767,7 @@
                   "specialized_investigation",
                   "disagreement_detection",
                   "red_team_challenge",
+                  "evidence_verification",
                   "senior_synthesis",
                   "final_assessment"
                 ],
@@ -2679,6 +2831,9 @@
             "title": "Status",
             "type": "string"
           },
+          "timeline": {
+            "$ref": "#/components/schemas/InvestigationTimeline"
+          },
           "updated_at": {
             "format": "date-time",
             "title": "Updated At",
@@ -2696,6 +2851,7 @@
           "current_stage",
           "stages",
           "agents",
+          "timeline",
           "events"
         ],
         "title": "InvestigationProgress",
@@ -2773,6 +2929,30 @@
         "title": "InvestigationSummary",
         "type": "object"
       },
+      "InvestigationTimeline": {
+        "properties": {
+          "agents": {
+            "items": {
+              "$ref": "#/components/schemas/AgentProgress"
+            },
+            "title": "Agents",
+            "type": "array"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/TimelineStep"
+            },
+            "title": "Steps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "steps",
+          "agents"
+        ],
+        "title": "InvestigationTimeline",
+        "type": "object"
+      },
       "Issue": {
         "properties": {
           "code": {
@@ -2805,6 +2985,43 @@
           "detail"
         ],
         "title": "Issue",
+        "type": "object"
+      },
+      "KeyFinding": {
+        "description": "The agent's headline claim (its summary-level statement), already verified.",
+        "properties": {
+          "claim_id": {
+            "title": "Claim Id",
+            "type": "string"
+          },
+          "confidence": {
+            "title": "Confidence",
+            "type": "string"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "statement": {
+            "title": "Statement",
+            "type": "string"
+          },
+          "statement_type": {
+            "title": "Statement Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "claim_id",
+          "statement",
+          "statement_type",
+          "confidence",
+          "evidence_ids"
+        ],
+        "title": "KeyFinding",
         "type": "object"
       },
       "Metric": {
@@ -4676,6 +4893,7 @@
               "specialized_investigation",
               "disagreement_detection",
               "red_team_challenge",
+              "evidence_verification",
               "senior_synthesis",
               "final_assessment"
             ],
@@ -5020,6 +5238,136 @@
           "rules"
         ],
         "title": "TimelinePoint",
+        "type": "object"
+      },
+      "TimelineStep": {
+        "description": "One of the eight investigation steps shown to users, mapped onto real stages and agents.",
+        "properties": {
+          "agents": {
+            "description": "Agents that execute this step",
+            "items": {
+              "type": "string"
+            },
+            "title": "Agents",
+            "type": "array"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "highlights": {
+            "description": "What the step established, from stage summaries",
+            "items": {
+              "type": "string"
+            },
+            "title": "Highlights",
+            "type": "array"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "integer"
+          },
+          "parallel_group": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Steps sharing a group run concurrently",
+            "title": "Parallel Group"
+          },
+          "stages": {
+            "description": "Workflow stages this step covers",
+            "items": {
+              "enum": [
+                "financial_data",
+                "deterministic_analytics",
+                "financial_passport",
+                "early_warning_detection",
+                "stress_testing",
+                "evidence_assembly",
+                "specialized_investigation",
+                "disagreement_detection",
+                "red_team_challenge",
+                "evidence_verification",
+                "senior_synthesis",
+                "final_assessment"
+              ],
+              "type": "string"
+            },
+            "title": "Stages",
+            "type": "array"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "state": {
+            "enum": [
+              "pending",
+              "running",
+              "completed",
+              "completed_with_issues",
+              "failed",
+              "skipped"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "number",
+          "key",
+          "title",
+          "description",
+          "stages",
+          "agents",
+          "state",
+          "highlights"
+        ],
+        "title": "TimelineStep",
         "type": "object"
       },
       "TriggeredWarning": {

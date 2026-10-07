@@ -174,6 +174,7 @@ async def test_background_investigation_reports_live_progress(client: httpx.Asyn
     body = started.json()
     assert body["status"] == "running"
     assert [a["agent"] for a in body["agents"]][-1] == "senior_synthesis"
+    assert [s["state"] for s in body["timeline"]["steps"]] == ["pending"] * 8
 
     done = await wait_for(client, body["investigation_id"])
 
@@ -181,8 +182,11 @@ async def test_background_investigation_reports_live_progress(client: httpx.Asyn
     assert all(a["state"] == "succeeded" and a["claims"] for a in done["agents"])
     assert [s["stage"] for s in done["stages"]][-1] == "final_assessment"
     assert {"agent_started", "agent_completed"} <= {e["event"] for e in done["events"]}
+    assert all(s["state"] == "completed" for s in done["timeline"]["steps"])
     full = await client.get(f"/api/v1/investigations/{body['investigation_id']}")
     assert full.status_code == 200 and full.json()["status"] == "completed"
+    # The live timeline and the stored one are the same.
+    assert full.json()["timeline"] == done["timeline"]
     mine = (
         await client.get("/api/v1/investigations", params={"entity_id": str(SHARMA.entity_id)})
     ).json()
@@ -199,6 +203,8 @@ async def test_background_investigation_failure_is_reported() -> None:
 
         assert done["status"] == "failed"
         assert done["error"]["code"] == "llm_unavailable"
+        states = [s["state"] for s in done["timeline"]["steps"]]
+        assert states == ["completed"] + ["failed"] * 4 + ["skipped"] * 3
         assert "ANTHROPIC_API_KEY" in done["error"]["message"]
         assert (
             await c.get(f"/api/v1/investigations/{body['investigation_id']}")

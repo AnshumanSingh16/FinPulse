@@ -1,23 +1,42 @@
 "use client";
 
 import type { InvestigationProgress } from "@finpulse/contracts";
-import { AlertCircle, Bot, CheckCircle2, Loader2, Play } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, Play, Radio } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { Panel } from "@/components/fp/layout";
 import { ApiErrorPanel } from "@/components/fp/states";
 import { getBrowserApiClient } from "@/lib/api/browser";
 import { unwrap } from "@/lib/api/client";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-import { Pipeline, stepsFromProgress } from "./pipeline";
+import { TimelineView, timelineCounts } from "./timeline";
 
 const POLL_MS = 900;
 
+function useElapsed(since: string | null, active: boolean): string | null {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!active) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [active]);
+  if (!since) return null;
+  const s = Math.max(0, Math.floor((now - Date.parse(since)) / 1000));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+
 /** Starts a background investigation and follows its real progress until it finishes. */
-export function InvestigationRunner({ entityId, asOf }: { entityId: string; asOf?: string }) {
+export function InvestigationRunner({
+  entityId,
+  entityName,
+  asOf,
+}: {
+  entityId: string;
+  entityName: string;
+  asOf?: string;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const search = useSearchParams();
@@ -51,7 +70,7 @@ export function InvestigationRunner({ entityId, asOf }: { entityId: string; asOf
           setDone(id);
           const next = new URLSearchParams(search.toString());
           next.set("investigation", id);
-          router.push(`${pathname}?${next.toString()}`);
+          router.push(`${pathname}?${next.toString()}`, { scroll: false });
           router.refresh();
           return;
         }
@@ -84,26 +103,32 @@ export function InvestigationRunner({ entityId, asOf }: { entityId: string; asOf
   };
 
   const running = starting || progress?.status === "running";
-  const view = progress ? stepsFromProgress(progress) : null;
+  const elapsed = useElapsed(progress?.started_at ?? null, progress?.status === "running");
   const unavailable = progress?.error?.code === "llm_unavailable";
+  const latest = progress?.events.at(-1);
+  const counts = progress ? timelineCounts(progress.timeline) : null;
 
   return (
-    <Panel
-      title={
-        <span className="flex items-center gap-2">
-          <Bot className="size-4 text-primary" aria-hidden />
-          Run a new investigation
-        </span>
-      }
-      description={`Deterministic engines first, then seven AI agents that may only cite verified evidence${asOf ? ` · as of ${formatDate(asOf)}` : " · latest data"}.`}
-      actions={
+    <section className="overflow-hidden rounded-xl border bg-card shadow-xs">
+      <div className="flex flex-col gap-4 bg-sidebar px-5 py-5 text-sidebar-foreground sm:flex-row sm:items-center sm:px-6">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <span className="text-[11px] font-semibold tracking-wider text-sidebar-muted uppercase">
+            Financial investigation · {asOf ? `as of ${formatDate(asOf)}` : "latest data"}
+          </span>
+          <h2 className="text-lg font-semibold text-balance">Investigate {entityName}</h2>
+          <p className="text-xs text-pretty text-sidebar-muted">
+            Deterministic engines collect the evidence. Specialist agents investigate it, a red team
+            challenges them, a verifier audits every claim, and a senior agent writes the
+            assessment.
+          </p>
+        </div>
         <button
           type="button"
           onClick={start}
           disabled={running}
           className={cn(
-            "flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground shadow-sm",
-            "hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70",
+            "flex shrink-0 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm",
+            "hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-80",
           )}
         >
           {running ? (
@@ -111,71 +136,105 @@ export function InvestigationRunner({ entityId, asOf }: { entityId: string; asOf
           ) : (
             <Play className="size-4" aria-hidden />
           )}
-          {running ? "Investigating…" : progress || done ? "Run again" : "Run investigation"}
+          {running
+            ? "Investigating…"
+            : progress || done
+              ? "Run a new investigation"
+              : "Start investigation"}
         </button>
-      }
-    >
-      {error ? <ApiErrorPanel error={error} what="the investigation" /> : null}
-      {done && !progress ? (
-        <p className="flex items-center gap-2 text-sm">
-          <CheckCircle2 className="size-4 text-text-good" aria-hidden />
-          Investigation complete. The report below is the one just produced.
-        </p>
-      ) : null}
-      {!progress && !error && !done ? (
-        <p className="text-sm text-muted-foreground">
-          Each step below is reported live by the API as it happens: nothing on this panel is
-          simulated.
-        </p>
-      ) : null}
-      {progress && view ? (
-        <div className="flex flex-col gap-4" aria-live="polite">
-          {progress.status === "failed" ? (
-            <div
-              role="alert"
-              className="flex gap-3 rounded-lg border border-status-critical/40 bg-status-critical/5 p-3 text-sm"
-            >
-              <AlertCircle className="mt-0.5 size-4 shrink-0 text-status-critical" aria-hidden />
-              <div className="flex flex-col gap-1">
-                <p className="font-medium">
-                  {unavailable
-                    ? "The AI layer is not configured on this API."
-                    : "The investigation stopped."}
-                </p>
-                <p className="text-muted-foreground">
-                  {unavailable
-                    ? "The deterministic engines ran (✓ below), but the agents need ANTHROPIC_API_KEY set on the API server. Stored investigations remain viewable."
-                    : progress.error?.message}
-                </p>
-                {progress.error ? (
-                  <p className="font-mono text-xs text-muted-foreground">{progress.error.code}</p>
-                ) : null}
-              </div>
-            </div>
+      </div>
+
+      {progress ? (
+        <div
+          className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b bg-muted/40 px-5 py-2.5 text-xs sm:px-6"
+          aria-live="polite"
+        >
+          {progress.status === "running" ? (
+            <span className="flex items-center gap-1.5 font-semibold text-primary">
+              <Radio className="size-3.5 animate-pulse" aria-hidden /> Live
+            </span>
           ) : null}
-          <Pipeline steps={view.steps} agents={view.agents} />
-          <details className="group rounded-lg border">
-            <summary className="cursor-pointer px-3 py-2 text-xs font-medium text-muted-foreground">
-              Event log · {progress.events.length} events
-            </summary>
-            <ol className="max-h-64 overflow-auto border-t px-3 py-2 font-mono text-[11px]">
-              {progress.events.map((e, i) => (
-                <li
-                  key={i}
-                  className={cn(
-                    "flex gap-2 py-0.5",
-                    e.level === "error" && "text-status-critical",
-                    e.level === "warning" && "text-foreground",
-                  )}
-                >
-                  <span className="shrink-0 text-muted-foreground">{e.at.slice(11, 19)}</span>
-                  <span className="min-w-0 break-words">{e.message}</span>
-                </li>
-              ))}
-            </ol>
-          </details>
+          {counts ? (
+            <span className="tabular">
+              {counts.done} of {counts.total} steps complete
+            </span>
+          ) : null}
+          {elapsed && progress.status === "running" ? (
+            <span className="tabular text-muted-foreground">Elapsed {elapsed}</span>
+          ) : null}
+          {latest && progress.status === "running" ? (
+            <span className="min-w-0 flex-1 truncate text-muted-foreground">
+              Latest event: {latest.message}
+            </span>
+          ) : null}
+          <span className="ml-auto text-[11px] text-muted-foreground">
+            Every state is reported by the API as it happens. Nothing is simulated.
+          </span>
         </div>
       ) : null}
-    </Panel>
+
+      <div className="flex flex-col gap-4 p-5 sm:p-6">
+        {error ? <ApiErrorPanel error={error} what="the investigation" /> : null}
+        {done && !progress ? (
+          <p className="flex items-center gap-2 text-sm">
+            <CheckCircle2 className="size-4 text-text-good" aria-hidden />
+            Investigation complete. Its timeline and report are below.
+          </p>
+        ) : null}
+        {!progress && !error && !done ? (
+          <p className="text-sm text-muted-foreground">
+            Start an investigation to watch each step live. The most recent completed investigation
+            is shown below.
+          </p>
+        ) : null}
+        {progress?.status === "failed" ? (
+          <div
+            role="alert"
+            className="flex gap-3 rounded-lg border border-status-critical/40 bg-status-critical/5 p-3 text-sm"
+          >
+            <AlertCircle className="mt-0.5 size-4 shrink-0 text-status-critical" aria-hidden />
+            <div className="flex flex-col gap-1">
+              <p className="font-medium">
+                {unavailable
+                  ? "The AI layer is not configured on this API."
+                  : "The investigation stopped."}
+              </p>
+              <p className="text-muted-foreground">
+                {unavailable
+                  ? "Step 1 ran on the deterministic engines, but the agents need ANTHROPIC_API_KEY set on the API server, so steps 2–8 could not run. Stored investigations remain viewable."
+                  : progress.error?.message}
+              </p>
+              {progress.error ? (
+                <p className="font-mono text-xs text-muted-foreground">{progress.error.code}</p>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+        {progress ? (
+          <>
+            <TimelineView timeline={progress.timeline} ctx={{ entityId, asOf }} />
+            <details className="rounded-lg border">
+              <summary className="cursor-pointer px-3 py-2 text-xs font-medium text-muted-foreground">
+                Raw event log · {progress.events.length} events
+              </summary>
+              <ol className="max-h-64 overflow-auto border-t px-3 py-2 font-mono text-[11px]">
+                {progress.events.map((e, i) => (
+                  <li
+                    key={i}
+                    className={cn(
+                      "flex gap-2 py-0.5",
+                      e.level === "error" && "text-status-critical",
+                    )}
+                  >
+                    <span className="shrink-0 text-muted-foreground">{e.at.slice(11, 19)}</span>
+                    <span className="min-w-0 break-words">{e.message}</span>
+                  </li>
+                ))}
+              </ol>
+            </details>
+          </>
+        ) : null}
+      </div>
+    </section>
   );
 }

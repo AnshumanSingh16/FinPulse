@@ -6,6 +6,7 @@
       → Specialized AI Investigation (five agents, in parallel, on verified evidence only)
       → Disagreement Detection & Review Planning (deterministic)
       → Red-Team Challenge (mandatory review of significant risk assessments)
+      → Evidence Verification (deterministic audit of every verified claim before synthesis)
       → Senior Financial Intelligence Agent
       → Final Assessment (deterministic assembly, confidence, audit)
 
@@ -46,6 +47,7 @@ from finpulse.investigation.schemas import (
     StageRecord,
     StageStatus,
 )
+from finpulse.investigation.timeline import agent_event_data, build_timeline
 from finpulse.observability.logging import get_logger
 from finpulse.scoring import load_model, with_monthly_change
 
@@ -154,6 +156,7 @@ def _agent_event(rec: Recorder, run: AgentRun) -> None:
         "pruned": len(v.pruned) if v else 0,
         "unmet_requirements": len(v.unmet_requirements) if v else 0,
         "stance": (run.output or {}).get("risk_stance"),
+        **agent_event_data(run),
     }
     if run.status == "succeeded":
         rec.event(
@@ -401,6 +404,55 @@ class InvestigationOrchestrator:
                 )
             st.details = coverage.model_dump()
 
+        async with rec.stage("evidence_verification", "Evidence verification") as st:
+            upstream_runs = [x for x in runs.values() if x.status == "succeeded"]
+            if not upstream_runs:
+                st.status, st.summary = "skipped", "No verified claims to audit."
+            else:
+                for audited in upstream_runs:
+                    v = audited.verification
+                    issues = sum(len(i) for i in v.attempts_issues) if v else 0
+                    pruned = len(v.pruned) if v else 0
+                    rec.event(
+                        "claims_audited",
+                        f"{audited.title}: {len(audited.claims)} claim(s) passed the "
+                        f"verifier; {pruned} pruned; {issues} issue(s) caught over "
+                        f"{audited.attempts} attempt(s).",
+                        agent_audited=audited.agent,
+                        claims=len(audited.claims),
+                        pruned=pruned,
+                        issues_caught=issues,
+                    )
+                up_refs, up_resolve = analysis.evidence_references(upstream_runs, pack)
+                up_audit = analysis.audit_claims(upstream_runs, up_resolve)
+                st.details = {
+                    "agents": len(upstream_runs),
+                    "claims_verified": up_audit.claims_verified,
+                    "claims_pruned": up_audit.claims_pruned,
+                    "issues_caught": up_audit.issues_caught,
+                    "evidence_references": len(up_refs),
+                    "evidence_references_resolve": up_resolve,
+                    "unmet_requirements": up_audit.unmet_requirements,
+                }
+                st.summary = (
+                    f"{up_audit.claims_verified} verified claim(s) from {len(upstream_runs)} "
+                    f"agent(s); {up_audit.claims_pruned} statement(s) pruned, "
+                    f"{up_audit.issues_caught} issue(s) caught; {len(up_refs)} evidence "
+                    + (
+                        "references all resolve to the hashed pack."
+                        if up_resolve
+                        else "references, some of which do not resolve to the pack."
+                    )
+                )
+                if not up_resolve or up_audit.unmet_requirements:
+                    st.status = "completed_with_issues"
+                    rec.event(
+                        "verification_gaps",
+                        "Audit found unresolved references or unmet requirements.",
+                        "warning",
+                        unmet=up_audit.unmet_requirements,
+                    )
+
         senior: AgentRun | None = None
         async with rec.stage("senior_synthesis", "Senior Financial Intelligence Agent") as st:
             if not verified:
@@ -540,5 +592,6 @@ class InvestigationOrchestrator:
             claim_audit=audit,
             usage=usage,
             events=rec.events,
+            timeline=build_timeline(rec.stages, rec.events, running=False),
             disclaimer=DISCLAIMER,
         )

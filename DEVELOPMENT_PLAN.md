@@ -315,12 +315,12 @@ calibrated).
 
 **Progress.** Implemented in `apps/web` on the background run plus
 `/investigations/{id}/progress`; the UI polls rather than using SSE.
-- **AI Investigation**: the live pipeline shows the deterministic engines, the five specialists,
-  disagreement detection, red team, senior synthesis, and the final assessment. Each step's
-  state comes from the API.
-- **Report**: claims grouped by statement type, with evidence chips; recommendations; red-team
-  challenges with the senior agent's resolutions; disagreements; agent analyses; metrics used;
-  and the audit.
+- **AI Investigation**: an eight-step timeline (collecting evidence → cash flow → reliability →
+  early warnings → stress scenarios → red team → verification → final assessment) is rebuilt
+  from real stage records and agent events; steps 2–5 are shown as concurrent. Each agent card
+  shows its focus, key finding, evidence, confidence and red-team challenges. The report runs
+  overall assessment → key evidence → primary risks → contradictory evidence → stress-test
+  results → recommended actions.
 - **Evidence**: trace any claim to its evidence items, with each metric's method, components and
   source tables, and other claims citing the same evidence. You can also browse the whole pack.
 - **Without `ANTHROPIC_API_KEY`**: the run is shown failing honestly with `llm_unavailable`
