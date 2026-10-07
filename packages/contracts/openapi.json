@@ -371,6 +371,120 @@
         "title": "AppliedShock",
         "type": "object"
       },
+      "AuditRecord": {
+        "properties": {
+          "actor": {
+            "title": "Actor",
+            "type": "string"
+          },
+          "event": {
+            "title": "Event",
+            "type": "string"
+          },
+          "hash": {
+            "title": "Hash",
+            "type": "string"
+          },
+          "investigation_id": {
+            "format": "uuid",
+            "title": "Investigation Id",
+            "type": "string"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "org_id": {
+            "format": "uuid",
+            "title": "Org Id",
+            "type": "string"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          },
+          "prev_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prev Hash"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          },
+          "seq": {
+            "title": "Seq",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "investigation_id",
+          "org_id",
+          "seq",
+          "event",
+          "occurred_at",
+          "actor",
+          "request_id",
+          "payload",
+          "prev_hash",
+          "hash"
+        ],
+        "title": "AuditRecord",
+        "type": "object"
+      },
+      "AuditTrail": {
+        "properties": {
+          "broken_at_seq": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Broken At Seq"
+          },
+          "chain_valid": {
+            "title": "Chain Valid",
+            "type": "boolean"
+          },
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/AuditRecord"
+            },
+            "title": "Entries",
+            "type": "array"
+          },
+          "investigation_id": {
+            "format": "uuid",
+            "title": "Investigation Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "investigation_id",
+          "entries",
+          "chain_valid"
+        ],
+        "title": "AuditTrail",
+        "type": "object"
+      },
       "Band": {
         "properties": {
           "code": {
@@ -2693,6 +2807,9 @@
             "title": "Investigation Id",
             "type": "string"
           },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
           "recommendations": {
             "items": {
               "additionalProperties": true,
@@ -3126,7 +3243,8 @@
               "wrong_section_type",
               "unknown_claim_id",
               "wrong_reference_kind",
-              "unknown_reference"
+              "unknown_reference",
+              "prohibited_decision"
             ],
             "title": "Code",
             "type": "string"
@@ -4075,6 +4193,54 @@
           "months"
         ],
         "title": "Projection",
+        "type": "object"
+      },
+      "Provenance": {
+        "description": "Which parts of the record are verified facts and which are AI conclusions.",
+        "properties": {
+          "ai_can_modify_records": {
+            "default": false,
+            "description": "Always false: AI output is never written to financial data",
+            "title": "Ai Can Modify Records",
+            "type": "boolean"
+          },
+          "ai_generated": {
+            "description": "Fields written by the AI agents (or the demo script): verified to cite existing evidence and quote only its numbers, but interpretations, not facts",
+            "items": {
+              "type": "string"
+            },
+            "title": "Ai Generated",
+            "type": "array"
+          },
+          "deterministic": {
+            "description": "Fields computed by deterministic backend code from the recorded data",
+            "items": {
+              "type": "string"
+            },
+            "title": "Deterministic",
+            "type": "array"
+          },
+          "lending_decision": {
+            "default": false,
+            "description": "Always false: FinPulse never makes a lending decision",
+            "title": "Lending Decision",
+            "type": "boolean"
+          },
+          "statement_types": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "How to read each claim's statement_type",
+            "title": "Statement Types",
+            "type": "object"
+          }
+        },
+        "required": [
+          "deterministic",
+          "ai_generated",
+          "statement_types"
+        ],
+        "title": "Provenance",
         "type": "object"
       },
       "ReadinessResponse": {
@@ -7288,6 +7454,51 @@
           }
         },
         "summary": "A complete investigation record",
+        "tags": [
+          "investigations"
+        ]
+      }
+    },
+    "/api/v1/investigations/{investigation_id}/audit": {
+      "get": {
+        "operationId": "get_audit_api_v1_investigations__investigation_id__audit_get",
+        "parameters": [
+          {
+            "description": "Investigation id",
+            "in": "path",
+            "name": "investigation_id",
+            "required": true,
+            "schema": {
+              "description": "Investigation id",
+              "format": "uuid",
+              "title": "Investigation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditTrail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (application/problem+json)"
+          }
+        },
+        "summary": "The investigation's append-only, hash-chained audit trail, and whether it verifies",
         "tags": [
           "investigations"
         ]

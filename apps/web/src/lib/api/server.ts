@@ -1,10 +1,18 @@
 import "server-only";
 
-import { serverApiBaseUrl } from "@/lib/env";
+import { serverApiBaseUrl, serverApiKey } from "@/lib/env";
 
 import { createApiClient, type ApiClient } from "./client";
 
-/** API client for Server Components and route handlers. Never cached: data is per-request. */
+/**
+ * API client for Server Components and route handlers. Never cached: data is per-request.
+ * Sends the server's API key; the key never reaches the browser.
+ */
 export function getServerApiClient(): ApiClient {
-  return createApiClient({ baseUrl: serverApiBaseUrl(), init: { cache: "no-store" } });
+  const key = serverApiKey();
+  return createApiClient({
+    baseUrl: serverApiBaseUrl(),
+    init: { cache: "no-store" },
+    headers: key ? { Authorization: `Bearer ${key}` } : undefined,
+  });
 }

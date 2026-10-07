@@ -30,7 +30,11 @@ from typing import Any
 
 from finpulse.agents.base import AgentContext, ContextSection, run_agent
 from finpulse.agents.catalogue import AGENTS, ANALYSTS
-from finpulse.agents.evidence import assemble_evidence_pack, run_stress_presets
+from finpulse.agents.evidence import (
+    NEUTRALISED_TAG,
+    assemble_evidence_pack,
+    run_stress_presets,
+)
 from finpulse.agents.llm import LLMClient
 from finpulse.agents.schemas import AgentRun, Usage
 from finpulse.analytics import compute_report
@@ -279,6 +283,15 @@ class InvestigationOrchestrator:
             by_kind = dict(Counter(i.kind for i in pack.items))
             st.details = {"sha256": pack.sha256, "items": len(pack.items), "by_kind": by_kind}
             st.summary = f"{len(pack.items)} verified evidence items (sha256 {pack.sha256[:12]}…)."
+            neutralised = [i.id for i in pack.items if NEUTRALISED_TAG in i.tags]
+            if neutralised:
+                rec.event(
+                    "untrusted_text_neutralised",
+                    f"{len(neutralised)} evidence items contained text resembling instructions; "
+                    "it was removed before any agent saw it.",
+                    "warning",
+                    items=neutralised,
+                )
 
         # --- AI stages -------------------------------------------------------------------------
         runs: dict[str, AgentRun] = {}

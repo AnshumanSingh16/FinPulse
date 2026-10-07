@@ -183,7 +183,9 @@ async def test_database_outage_is_a_503() -> None:
 
 
 def test_org_scope_defaults_to_the_demo_org() -> None:
-    assert get_current_org_id() == DEMO_ORG_ID
+    from finpulse.core.security import LOCAL_DEVELOPER
+
+    assert get_current_org_id(LOCAL_DEVELOPER) == DEMO_ORG_ID
 
 
 @pytest.mark.db

@@ -8,7 +8,10 @@ For every ``Claim`` in an agent's output:
   * every number in the statement appears in the evidence it cites (or in the evidence behind
     the upstream claims it builds on), allowing only for displayed rounding. A number the
     model worked out itself — a sum, a difference, an average — is therefore rejected;
-  * in sectioned outputs (the senior synthesis) it sits in the section matching its type.
+  * in sectioned outputs (the senior synthesis) it sits in the section matching its type;
+  * it does not make or imply a lending decision, a credit score or a creditworthiness verdict
+    (``prohibited_decision``). FinPulse informs an analyst; it never decides. This applies to
+    every text field, not only claims.
 
 Other text fields may only contain numbers that exist somewhere in the evidence pack. Fields
 that point at evidence or at other agents' claims must point at things that exist.
@@ -16,6 +19,7 @@ that point at evidence or at other agents' claims must point at things that exis
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Any
@@ -32,6 +36,31 @@ REQUIRED_KIND: dict[str, str] = {
     "ASSUMPTION": "assumption",
 }
 CLAIM_KEYS = {"statement", "statement_type", "evidence_ids", "confidence"}
+
+# Statements that would make, or present as made, a lending or credit decision. Negated or
+# descriptive mentions ("not a credit score", "never a lending decision") do not match.
+PROHIBITED = re.compile(
+    "|".join(
+        [
+            r"\b(approve|approved|approving|approval of|reject|rejected|decline|declined|deny|"
+            r"denied|grant|granted|sanction|sanctioned)\b[^.;]{0,40}\b(loan|credit line|credit "
+            r"application|loan application|facility|financing|borrowing request)\b",
+            r"\b(should|must|can|recommend\w*|advise\w*)\b(\s+not)?\s+(lend|be lent|extend a "
+            r"loan|be financed|receive (a )?(loan|credit))\b",
+            r"\b(loan|credit line|credit|facility|application|financing)\b[^.;]{0,30}\b(should|"
+            r"must|can|could|will|would)\s+(not\s+)?be\s+(approved|declined|rejected|sanctioned|"
+            r"granted|denied|refused|extended)\b",
+            r"\b(un)?credit[- ]?worthy\b|\bbankable\b",
+            r"\b(eligible|ineligible|qualifies|qualified)\s+for\s+(a\s+)?(loan|credit|financing)\b",
+            r"\b(credit|cibil|bureau)\s+score\s*(of|is|=|:)\s*\d",
+        ]
+    ),
+    re.IGNORECASE,
+)
+PROHIBITED_DETAIL = (
+    "FinPulse never makes or implies a lending decision, a credit score or a creditworthiness "
+    "verdict. Rephrase as an observation, or as something for an analyst to verify or monitor."
+)
 
 
 def is_claim(node: object) -> bool:
@@ -197,6 +226,8 @@ class Verifier:
             if ref in self.upstream:
                 for i in self.upstream[ref].evidence_ids:
                     known |= self.numbers_of(i)
+        if PROHIBITED.search(str(claim.get("statement", ""))):
+            r.found.append(Found((*path, "statement"), "prohibited_decision", PROHIBITED_DETAIL))
         for n in extract(str(claim.get("statement", ""))):
             r.numbers_checked += 1
             if not supported(n, known):
@@ -211,6 +242,8 @@ class Verifier:
                 )
 
     def _free_text(self, text: str, path: tuple[PathKey, ...], r: Result) -> None:
+        if PROHIBITED.search(text):
+            r.found.append(Found(path, "prohibited_decision", PROHIBITED_DETAIL))
         for n in extract(text):
             r.numbers_checked += 1
             if not supported(n, self.all_numbers()):

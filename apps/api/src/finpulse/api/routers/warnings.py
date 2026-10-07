@@ -11,7 +11,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query
 
-from finpulse.api.deps import DataSourceDep, OrgDep
+from finpulse.api.deps import DataSourceDep, OrgDep, Viewer
 from finpulse.api.routers.entities import AsOf, EntityId
 from finpulse.early_warning import RULES, detect_warnings, load_config, risk_summary
 from finpulse.early_warning.config import SEVERITIES, Severity
@@ -25,7 +25,7 @@ from finpulse.early_warning.schemas import (
 )
 from finpulse.services.entities import load_entity, resolve_as_of
 
-router = APIRouter(prefix="/api/v1", tags=["early-warning"])
+router = APIRouter(prefix="/api/v1", dependencies=[Viewer], tags=["early-warning"])
 
 
 @router.get(

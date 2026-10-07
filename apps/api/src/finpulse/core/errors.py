@@ -35,6 +35,18 @@ class BadRequestError(AppError):
     title = "Bad request"
 
 
+class UnauthorizedError(AppError):
+    status = 401
+    code = "unauthorized"
+    title = "Authentication required"
+
+
+class TooManyRequestsError(AppError):
+    status = 429
+    code = "too_many_requests"
+    title = "Too many requests"
+
+
 class ForbiddenError(AppError):
     status = 403
     code = "forbidden"

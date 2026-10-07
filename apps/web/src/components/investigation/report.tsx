@@ -1,4 +1,10 @@
-import type { AgentRun, EvidenceItem, EvidencePack, Investigation } from "@finpulse/contracts";
+import type {
+  AgentRun,
+  AuditTrail,
+  EvidenceItem,
+  EvidencePack,
+  Investigation,
+} from "@finpulse/contracts";
 import {
   ArrowDown,
   ArrowRight,
@@ -252,9 +258,11 @@ function StressTable({ pack, inv, ctx }: { pack: EvidencePack; inv: Investigatio
 export function InvestigationReport({
   inv,
   pack,
+  audit = null,
 }: {
   inv: Investigation;
   pack: EvidencePack | null;
+  audit?: AuditTrail | null;
 }) {
   const ctx: LinkCtx = {
     entityId: inv.entity_id,
@@ -754,9 +762,60 @@ export function InvestigationReport({
         </div>
       </details>
 
+      <ProvenancePanel inv={inv} audit={audit} />
+
       <div className="mt-6">
         <Disclaimer>{inv.disclaimer}</Disclaimer>
       </div>
     </div>
+  );
+}
+
+/** What in this record is verified fact and what is AI conclusion, and the audit trail's state. */
+function ProvenancePanel({ inv, audit }: { inv: Investigation; audit: AuditTrail | null }) {
+  const llmCalls = audit?.entries.filter((e) => e.event === "llm_call").length;
+  const caught = audit?.entries
+    .filter((e) => e.event === "agent_result")
+    .reduce((n, e) => n + Number(e.payload.prohibited_decisions_caught ?? 0), 0);
+  return (
+    <section className="mt-6 grid grid-cols-1 gap-4 rounded-xl border p-4 md:grid-cols-3">
+      <div className="flex flex-col gap-1.5">
+        <h4 className="text-sm font-semibold">Verified by deterministic code</h4>
+        <p className="text-xs text-pretty text-muted-foreground">
+          Risk level, early-warning index, financial health, every metric, stress projection and
+          evidence item: computed by the backend engines from the recorded data. No model
+          calculates, and none can change financial records.
+        </p>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <h4 className="text-sm font-semibold">
+          {inv.ai_mode === "demo_script" ? "Scripted (demo), verified" : "AI-generated, verified"}
+        </h4>
+        <p className="text-xs text-pretty text-muted-foreground">
+          Headline, assessment, interpretations, challenges and recommended actions. Each statement
+          cites evidence and quotes only its numbers, but a statement typed{" "}
+          <span className="font-medium text-foreground">AI interpretation</span> is a judgement, not
+          a fact. FinPulse never makes a lending decision.
+        </p>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <h4 className="text-sm font-semibold">Audit trail</h4>
+        {audit ? (
+          <KeyValue
+            items={[
+              [
+                "Hash chain",
+                audit.chain_valid ? "Intact" : `Broken at entry ${audit.broken_at_seq}`,
+              ],
+              ["Entries", audit.entries.length],
+              ["Model calls recorded", llmCalls ?? 0],
+              ["Decision language blocked", caught ?? 0],
+            ]}
+          />
+        ) : (
+          <p className="text-xs text-muted-foreground">Not available for this run.</p>
+        )}
+      </div>
+    </section>
   );
 }

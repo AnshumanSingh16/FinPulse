@@ -22,6 +22,7 @@ def make_settings(**overrides: object) -> Settings:
         "DATABASE_URL": UNREACHABLE_DATABASE_URL,
         "DATABASE_CONNECT_TIMEOUT_S": 1,
         "CORS_ALLOWED_ORIGINS": "http://localhost:3000",
+        "AUDIT_BACKEND": "memory",
     }
     values.update(overrides)
     # _env_file=None: tests never read the developer's .env

@@ -296,6 +296,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/investigations/{investigation_id}/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The investigation's append-only, hash-chained audit trail, and whether it verifies */
+        get: operations["get_audit_api_v1_investigations__investigation_id__audit_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/investigations/{investigation_id}/events": {
         parameters: {
             query?: never;
@@ -592,6 +609,54 @@ export interface components {
             };
             /** Type */
             type: string;
+        };
+        /** AuditRecord */
+        AuditRecord: {
+            /** Actor */
+            actor: string;
+            /** Event */
+            event: string;
+            /** Hash */
+            hash: string;
+            /**
+             * Investigation Id
+             * Format: uuid
+             */
+            investigation_id: string;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /**
+             * Org Id
+             * Format: uuid
+             */
+            org_id: string;
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Prev Hash */
+            prev_hash: string | null;
+            /** Request Id */
+            request_id: string | null;
+            /** Seq */
+            seq: number;
+        };
+        /** AuditTrail */
+        AuditTrail: {
+            /** Broken At Seq */
+            broken_at_seq?: number | null;
+            /** Chain Valid */
+            chain_valid: boolean;
+            /** Entries */
+            entries: components["schemas"]["AuditRecord"][];
+            /**
+             * Investigation Id
+             * Format: uuid
+             */
+            investigation_id: string;
         };
         /** Band */
         Band: {
@@ -1511,6 +1576,7 @@ export interface components {
              * Format: uuid
              */
             investigation_id: string;
+            provenance?: components["schemas"]["Provenance"];
             /** Recommendations */
             recommendations: {
                 [key: string]: unknown;
@@ -1687,7 +1753,7 @@ export interface components {
              * Code
              * @enum {string}
              */
-            code: "unknown_evidence_id" | "missing_citation" | "type_not_supported" | "unsupported_number" | "wrong_section_type" | "unknown_claim_id" | "wrong_reference_kind" | "unknown_reference";
+            code: "unknown_evidence_id" | "missing_citation" | "type_not_supported" | "unsupported_number" | "wrong_section_type" | "unknown_claim_id" | "wrong_reference_kind" | "unknown_reference" | "prohibited_decision";
             /** Detail */
             detail: string;
             /**
@@ -2072,6 +2138,41 @@ export interface components {
              */
             revenue: string;
             risk: components["schemas"]["RiskAssessment"];
+        };
+        /**
+         * Provenance
+         * @description Which parts of the record are verified facts and which are AI conclusions.
+         */
+        Provenance: {
+            /**
+             * Ai Can Modify Records
+             * @description Always false: AI output is never written to financial data
+             * @default false
+             */
+            ai_can_modify_records: boolean;
+            /**
+             * Ai Generated
+             * @description Fields written by the AI agents (or the demo script): verified to cite existing evidence and quote only its numbers, but interpretations, not facts
+             */
+            ai_generated: string[];
+            /**
+             * Deterministic
+             * @description Fields computed by deterministic backend code from the recorded data
+             */
+            deterministic: string[];
+            /**
+             * Lending Decision
+             * @description Always false: FinPulse never makes a lending decision
+             * @default false
+             */
+            lending_decision: boolean;
+            /**
+             * Statement Types
+             * @description How to read each claim's statement_type
+             */
+            statement_types: {
+                [key: string]: string;
+            };
         };
         /**
          * ReadinessResponse
@@ -3560,6 +3661,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Investigation"];
+                };
+            };
+            /** @description Error (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    get_audit_api_v1_investigations__investigation_id__audit_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Investigation id */
+                investigation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditTrail"];
                 };
             };
             /** @description Error (application/problem+json) */

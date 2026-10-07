@@ -7,6 +7,7 @@ from datetime import date
 
 from finpulse.analytics import default_as_of
 from finpulse.analytics.inputs import FinancialData
+from finpulse.analytics.integrity import check_integrity
 from finpulse.core.errors import NotFoundError, UnprocessableError
 from finpulse.persistence.repositories.financial_data import FinancialDataSource
 
@@ -17,6 +18,7 @@ async def load_entity(
     data = await source.load(org_id, entity_id)
     if data is None:
         raise NotFoundError(f"No entity with id {entity_id}.", code="entity_not_found")
+    check_integrity(data)  # every engine, and the AI evidence, starts from consistent data
     return data
 
 

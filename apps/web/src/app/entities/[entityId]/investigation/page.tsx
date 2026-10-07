@@ -1,4 +1,9 @@
-import type { EvidencePack, Investigation, InvestigationSummary } from "@finpulse/contracts";
+import type {
+  AuditTrail,
+  EvidencePack,
+  Investigation,
+  InvestigationSummary,
+} from "@finpulse/contracts";
 import { History } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -14,6 +19,7 @@ import {
   getEntities,
   getEvidencePack,
   getInvestigation,
+  getInvestigationAudit,
   listInvestigations,
 } from "@/lib/api/finpulse";
 import { formatDate, formatDateTime } from "@/lib/format";
@@ -43,11 +49,15 @@ export default async function InvestigationPage(props: EntityPageProps) {
   const selectedId = one(search.investigation) ?? sorted[0]?.investigation_id;
   let inv: Investigation | null = null;
   let pack: EvidencePack | null = null;
+  let audit: AuditTrail | null = null;
   let loadError: unknown = null;
   if (selectedId) {
     try {
       inv = await getInvestigation(selectedId);
-      pack = await getEvidencePack(entityId, inv.as_of).catch(() => null);
+      [pack, audit] = await Promise.all([
+        getEvidencePack(entityId, inv.as_of).catch(() => null),
+        getInvestigationAudit(selectedId).catch(() => null),
+      ]);
     } catch (error) {
       loadError = error;
     }
@@ -102,7 +112,7 @@ export default async function InvestigationPage(props: EntityPageProps) {
               what to do next.
             </p>
           </div>
-          <InvestigationReport inv={inv} pack={pack} />
+          <InvestigationReport inv={inv} pack={pack} audit={audit} />
         </>
       ) : !loadError ? (
         <EmptyState title="No investigations yet">

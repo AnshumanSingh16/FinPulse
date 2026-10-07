@@ -3,6 +3,7 @@ import "server-only";
 import { cache } from "react";
 
 import type {
+  AuditTrail,
   DemoInfo,
   EntitySummary,
   EvidencePack,
@@ -130,6 +131,14 @@ export const listInvestigations = cache(function listInvestigations(
     api().GET("/api/v1/investigations", { params: { query: { entity_id: entityId } } }),
   );
 });
+
+export function getInvestigationAudit(investigationId: string): Promise<AuditTrail> {
+  return unwrap(
+    api().GET("/api/v1/investigations/{investigation_id}/audit", {
+      params: { path: { investigation_id: investigationId } },
+    }),
+  );
+}
 
 export const getInvestigation = cache(function getInvestigation(
   investigationId: string,

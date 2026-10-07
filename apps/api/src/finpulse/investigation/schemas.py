@@ -249,6 +249,69 @@ class InvestigationTimeline(BaseModel):
     agents: list[AgentProgress]
 
 
+class Provenance(BaseModel):
+    """Which parts of the record are verified facts and which are AI conclusions."""
+
+    deterministic: list[str] = Field(
+        description="Fields computed by deterministic backend code from the recorded data"
+    )
+    ai_generated: list[str] = Field(
+        description="Fields written by the AI agents (or the demo script): verified to cite "
+        "existing evidence and quote only its numbers, but interpretations, not facts"
+    )
+    statement_types: dict[str, str] = Field(description="How to read each claim's statement_type")
+    ai_can_modify_records: bool = Field(
+        default=False, description="Always false: AI output is never written to financial data"
+    )
+    lending_decision: bool = Field(
+        default=False, description="Always false: FinPulse never makes a lending decision"
+    )
+
+
+PROVENANCE = Provenance(
+    deterministic=[
+        "triggered_warnings",
+        "risk_summary",
+        "financial_health",
+        "financial_metrics_used",
+        "evidence_pack",
+        "evidence_references",
+        "disagreements",
+        "review_requests",
+        "confidence.cap",
+        "final_assessment.risk_level",
+        "final_assessment.early_warning_index",
+        "final_assessment.financial_health",
+        "claim_audit",
+        "stages",
+        "events",
+    ],
+    ai_generated=[
+        "agent_analyses[*].output",
+        "red_team_findings",
+        "final_assessment.headline",
+        "final_assessment.overall_assessment",
+        "final_assessment.facts",
+        "final_assessment.calculated_metrics",
+        "final_assessment.forecasts",
+        "final_assessment.assumptions",
+        "final_assessment.interpretations",
+        "final_assessment.challenges_addressed",
+        "final_assessment.disagreements_resolved",
+        "final_assessment.open_questions",
+        "recommendations",
+        "confidence.stated_by_senior_agent",
+    ],
+    statement_types={
+        "FACT": "Restates a recorded fact from a cited evidence item",
+        "CALCULATED_METRIC": "Quotes a metric the deterministic engine calculated",
+        "FORECAST": "Quotes a deterministic stress-test projection",
+        "ASSUMPTION": "Quotes an assumption the deterministic engines used",
+        "AI_INTERPRETATION": "An AI judgement: not a verified fact",
+    },
+)
+
+
 class Investigation(BaseModel):
     investigation_id: uuid.UUID
     entity_id: uuid.UUID
@@ -287,6 +350,7 @@ class Investigation(BaseModel):
         default=None, description="The eight user-facing steps, rebuilt from stages and events"
     )
     disclaimer: str
+    provenance: Provenance = Field(default_factory=lambda: PROVENANCE.model_copy())
 
 
 class InvestigationSummary(BaseModel):

@@ -343,6 +343,17 @@ underlying metric and transactions.
 
 - Security review (authz on every route, scope guards, prompt-injection tests with hostile
   transaction descriptions), rate limits, retention job, OpenTelemetry option.
+  **MVP review done** ([SECURITY.md](SECURITY.md)):
+  - hashed API keys with roles and org scoping;
+  - integrity checks on financial data;
+  - neutralisation of untrusted text;
+  - verifier enforcement of the no-lending-decision rule;
+  - provenance on every investigation;
+  - a hash-chained, append-only audit trail of AI investigations;
+  - a per-org investigation cap, body limits, security headers, and a same-origin web proxy.
+
+  Remaining: per-user identity (Supabase Auth), request-rate limits, retention, external
+  anchoring of audit chains.
 - Performance: analysis run < 5s per subject for 18 months of data; portfolio of 200 subjects.
 - Documentation: ADRs, methodology pages generated from registries, runbook.
 - Demo cohort script: fixed seeds covering every persona × stable/deteriorating.

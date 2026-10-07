@@ -72,6 +72,22 @@ class Settings(BaseSettings):
     )
     investigations_dir: Path | None = Field(default=None, validation_alias="INVESTIGATIONS_DIR")
 
+    # --- Security (SECURITY.md). API keys as name:role:sha256hex[:org_uuid], comma-separated;
+    # generate with `finpulse auth new-key`. Required outside development and test.
+    api_keys: SecretStr | None = Field(default=None, validation_alias="API_KEYS")
+    # Running investigations per organisation (each makes several paid LLM calls).
+    investigations_max_running: int = Field(
+        default=2, ge=1, le=50, validation_alias="INVESTIGATIONS_MAX_RUNNING"
+    )
+    max_request_bytes: int = Field(
+        default=1_000_000, ge=1024, le=50_000_000, validation_alias="MAX_REQUEST_BYTES"
+    )
+    # Where the AI investigation audit trail is written. "memory" is for tests and local runs
+    # without a database; staging and production must use "postgres".
+    audit_backend: Literal["postgres", "memory"] = Field(
+        default="postgres", validation_alias="AUDIT_BACKEND"
+    )
+
     # The deterministic demo (docs/DEMO.md): a scripted stand-in for the agents and a reset
     # endpoint. Never available in production.
     demo_enabled: bool = Field(default=True, validation_alias="DEMO_ENABLED")

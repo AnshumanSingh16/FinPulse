@@ -20,15 +20,16 @@ import json
 from collections.abc import Iterable
 from datetime import date
 from decimal import Decimal
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from finpulse.analytics import ENGINE_VERSION as ANALYTICS_VERSION
 from finpulse.analytics import compute_report
 from finpulse.analytics.inputs import FinancialData
 from finpulse.analytics.schemas import EntityRef, FinancialMetricsReport, Metric
 from finpulse.core.errors import UnprocessableError
+from finpulse.core.untrusted import neutralise
 from finpulse.early_warning import detect_warnings, risk_summary
 from finpulse.early_warning import load_config as load_warning_config
 from finpulse.early_warning.engine import ENGINE_VERSION as WARNING_VERSION
@@ -46,6 +47,9 @@ EvidenceSource = Literal["data", "analytics", "passport", "early_warning", "stre
 Value = Decimal | int | str | bool | None
 
 
+NEUTRALISED_TAG = "untrusted_text_neutralised"
+
+
 class EvidenceItem(BaseModel):
     model_config = ConfigDict(frozen=True)
 
@@ -56,6 +60,32 @@ class EvidenceItem(BaseModel):
     text: str = Field(description="A deterministic statement of the item, numbers as displayed")
     values: dict[str, Value] = Field(default_factory=dict)
     tags: list[str] = Field(default_factory=list, description="For selecting items per agent")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _neutralise_untrusted_text(cls, raw: Any) -> Any:
+        """Evidence text carries names and labels from the source data, and it is what the
+        agents read: neutralise anything instruction-like (core/untrusted.py) and tag the item."""
+        if not isinstance(raw, dict):
+            return raw
+        item = dict(raw)
+        flagged = False
+        for key in ("title", "text"):
+            if isinstance(item.get(key), str):
+                item[key], hit = neutralise(item[key])
+                flagged = flagged or hit
+        values = item.get("values")
+        if isinstance(values, dict):
+            clean: dict[str, Any] = {}
+            for k, v in values.items():
+                if isinstance(v, str):
+                    v, hit = neutralise(v, 500)
+                    flagged = flagged or hit
+                clean[k] = v
+            item["values"] = clean
+        if flagged:
+            item["tags"] = [*item.get("tags", []), NEUTRALISED_TAG]
+        return item
 
     def for_prompt(self) -> dict[str, object]:
         return {

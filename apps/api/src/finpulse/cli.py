@@ -14,6 +14,11 @@
     finpulse investigate show FILE [--events]  print a saved investigation
     finpulse demo reset [--api URL]      restore the exact demo state: re-seed every synthetic
                                          entity and clear the running API's investigations
+                                         (sends FINPULSE_API_KEY, an admin key, if set)
+    finpulse auth new-key --name N --role R [--org UUID]
+                                         generate an API key; prints it once, with its API_KEYS
+                                         entry (only the hash is ever configured)
+    finpulse audit verify                check every AI investigation audit chain in the database
 
 Everything except `investigate run` (without --demo) is deterministic Python and never calls an
 LLM.
@@ -23,6 +28,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import os
 import sys
 from collections.abc import Callable
 from pathlib import Path
@@ -268,7 +274,62 @@ def build_parser() -> argparse.ArgumentParser:
         help="running API to clear (default: http://API_HOST:API_PORT from the settings)",
     )
     p.set_defaults(handler=demo_reset)
+
+    auth = groups.add_parser("auth", help="API keys").add_subparsers(dest="cmd", required=True)
+    p = auth.add_parser("new-key", help="generate a key and print its API_KEYS entry")
+    p.add_argument("--name", required=True, help="who or what uses the key, e.g. web")
+    p.add_argument("--role", required=True, choices=["viewer", "analyst", "admin"])
+    p.add_argument("--org", help="organisation id (default: the demo organisation)")
+    p.set_defaults(handler=auth_new_key)
+
+    audit = groups.add_parser("audit", help="AI investigation audit trail").add_subparsers(
+        dest="cmd", required=True
+    )
+    audit.add_parser("verify", help="verify every hash chain").set_defaults(handler=audit_verify)
     return parser
+
+
+# --- auth and audit -----------------------------------------------------------------------------
+
+
+def auth_new_key(args: argparse.Namespace, _: Settings) -> None:
+    import re
+    import uuid
+
+    from finpulse.core.security import generate_key, hash_key
+
+    if not re.fullmatch(r"[A-Za-z0-9._-]{1,64}", args.name):
+        raise SystemExit("--name: letters, digits, '.', '_' or '-' only")
+    org = str(uuid.UUID(args.org)) if args.org else None
+    key = generate_key()
+    entry = f"{args.name}:{args.role}:{hash_key(key)}" + (f":{org}" if org else "")
+    _say(f"key (shown once; give it to the client, e.g. FINPULSE_API_KEY): {key}")
+    _say(f"API_KEYS entry (append, comma-separated): {entry}")
+
+
+def audit_verify(_: argparse.Namespace, settings: Settings) -> None:
+    from finpulse.investigation.audit import verify_chain
+    from finpulse.persistence.repositories.ai_audit import PostgresAuditSink
+
+    async def run() -> list[tuple[str, int, int | None]]:
+        engine = create_engine(settings)
+        try:
+            sink = PostgresAuditSink(engine)
+            out = []
+            for org_id, inv_id in await sink.investigations():
+                entries = await sink.read(org_id, inv_id)
+                out.append((str(inv_id), len(entries), verify_chain(entries)))
+            return out
+        finally:
+            await engine.dispose()
+
+    results = asyncio.run(run())
+    broken = [r for r in results if r[2] is not None]
+    for inv_id, n, at in results:
+        _say(f"{inv_id}  {n:>3} entries  {'ok' if at is None else f'BROKEN at seq {at}'}")
+    _say(f"{len(results)} audit chain(s), {len(broken)} broken")
+    if broken:
+        sys.exit(1)
 
 
 # --- demo ---------------------------------------------------------------------------------------
@@ -285,7 +346,13 @@ def demo_reset(args: argparse.Namespace, settings: Settings) -> None:
     db_seed(argparse.Namespace(scenario=None), settings)
     api = (args.api or f"http://{settings.api_host}:{settings.api_port}").rstrip("/")
     try:
-        response = httpx.post(f"{api}/api/v1/demo/reset", json={"seed": False}, timeout=10)
+        key = os.environ.get("FINPULSE_API_KEY")
+        response = httpx.post(
+            f"{api}/api/v1/demo/reset",
+            json={"seed": False},
+            headers={"Authorization": f"Bearer {key}"} if key else {},
+            timeout=10,
+        )
         response.raise_for_status()
         body = response.json()
         _say(

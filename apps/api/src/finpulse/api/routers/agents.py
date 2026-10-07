@@ -17,11 +17,11 @@ from finpulse.agents.catalogue import AGENTS
 from finpulse.agents.evidence import EvidencePack, build_evidence_pack
 from finpulse.agents.orchestrator import dependency_closure, run_agents
 from finpulse.agents.schemas import AgentInfo, AgentRun
-from finpulse.api.deps import DataSourceDep, LLMDep, OrgDep
+from finpulse.api.deps import Analyst, DataSourceDep, LLMDep, OrgDep, Viewer
 from finpulse.api.routers.entities import AsOf, EntityId
 from finpulse.services.entities import load_entity, resolve_as_of
 
-router = APIRouter(prefix="/api/v1", tags=["agents"])
+router = APIRouter(prefix="/api/v1", dependencies=[Viewer], tags=["agents"])
 
 
 class AgentRequest(BaseModel):
@@ -58,6 +58,7 @@ async def evidence_pack(
 
 @router.post(
     "/entities/{entity_id}/agents/{agent_name}",
+    dependencies=[Analyst],
     response_model=SingleAgentResponse,
     summary="Run one agent (and any agents whose findings it needs)",
 )

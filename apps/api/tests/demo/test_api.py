@@ -67,7 +67,13 @@ async def test_demo_mode_investigation_is_marked_and_kept(client: httpx.AsyncCli
 
 
 async def test_demo_is_refused_in_production() -> None:
-    async for c in make(FINPULSE_ENV="production"):
+    from finpulse.core.security import hash_key
+
+    key = "fpk_test_admin"
+    async for c in make(
+        FINPULSE_ENV="production", API_KEYS=f"ops:admin:{hash_key(key)}", AUDIT_BACKEND="postgres"
+    ):
+        c.headers["Authorization"] = f"Bearer {key}"
         url = f"/api/v1/entities/{SHARMA.entity_id}/investigations"
         refused = await c.post(url, json={"mode": "demo"})
         assert refused.status_code == 403 and refused.json()["code"] == "demo_disabled"

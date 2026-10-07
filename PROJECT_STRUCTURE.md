@@ -9,6 +9,7 @@
 finpulse/
 ├── README.md
 ├── ARCHITECTURE.md · DATA_MODEL.md · API_SPEC.md · PROJECT_STRUCTURE.md · DEVELOPMENT_PLAN.md
+├── SECURITY.md                    # security architecture, AI guarantees, audit trail
 ├── docs/
 │   ├── adr/                      # one file per architecture decision (0001-custom-orchestration.md …)
 │   └── methodology/              # generated from the registries (metrics, scoring, rules, scenarios)
@@ -45,6 +46,8 @@ apps/api/
 │   ├── core/                     # shared, dependency-free
 │   │   ├── errors.py             # domain error taxonomy (→ problem+json in api/)
 │   │   ├── money.py              # Money (minor units), rounding rules
+│   │   ├── security.py           # API keys (hashed), roles, principals
+│   │   ├── untrusted.py          # neutralises instruction-like text before any model reads it
 │   │   ├── time.py               # Period, Window, month arithmetic — no clock access
 │   │   ├── ids.py
 │   │   └── types.py              # enums: SubjectKind, Severity, Direction, …
@@ -73,6 +76,7 @@ apps/api/
 │   │
 │   ├── analytics/                # PURE: financial metrics (see docs/FINANCIAL_METRICS.md)
 │   │   ├── inputs.py             # FinancialData: the read-only snapshot the engine consumes
+│   │   ├── integrity.py          # refuses impossible or inconsistent data before analysis
 │   │   ├── classify.py           # how transaction categories group into receipts/expenses/…
 │   │   ├── context.py            # months, balances, receivables: computed once per report
 │   │   ├── registry.py           # metric definitions (catalogue), value & output helpers
@@ -133,7 +137,10 @@ apps/api/
 │   │   ├── orchestrator.py       # 11 recorded stages; events mirrored to structured logs
 │   │   ├── analysis.py           # deterministic: disagreements, review, confidence, audit
 │   │   ├── schemas.py            # Investigation record
-│   │   ├── store.py              # recent investigations (memory + optional JSON files)
+│   │   ├── store.py              # recent investigations, org-scoped (memory + optional JSON files)
+│   │   ├── progress.py           # background runs: live progress, per-org concurrency cap
+│   │   ├── audit.py              # hash-chained audit trail: auditor, LLM-call recorder, verify
+│   │   ├── timeline.py           # the eight user-facing steps
 │   │   └── report.py             # terminal rendering for demos
 │   │
 │   ├── orchestration/
@@ -149,7 +156,8 @@ apps/api/
 │   │   ├── db.py                 # async engine/session
 │   │   ├── models.py             # SQLAlchemy ORM (split per DATA_MODEL section as it grows)
 │   │   ├── seed.py               # load synthetic datasets (idempotent)
-│   │   ├── repositories/         # org-scoped data access (financial_data.py → FinancialData)
+│   │   ├── repositories/         # org-scoped data access (financial_data.py → FinancialData;
+│   │   │                         #   ai_audit.py → append-only audit trail)
 │   │   └── registry_sync.py      # sync code registries → reference tables
 │   │
 │   ├── jobs/
@@ -220,7 +228,8 @@ apps/web/
 │   │   │   ├── client.ts                       # openapi-fetch + @finpulse/contracts types, unwrap()
 │   │   │   ├── errors.ts                       # problem+json / network failure → ApiError
 │   │   │   ├── server.ts                       # client for Server Components (FINPULSE_API_URL)
-│   │   │   └── browser.ts                      # client for Client Components (NEXT_PUBLIC_API_URL)
+│   │   │   ├── browser.ts                      # client for Client Components (same-origin proxy)
+│   │   │   └── proxy-policy.ts                 # what the browser may ask for; same-origin check
 │   │   ├── format/                             # money, percent, date, score band
 │   │   ├── hooks/                              # useJob, useInvestigationEvents (SSE)
 │   │   └── auth/                               # Supabase session helpers
@@ -243,7 +252,8 @@ apps/web/src/
 │       ├── loading.tsx · error.tsx
 │       ├── page.tsx                            # overview
 │       ├── passport/ · warnings/ · health/ · stress/ · investigation/ · evidence/
-│   └── demo/page.tsx                           # demo walkthrough, reset and the brief
+│   ├── demo/page.tsx                           # demo walkthrough, reset and the brief
+│   └── api/finpulse/[...path]/route.ts         # same-origin proxy: adds the server's API key
 ├── components/
 │   ├── shell/                                  # sidebar, nav, entity controls
 │   ├── fp/                                     # badges, panels, stat tiles, meters, risk timeline
@@ -253,6 +263,7 @@ apps/web/src/
 │   └── evidence/evidence-card.tsx
 └── lib/
     ├── api/finpulse.ts                         # cached server-side reads, one per endpoint
+    ├── api/proxy-policy.ts                     # allow-list + same-origin check for the proxy
     ├── format.ts · presentation.ts             # display only: no financial arithmetic
     ├── shock-form.ts                           # stress-scenario form from JSON Schema
     └── evidence-link.ts · page.ts

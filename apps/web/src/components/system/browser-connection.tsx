@@ -26,8 +26,8 @@ type State =
   | { kind: "done"; probe: Probe<HealthResponse>; at: Date };
 
 /**
- * Client-side check: the browser calls the API directly (NEXT_PUBLIC_API_URL). This is the path
- * that needs CORS to be configured, so it can fail while the server-side check succeeds.
+ * Client-side check: the browser → this app's same-origin proxy → the API. This is the path the
+ * interactive pages (stress lab, investigation runner, demo reset) use.
  */
 export function BrowserConnection() {
   const [state, setState] = useState<State>({ kind: "checking" });
@@ -53,7 +53,7 @@ export function BrowserConnection() {
     <Card>
       <CardHeader>
         <CardTitle>Browser connection</CardTitle>
-        <CardDescription>This browser → API, through CORS</CardDescription>
+        <CardDescription>This browser → app proxy → API</CardDescription>
         <CardAction>
           {state.kind === "checking" ? (
             <StatusBadge tone="pending" label="Checking" />
@@ -87,8 +87,8 @@ export function BrowserConnection() {
               />
               {state.probe.error.isNetworkError ? (
                 <p className="text-xs text-muted-foreground">
-                  Check that the API is running, that NEXT_PUBLIC_API_URL points at it, and that
-                  this page&apos;s origin is listed in CORS_ALLOWED_ORIGINS.
+                  Check that the API is running and that FINPULSE_API_URL (and FINPULSE_API_KEY,
+                  when the API requires keys) are set for the web server.
                 </p>
               ) : null}
             </div>

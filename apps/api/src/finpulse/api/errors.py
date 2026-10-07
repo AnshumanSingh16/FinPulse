@@ -74,6 +74,7 @@ async def _handle_app_error(request: Request, exc: Exception) -> JSONResponse:
         detail=exc.detail,
         request_id=_request_id(request),
         extra=exc.extra,
+        headers={"WWW-Authenticate": "Bearer"} if exc.status == 401 else None,
     )
 
 

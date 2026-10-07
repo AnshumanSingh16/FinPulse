@@ -371,3 +371,33 @@ class SimulatedBureauEvent(Base):
     event_type: Mapped[str] = mapped_column(Text)
     event_on: Mapped[date] = mapped_column(Date)
     reported_on: Mapped[date] = mapped_column(Date)
+
+
+# --- AI investigation audit trail (SECURITY.md) ---------------------------------------------------
+
+
+class AIAuditEvent(Base):
+    """One entry in an investigation's append-only, hash-chained audit trail.
+
+    No foreign keys on purpose: deleting an organisation or a subject must not delete the record
+    of what the AI was asked and what it produced. A database trigger (see the migration) rejects
+    UPDATE and DELETE, so entries can only be appended.
+    """
+
+    __tablename__ = "ai_audit_events"
+    __table_args__ = (
+        UniqueConstraint("investigation_id", "seq"),
+        Index("ix_ai_audit_events_org_investigation", "org_id", "investigation_id"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    org_id: Mapped[uuid.UUID] = mapped_column()
+    investigation_id: Mapped[uuid.UUID] = mapped_column()
+    seq: Mapped[int] = mapped_column(Integer)
+    event: Mapped[str] = mapped_column(Text)
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    actor: Mapped[str] = mapped_column(Text)
+    request_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    prev_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
+    hash: Mapped[str] = mapped_column(Text)

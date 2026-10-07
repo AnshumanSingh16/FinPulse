@@ -11,7 +11,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query
 
-from finpulse.api.deps import DataSourceDep, OrgDep
+from finpulse.api.deps import DataSourceDep, OrgDep, Viewer
 from finpulse.api.routers.entities import AsOf, EntityId
 from finpulse.scoring import load_model, passport_history, with_monthly_change
 from finpulse.scoring.config import ScoringModel
@@ -19,7 +19,7 @@ from finpulse.scoring.history import MAX_MONTHS
 from finpulse.scoring.schemas import Passport, PassportHistory
 from finpulse.services.entities import load_entity, resolve_as_of
 
-router = APIRouter(prefix="/api/v1", tags=["passport"])
+router = APIRouter(prefix="/api/v1", dependencies=[Viewer], tags=["passport"])
 
 
 @router.get(

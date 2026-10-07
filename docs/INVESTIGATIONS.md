@@ -139,6 +139,22 @@ listed in `confidence.adjustments`.
 | `confidence` | Level, the senior agent's own statement, the orchestrator's cap and the reasons |
 | `evidence_pack`, `evidence_references[]`, `claim_audit` | The pack hash and every cited item. Claims verified and pruned, issues caught, unmet requirements, and whether every reference resolves |
 | `usage`, `events[]`, `disclaimer` | Model calls and tokens, the full event log, and the disclaimer |
+| `provenance` | Which fields are deterministic and which are AI-generated, how to read each statement type, and `ai_can_modify_records: false`, `lending_decision: false` |
+
+## Audit trail
+
+Every investigation also writes an append-only, hash-chained audit trail to PostgreSQL. It records:
+
+- who asked, and for which entity and date;
+- every model call (hashes of the exact request and response, tokens, duration);
+- the evidence pack hash, and any text that was neutralised;
+- each agent's verification outcome, including blocked decision language;
+- the final outcome, with a hash of the full record.
+
+The first entry is written before any model call. If it cannot be written, the investigation
+does not start (`503 audit_unavailable`). To check a trail, use
+`GET /api/v1/investigations/{id}/audit` (entries plus `chain_valid`) or `finpulse audit verify`.
+Details are in [SECURITY.md](../SECURITY.md#9-audit-trail-for-ai-investigations).
 
 ## Inspecting an investigation during a demo
 
@@ -194,5 +210,7 @@ agent run's `model` is `finpulse-demo-script-1`, and the UI labels it. See [DEMO
 - `POST …/investigate` is synchronous: the request returns when the investigation is complete. A
   real run makes at least seven calls to Claude and takes minutes. The background variant
   (`POST …/investigations` plus `/progress`) keeps progress in memory, in the API process only.
-- Investigations are kept in memory (and optionally as files), not in PostgreSQL.
+- Investigations are kept in memory (and optionally as files), not in PostgreSQL; their audit
+  trails are in PostgreSQL. At most `INVESTIGATIONS_MAX_RUNNING` (default 2) run at once per
+  organisation (`429 too_many_investigations`).
 - Not yet run against the live model. Every test uses a scripted model.

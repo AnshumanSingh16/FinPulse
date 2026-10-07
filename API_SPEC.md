@@ -24,9 +24,15 @@ Browser ──▶ Next.js (apps/web) ──▶ FastAPI /api/v1 ──▶ engines
 - **Base path:** `/api/v1` for all business endpoints. Breaking changes → `/api/v2`.
   Operational probes (`/health`, `/ready`) are unversioned at the root so infrastructure can
   reach them without knowing the API version.
-- **Auth:** `Authorization: Bearer <JWT>` on every endpoint except `/health` and `/ready`.
+- **Auth:** `Authorization: Bearer <token>` on every endpoint except `/health` and `/ready`.
   Roles: `viewer` (read), `analyst` (read + run analyses/stress/investigations + alert actions),
   `admin` (+ backtests, org settings).
+  *Implemented:*
+  - API keys (`API_KEYS`, stored as SHA-256 hashes), each bound to a role and an organisation;
+  - `401 unauthorized` / `401 invalid_api_key` and `403 insufficient_role`;
+  - `X-API-Key` is accepted as an alternative header.
+
+  Supabase JWTs will map onto the same roles. See [SECURITY.md](SECURITY.md).
 - **Content type:** `application/json; charset=utf-8`. Errors: `application/problem+json`.
 - **IDs:** UUID strings.
 - **Money:** `{ "amount_minor": 1234500, "currency": "INR" }` — integer minor units. Never floats.
@@ -42,7 +48,9 @@ Browser ──▶ Next.js (apps/web) ──▶ FastAPI /api/v1 ──▶ engines
   Engine-level dedup also applies (same inputs + versions ⇒ same run returned with `200`).
 - **Request tracing:** clients may send `X-Request-ID`; the server always returns one.
 - **Rate limits:** per-user token bucket; investigations have a tighter limit (default 10/hour).
-  `429` + `Retry-After`.
+  `429` + `Retry-After`. *Implemented:* at most `INVESTIGATIONS_MAX_RUNNING` concurrent
+  investigations per organisation (`429 too_many_investigations`), and request bodies capped at
+  `MAX_REQUEST_BYTES` (`413 request_too_large`).
 - **Versions in payloads:** every engine result includes the versions that produced it.
 
 ## 3. Error format (RFC 7807)
@@ -324,11 +332,19 @@ The run-based design below (persisted runs, Monte Carlo paths) follows later.
 | GET | `/investigations/{id}/progress` | Live state of a background run, built from the orchestrator's real events: `status` (running · completed · failed), `current_stage`, completed `stages[]`, per-agent `agents[]` (pending · running · succeeded · failed · skipped, claims, attempts), `events[]`, `error{code,message}`, and `timeline` (the eight user-facing steps with
 state, timing and highlights, plus per-agent focus, key finding, evidence ids, verifier counts and
 red-team challenges; also stored on the finished record). When completed the full record is at `/investigations/{id}`. `404 investigation_not_found` |
-| GET | `/investigations` · `/investigations/{id}` · `/investigations/{id}/events` | Recent investigations (in memory; `?entity_id=` filters), one record, its event log. `404 investigation_not_found` |
+| GET | `/investigations` · `/investigations/{id}` · `/investigations/{id}/events` | Recent investigations (in memory; `?entity_id=` filters), one record, its event log. Scoped to the caller's organisation. `404 investigation_not_found` |
+| GET | `/investigations/{id}/audit` | The append-only, hash-chained audit trail (`entries[]`, `chain_valid`, `broken_at_seq`). See [SECURITY.md](SECURITY.md#9-audit-trail-for-ai-investigations) |
 | POST | `/entities/{entity_id}/agents/{agent_name}` | One agent, plus the agents whose findings it needs. `404 agent_not_found` |
 | GET | `/meta/agents` | Agents, dependencies, prompt versions, output schemas |
 
-`503 llm_unavailable` when no model is configured or reachable (for a background run, the progress
+Starting an investigation needs the `analyst` role. Possible errors:
+
+- `429 too_many_investigations` when the organisation already has `INVESTIGATIONS_MAX_RUNNING`
+  runs going;
+- `503 audit_unavailable` when the audit trail cannot be written (no model is called);
+- `422 data_integrity_failed` for inconsistent financial data (also on every analytics
+  endpoint);
+- `503 llm_unavailable` when no model is configured or reachable (for a background run, the progress
 reports `status: failed` with `error.code: llm_unavailable` after the deterministic stages). Methodology:
 [docs/AI_AGENTS.md](docs/AI_AGENTS.md). The persisted, asynchronous investigations below follow.
 
@@ -378,7 +394,7 @@ Claim item:
 | Method | Path | Description |
 |---|---|---|
 | GET | `/demo` | The demo entity (`entity_id`, `as_of`), its narrative, the stress preset it uses and the six walkthrough steps; `enabled` is false in production |
-| POST | `/demo/reset` | Restores the exact demo state: re-seeds every synthetic entity (deterministic; returns the fingerprints) and clears kept and running investigations. Body `{"seed"?: true}`. `403 demo_disabled` in production or with `DEMO_ENABLED=false` |
+| POST | `/demo/reset` | Admin only. Restores the exact demo state: re-seeds every synthetic entity (deterministic; returns the fingerprints) and clears kept and running investigations. Body `{"seed"?: true}`. `403 demo_disabled` in production or with `DEMO_ENABLED=false` |
 
 ### 4.11 Evidence resolution
 

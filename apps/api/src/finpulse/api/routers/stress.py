@@ -8,18 +8,19 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from finpulse.api.deps import DataSourceDep, OrgDep
+from finpulse.api.deps import Analyst, DataSourceDep, OrgDep, Viewer
 from finpulse.api.routers.entities import EntityId
 from finpulse.scoring import load_model
 from finpulse.services.entities import load_entity, resolve_as_of
 from finpulse.stress import PRESETS, SHOCKS, StressTestRequest, run_stress_test
 from finpulse.stress.schemas import PresetOut, ScenarioCatalogue, ShockTypeOut, StressTestResult
 
-router = APIRouter(prefix="/api/v1", tags=["stress testing"])
+router = APIRouter(prefix="/api/v1", dependencies=[Viewer], tags=["stress testing"])
 
 
 @router.post(
     "/entities/{entity_id}/stress-test",
+    dependencies=[Analyst],
     response_model=StressTestResult,
     summary="Run a stress test: baseline vs. scenario projection",
     description=(

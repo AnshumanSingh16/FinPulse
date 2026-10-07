@@ -81,5 +81,8 @@ export type ConfidenceAssessment = Schemas["ConfidenceAssessment"];
 export type ClaimAudit = Schemas["ClaimAudit"];
 export type ReviewRequest = Schemas["ReviewRequest"];
 export type RedTeamFindings = Schemas["RedTeamFindings"];
+export type Provenance = Schemas["Provenance"];
+export type AuditTrail = Schemas["AuditTrail"];
+export type AuditRecord = Schemas["AuditRecord"];
 
 export type ApiPath = keyof paths;

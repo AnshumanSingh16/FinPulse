@@ -15,12 +15,12 @@ from fastapi import APIRouter, Path, Query
 from finpulse.analytics import CATALOGUE, compute_report
 from finpulse.analytics.history import MAX_HISTORY_MONTHS, MetricHistory, metric_history
 from finpulse.analytics.schemas import FinancialMetricsReport, Metric, MetricDefinitionOut
-from finpulse.api.deps import DataSourceDep, OrgDep
+from finpulse.api.deps import DataSourceDep, OrgDep, Viewer
 from finpulse.api.schemas.entities import EntitySummary
 from finpulse.core.errors import NotFoundError
 from finpulse.services.entities import load_entity, resolve_as_of
 
-router = APIRouter(prefix="/api/v1")
+router = APIRouter(prefix="/api/v1", dependencies=[Viewer])
 
 AsOf = Annotated[
     date | None,

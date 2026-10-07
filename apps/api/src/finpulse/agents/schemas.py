@@ -197,6 +197,7 @@ IssueCode = Literal[
     "unknown_claim_id",
     "wrong_reference_kind",
     "unknown_reference",
+    "prohibited_decision",
 ]
 
 

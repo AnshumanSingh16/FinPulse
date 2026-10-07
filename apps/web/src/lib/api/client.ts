@@ -11,6 +11,8 @@ export type ApiClientOptions = {
   timeoutMs?: number;
   /** Extra `fetch` init merged into every request (e.g. Next.js `cache` options). */
   init?: RequestInit;
+  /** Headers sent with every request (e.g. the server-side Authorization header). */
+  headers?: Record<string, string>;
   /** Injected in tests. */
   fetch?: typeof globalThis.fetch;
 };
@@ -23,10 +25,12 @@ export function createApiClient({
   baseUrl,
   timeoutMs = 5000,
   init,
+  headers,
   fetch: fetchImpl = globalThis.fetch,
 }: ApiClientOptions): ApiClient {
   return createClient<paths>({
     baseUrl,
+    headers,
     fetch: (request: Request) =>
       fetchImpl(request, { ...init, signal: AbortSignal.timeout(timeoutMs) }),
   });

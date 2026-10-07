@@ -8,13 +8,13 @@ from datetime import UTC, datetime
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from finpulse.api.deps import EngineDep, SettingsDep, StoreDep, TrackerDep
+from finpulse.api.deps import Admin, EngineDep, SettingsDep, StoreDep, TrackerDep, Viewer
 from finpulse.core.errors import ForbiddenError
 from finpulse.demo.story import DemoInfo, demo_info
 from finpulse.observability.logging import get_logger
 from finpulse.persistence.seed import seed
 
-router = APIRouter(prefix="/api/v1/demo", tags=["demo"])
+router = APIRouter(prefix="/api/v1/demo", dependencies=[Viewer], tags=["demo"])
 log = get_logger("finpulse.demo")
 
 
@@ -42,6 +42,7 @@ async def get_demo(settings: SettingsDep) -> DemoInfo:
 
 @router.post(
     "/reset",
+    dependencies=[Admin],
     response_model=DemoResetResult,
     summary="Restore the exact demo state: re-seed every synthetic entity, clear investigations",
 )

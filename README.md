@@ -99,6 +99,21 @@ apps read the repository-root `.env` (git-ignored); real environment variables t
 No secrets are committed and none have defaults. A Supabase connection string can be pasted into
 `DATABASE_URL` unchanged.
 
+## Security
+
+[SECURITY.md](SECURITY.md) covers the security architecture. In short:
+
+- the API needs an API key (`finpulse auth new-key`), with viewer, analyst and admin roles, and
+  data is isolated per organisation;
+- financial data is integrity-checked before analysis;
+- text from the data is neutralised before any agent reads it;
+- the verifier rejects invented numbers and any lending-decision language;
+- AI output can never write financial records;
+- every AI investigation leaves an append-only, hash-chained audit trail
+  (`GET /api/v1/investigations/{id}/audit`, `finpulse audit verify`).
+
+Without `API_KEYS`, authentication is off; that is allowed only for local development.
+
 ## Everyday commands
 
 | Task | Command |
@@ -282,8 +297,10 @@ event log. `uv run finpulse investigate show FILE --events` prints it for a demo
    `packages/contracts/src/schema.gen.ts` with `openapi-typescript`. CI fails if these are stale.
 3. `apps/web/src/lib/api` wraps `openapi-fetch` with those types, so request paths, parameters
    and response shapes are type-checked against the backend.
-4. Server Components use `getServerApiClient()` (base URL `FINPULSE_API_URL`, never cached).
-   Client Components use `getBrowserApiClient()` (base URL `NEXT_PUBLIC_API_URL`, needs CORS).
+4. Server Components use `getServerApiClient()` (base URL `FINPULSE_API_URL`, never cached,
+   sends the server-only `FINPULSE_API_KEY`). Client Components use `getBrowserApiClient()`,
+   which calls this app's same-origin proxy (`/api/finpulse/...`). The proxy forwards only an
+   allow-listed set of requests and adds the key, so the browser never holds one.
 5. Errors arrive as RFC 7807 `application/problem+json` and become a typed `ApiError`; network
    failures and timeouts become an `ApiError` with `status: 0`. Every response carries
    `X-Request-ID`, which also appears on the matching API log lines.
@@ -297,3 +314,4 @@ event log. `uv run finpulse investigate show FILE --events` prints it for a demo
 | [API_SPEC.md](API_SPEC.md) | REST API contract and agent tool contract |
 | [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) | Monorepo layout and module boundaries |
 | [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md) | Phased build plan with exit criteria |
+| [SECURITY.md](SECURITY.md) | Security and reliability architecture, AI guarantees, audit trail, residual risks |
