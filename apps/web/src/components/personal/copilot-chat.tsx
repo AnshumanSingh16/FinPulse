@@ -102,10 +102,10 @@ export function CopilotChat() {
     <div className="flex flex-col gap-5">
       <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div className="flex flex-col gap-1">
-          <div className="text-xs font-medium tracking-wide text-primary uppercase">
-            AI Financial Copilot
-          </div>
-          <h1 className="text-2xl font-semibold tracking-tight">Ask, and the agents get to work</h1>
+          <div className="text-xs font-medium text-primary">Ask FinPulse</div>
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">
+            Ask about any money decision
+          </h1>
           <p className="max-w-2xl text-sm text-muted-foreground">
             The copilot answers by calling FinPulse&apos;s tools — the full affordability workflow,
             stress scenarios, comparisons and savings plans — and shows every call.
@@ -124,7 +124,7 @@ export function CopilotChat() {
         </Notice>
       ) : null}
 
-      <div className="flex min-h-[420px] flex-col gap-4 rounded-xl border bg-card p-4 sm:p-5">
+      <div className="flex min-h-[420px] flex-col gap-4 rounded-2xl border bg-card p-4 sm:p-6">
         {turns.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-4 py-8 text-center">
             <Bot className="size-8 text-primary" />
@@ -155,7 +155,7 @@ export function CopilotChat() {
                   {t.role === "user" ? <User className="size-3.5" /> : <Bot className="size-3.5" />}
                 </span>
                 {t.role === "user" ? (
-                  <div className="max-w-[80%] rounded-2xl rounded-tr-sm bg-primary/15 px-3.5 py-2 text-sm">
+                  <div className="max-w-[80%] rounded-2xl rounded-tr-sm bg-primary px-4 py-2.5 text-[15px] text-primary-foreground">
                     {t.text}
                   </div>
                 ) : (
@@ -170,7 +170,7 @@ export function CopilotChat() {
                               "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 font-mono text-[11px]",
                               c.status === "ok"
                                 ? "text-muted-foreground"
-                                : "border-status-critical/40 text-chart-negative",
+                                : "border-status-critical/40 text-text-critical",
                             )}
                           >
                             <Wrench className="size-3" /> {c.tool} · {c.summary}
@@ -179,7 +179,7 @@ export function CopilotChat() {
                       </div>
                     ) : null}
                     {t.events.length ? (
-                      <details className="rounded-lg border bg-background/40 p-3" open={t.pending}>
+                      <details className="rounded-xl border p-3" open={t.pending}>
                         <summary className="cursor-pointer text-xs text-muted-foreground select-none">
                           Multi-agent workflow ({t.events.length} events)
                           {t.runStatus ? ` · ${t.runStatus.replace("_", " ")}` : ""}
@@ -195,7 +195,7 @@ export function CopilotChat() {
                         <Loader2 className="size-4 animate-spin" /> Working…
                       </div>
                     ) : (
-                      <div className="rounded-2xl rounded-tl-sm border bg-background/50 px-3.5 py-2.5 text-sm whitespace-pre-line">
+                      <div className="rounded-2xl rounded-tl-sm bg-muted px-4 py-3 text-[15px] whitespace-pre-line">
                         {t.text}
                       </div>
                     )}
@@ -222,7 +222,7 @@ export function CopilotChat() {
                       <p className="text-[11px] text-muted-foreground">{t.notice}</p>
                     ) : null}
                     {t.unverified.length ? (
-                      <p className="flex items-center gap-1 text-[11px] text-status-warning">
+                      <p className="flex items-center gap-1 text-[11px] text-text-warning">
                         <AlertTriangle className="size-3" /> {t.unverified.length} figure(s) in this
                         reply did not match any tool output: {t.unverified.join(", ")}. Treat them
                         with caution.
@@ -244,7 +244,7 @@ export function CopilotChat() {
           e.preventDefault();
           void send(input);
         }}
-        className="sticky bottom-4 flex gap-2 rounded-xl border bg-card p-2 shadow-lg"
+        className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] flex gap-2 rounded-2xl border bg-card p-2 shadow-lg lg:bottom-4"
       >
         <input
           value={input}

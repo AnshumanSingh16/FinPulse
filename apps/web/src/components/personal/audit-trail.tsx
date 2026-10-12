@@ -65,10 +65,8 @@ export function AuditTrail() {
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-1">
-        <div className="text-xs font-medium tracking-wide text-primary uppercase">
-          Trust & accountability
-        </div>
-        <h1 className="text-2xl font-semibold tracking-tight">Audit Trail</h1>
+        <div className="text-xs font-medium text-primary">Everything that happened</div>
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">Activity log</h1>
         <p className="max-w-2xl text-sm text-muted-foreground">
           Every goal, agent step, verification flag, approval and data change, recorded by the
           server as it happened. Newest first.

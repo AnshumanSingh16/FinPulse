@@ -352,7 +352,7 @@ export function IncomeAllocation({
           <li key={r.label} className="flex flex-col gap-1">
             <div className="flex items-baseline justify-between gap-2 text-xs">
               <span className="text-muted-foreground">{r.label}</span>
-              <span className={cn("tabular font-medium", r.value < 0 && "text-chart-negative")}>
+              <span className={cn("tabular font-medium", r.value < 0 && "text-text-critical")}>
                 {formatINR(r.value)}{" "}
                 <span className="text-muted-foreground">
                   · {income > 0 ? `${Math.round((r.value / income) * 100)}%` : "—"}

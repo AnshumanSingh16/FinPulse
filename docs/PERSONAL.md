@@ -17,20 +17,40 @@ web research, AI explanations, the AI copilot, PDF reading). Without it every ot
 and the UI says which mode is active. See `.env.example` for `PERSONAL_LLM_EFFORT`,
 `FINPULSE_AI=off` and `FINPULSE_LIVE_RESEARCH=off`.
 
+## Design
+
+A light, consumer-fintech interface (inspired by the clarity of apps like Groww, with its own
+identity): white surfaces, dark type, one deep-emerald accent for primary actions and good
+outcomes, amber/red only for real warnings. Mobile-first: a bottom tab bar (Home, Afford, Ask,
+Steps, More) on phones, a quiet sidebar on desktop.
+
+- **Home** leads with one question — "What would you like to afford?" — and a plain-English goal
+  box, then a four-figure snapshot, what needs attention, and recent analyses.
+- **Can I afford this?** is a guided flow: describe the goal → confirm what was understood and
+  answer only the questions that are missing (saved figures are shown, not re-asked) → watch the
+  agents work in plain-language stages → read the result.
+- **Results** follow a fixed order: the answer (one plain sentence + three figures), the numbers,
+  what if things go wrong, why we said this, your options, your next steps. Everything technical
+  — agent steps, sources, tool calls, the event log — sits in an expandable *How we reached this
+  result* section.
+- Reusable pieces live in `src/components/personal/ui.tsx` (stats, label/value rows, disclosure,
+  confirmation dialog, badges, notices, loading and empty states).
+
 ## Five-minute demo
 
-1. Open **Overview** → **Try Demo**. A fictional profile loads (₹2,00,000 take-home, ₹25 lakh
-   savings, ₹70,000 expenses, ₹15,000 EMIs, one dependent).
-2. **Can I Afford This?** → **Try Demo** → **Run affordability analysis** (₹75 lakh house, 20%
-   down, 8.5% for 20 years — illustrative assumptions).
-3. Watch **Agent activity**: the 7-step plan appears, then each step's real tool calls stream in.
+1. Open **Home** → **Try the demo profile**. A fictional profile loads (₹2,00,000 take-home,
+   ₹25 lakh savings, ₹70,000 expenses, ₹15,000 EMIs, one dependent).
+2. Type **"I want to buy a ₹75 lakh house"** in the goal box → the details screen shows what was
+   understood and uses the saved figures → **Check if I can afford it**.
+3. Watch the stages ("Understanding your goal" … "Preparing your next steps") tick off as the
+   server finishes each one.
 4. Results: EMI **₹52,069**, ₹4,50,000 of illustrative stamp duty/registration, **₹5,50,000** left
    in savings (4.0 months of cover) → *Potentially manageable, but with limited buffer*. The
    *Income stops for 6 months* scenario runs out of savings in month 5.
 5. Show **Alternatives** (comfortable price ≈ ₹65.9 lakh, save ~5 months first, 25-year tenure)
    and the **Evidence** panel (every assumption with its source, every tool call with input and
    output).
-6. **Approve checklist** — then show the server refusing shortcuts: items can't be ticked before
+6. **Approve these steps** (a confirmation dialog explains what approval does and doesn't do) — then show the server refusing shortcuts: items can't be ticked before
    approval, "Submit the loan application" can never be executed (no integration).
 7. **Copilot**: "What if my income drops by 20%?", "Compare a ₹15 lakh car with a ₹20 lakh car."
 8. **Documents**: upload `salary-slip-demo.txt` (download link on the page). Net pay ₹1,85,000

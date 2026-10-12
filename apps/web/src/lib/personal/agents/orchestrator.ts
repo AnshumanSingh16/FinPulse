@@ -30,6 +30,7 @@ import { aiNarrative, buildAlternatives, buildRecommendation, buildSummary } fro
 import {
   actionPlanTool,
   analysePurchaseTool,
+  interpretGoalTool,
   compareFinancingTool,
   illustrativeResearchTool,
   optionsForComparison,
@@ -126,6 +127,23 @@ export async function runAffordabilityWorkflow(
 
   let current: PlanStep | null = null;
   try {
+    // 0. Understand the goal -----------------------------------------------------------------
+    current = step("understand");
+    start(current);
+    const goalInfo = await ctx.callTool(interpretGoalTool, { goal }, current.id);
+    if (
+      goalInfo.price !== null &&
+      Math.abs(goalInfo.price - request.price) > request.price * 0.01
+    ) {
+      ctx.emit(
+        "planner",
+        "finding",
+        `Your goal mentions ${formatINR(goalInfo.price)}, but the price entered is ${formatINR(request.price)}. Using the entered price.`,
+        { stepId: current.id, level: "warning" },
+      );
+    }
+    finish(current, `Goal: ${request.label} (${request.type}).`);
+
     // 1. Collect & check inputs ------------------------------------------------------------
     current = step("collect");
     start(current);

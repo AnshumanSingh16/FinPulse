@@ -9,7 +9,7 @@ import { PROFILE_LABELS, type ProfileField, type ProfileValues } from "@/lib/per
 
 import { Field, MoneyInput, NumberInput } from "./fields";
 import { usePersonal } from "./provider";
-import { Loading, Notice, Section, SourceBadge, inputClass } from "./ui";
+import { ConfirmDialog, Loading, Notice, PageTitle, Section, SourceBadge, inputClass } from "./ui";
 
 export function ProfileEditor() {
   const { state, setState } = usePersonal();
@@ -17,6 +17,7 @@ export function ProfileEditor() {
   const [baseline, setBaseline] = useState<string | null>(null);
   const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
 
   // (Re)seed the draft whenever the stored profile changes (save, demo, reset, document import).
   const stored = state ? JSON.stringify(state.profile.values) : null;
@@ -53,41 +54,39 @@ export function ProfileEditor() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <div className="flex flex-col gap-1">
-          <div className="text-xs font-medium tracking-wide text-primary uppercase">
-            Financial brain
-          </div>
-          <h1 className="text-2xl font-semibold tracking-tight">Financial Profile</h1>
-          <p className="max-w-2xl text-sm text-muted-foreground">
-            The structured facts every agent works from. Each value shows where it came from.
-            FinPulse never asks for bank passwords, card PINs or OTPs.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            disabled={busy}
-            onClick={() => run(api.loadDemo, "Fictional demo profile loaded.")}
-          >
-            <Wand2 /> Try Demo
-          </Button>
-          <Button
-            variant="ghost"
-            disabled={busy}
-            onClick={() => {
-              if (
-                window.confirm(
-                  "Reset all data for this session: profile, analyses, action plans, documents and audit trail?",
-                )
-              )
-                void run(api.reset, "All session data was reset.");
-            }}
-          >
-            <RotateCcw /> Reset all data
-          </Button>
-        </div>
-      </header>
+      <PageTitle
+        title="My finances"
+        description="The facts FinPulse works from. Each value shows where it came from. FinPulse never asks for bank passwords, card PINs or OTPs."
+        actions={
+          <>
+            <Button
+              variant="secondary"
+              disabled={busy}
+              onClick={() => run(api.loadDemo, "Fictional demo profile loaded.")}
+            >
+              <Wand2 /> Use demo profile
+            </Button>
+            <Button variant="ghost" disabled={busy} onClick={() => setConfirmReset(true)}>
+              <RotateCcw /> Reset
+            </Button>
+          </>
+        }
+      />
+      <ConfirmDialog
+        open={confirmReset}
+        title="Reset all your data?"
+        tone="danger"
+        confirmLabel="Reset everything"
+        busy={busy}
+        onClose={() => setConfirmReset(false)}
+        onConfirm={async () => {
+          await run(api.reset, "All session data was reset.");
+          setConfirmReset(false);
+        }}
+      >
+        This clears your profile, analyses, next steps, documents and activity log for this browser
+        session. It can&apos;t be undone.
+      </ConfirmDialog>
 
       {message ? <Notice tone={message.tone}>{message.text}</Notice> : null}
       <Notice tone="info">
@@ -96,7 +95,7 @@ export function ProfileEditor() {
         imported from documents you confirm.
       </Notice>
 
-      <Section title="Income & spending">
+      <Section title="Income and spending">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {(
             ["monthlyIncome", "monthlyExpenses", "existingEmis", "otherMonthlyObligations"] as const
@@ -182,7 +181,7 @@ export function ProfileEditor() {
         </Field>
       </Section>
 
-      <div className="sticky bottom-4 flex justify-end">
+      <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] flex justify-end lg:bottom-4">
         <Button
           disabled={!dirty || busy}
           className="h-10 px-5 shadow-lg"

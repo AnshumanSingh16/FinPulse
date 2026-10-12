@@ -1,28 +1,40 @@
 "use client";
 
-import { ArrowRight, Bot, Calculator, ClipboardCheck, Wand2 } from "lucide-react";
+import { ChevronRight, ClipboardCheck, FileText, Wand2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { formatINR } from "@/lib/format";
 import { api } from "@/lib/personal/client";
-import {
-  debtToIncomeRatio,
-  emergencyFundCoverageMonths,
-  summariseCashFlow,
-} from "@/lib/personal/finance/health";
+import { emergencyFundCoverageMonths, summariseCashFlow } from "@/lib/personal/finance/health";
 import { PROFILE_LABELS } from "@/lib/personal/schemas";
 
+import { GoalInput } from "./goal-input";
 import { usePersonal } from "./provider";
-import { ApprovalBadge, AssessmentBadge, Kpi, Loading, ModeStrip, Notice, Section } from "./ui";
+import {
+  ApprovalBadge,
+  AssessmentBadge,
+  Disclosure,
+  EmptyState,
+  Loading,
+  ModeStrip,
+  Notice,
+  Section,
+  Stat,
+} from "./ui";
+
+function greeting() {
+  const h = new Date().getHours();
+  return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+}
 
 export function Overview() {
   const { state, setState, error } = usePersonal();
   const [busy, setBusy] = useState(false);
   if (error)
     return (
-      <Notice tone="error" title="Could not load your data">
+      <Notice tone="error" title="Couldn't load your data">
         {error}
       </Notice>
     );
@@ -45,47 +57,59 @@ export function Overview() {
   const cover = flow
     ? emergencyFundCoverageMonths(v.liquidSavings!, flow.totalMonthlyOutflow)
     : null;
-  const dti = hasCore ? debtToIncomeRatio(v.existingEmis!, v.monthlyIncome!) : null;
-  const latest = state.latestRun;
-  const pending = state.actionPlans.filter(
-    (p) => p.status === "awaiting_review" || p.status === "approved",
-  );
+  const target = v.emergencyBufferMonths ?? 6;
 
-  // Alerts derived from the profile and the latest analysis only.
-  const alerts: { tone: "warning" | "error" | "info"; text: string }[] = [];
-  const missingCore = (
-    ["monthlyIncome", "monthlyExpenses", "liquidSavings", "existingEmis"] as const
-  ).filter((f) => v[f] === null);
-  if (missingCore.length)
-    alerts.push({
+  // "Needs your attention": derived only from your figures, analyses, plans and documents.
+  const attention: {
+    key: string;
+    tone: "warning" | "error" | "info";
+    text: string;
+    href?: string;
+    cta?: string;
+  }[] = [];
+  for (const p of state.actionPlans.filter((p) => p.status === "awaiting_review"))
+    attention.push({
+      key: p.id,
       tone: "info",
-      text: `Profile incomplete: ${missingCore.map((f) => PROFILE_LABELS[f]).join(", ")}.`,
+      text: `Review your next steps: ${p.title.replace("Next steps: ", "")}`,
+      href: "/actions",
+      cta: "Review",
     });
   if (flow && flow.monthlySurplus < 0)
-    alerts.push({
+    attention.push({
+      key: "deficit",
       tone: "error",
       text: `You spend ${formatINR(-flow.monthlySurplus)} a month more than you take home.`,
+      href: "/profile",
+      cta: "Check",
     });
-  if (cover !== null && cover < (v.emergencyBufferMonths ?? 6))
-    alerts.push({
+  if (cover !== null && cover < target)
+    attention.push({
+      key: "cover",
       tone: "warning",
-      text: `Savings cover ${cover.toFixed(1)} months of outgoings — below your ${v.emergencyBufferMonths ?? 6}-month target.`,
-    });
-  if (dti !== null && dti > 0.35)
-    alerts.push({
-      tone: "warning",
-      text: `EMIs already take ${(dti * 100).toFixed(0)}% of take-home pay.`,
-    });
-  if (latest?.analysis && latest.analysis.label !== "comfortable")
-    alerts.push({
-      tone: latest.analysis.label === "high_strain" ? "error" : "warning",
-      text: `Latest analysis (${latest.request.label}): ${latest.recommendation?.headline ?? ""}`,
+      text: `Your savings cover ${cover.toFixed(1)} months of spending — below your ${target}-month goal.`,
     });
   for (const d of state.documents.filter((d) => d.review === "pending"))
-    alerts.push({
+    attention.push({
+      key: d.id,
       tone: "info",
-      text: `"${d.name}" has extracted values waiting for your review.`,
+      text: `Confirm the figures read from "${d.name}".`,
+      href: "/documents",
+      cta: "Review",
     });
+  const missing = (
+    ["monthlyIncome", "monthlyExpenses", "liquidSavings", "existingEmis"] as const
+  ).filter((f) => v[f] === null);
+  if (missing.length && state.profile.updatedAt)
+    attention.push({
+      key: "missing",
+      tone: "info",
+      text: `Add ${missing.map((f) => PROFILE_LABELS[f].toLowerCase()).join(", ")} for reliable answers.`,
+      href: "/profile",
+      cta: "Add",
+    });
+
+  const analyses = state.runs.slice(0, 4);
 
   async function demo() {
     setBusy(true);
@@ -97,219 +121,211 @@ export function Overview() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-4 rounded-2xl border bg-card p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-col gap-2">
-          <div className="text-xs font-medium tracking-wide text-primary uppercase">
-            FinPulse · Your Financial Life. On Autopilot.
-          </div>
-          <h1 className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
-            Can I afford this, and what should I do next?
-          </h1>
-          <p className="max-w-2xl text-sm text-muted-foreground">
-            An orchestrator plans the question and hands it to research, analysis, risk,
-            verification and action agents. Calculations are deterministic and tested; you approve
-            every next step.
-          </p>
-          <ModeStrip status={state.status} />
-        </div>
-        <div className="flex flex-wrap gap-2 lg:flex-col">
-          <Button asChild className="h-10 px-5">
-            <Link href="/afford">
-              <Calculator /> Start a new analysis
-            </Link>
-          </Button>
-          {!hasCore ? (
-            <Button variant="outline" onClick={demo} disabled={busy}>
-              <Wand2 /> Try Demo (fictional profile)
-            </Button>
-          ) : (
-            <Button asChild variant="outline">
-              <Link href="/copilot">
-                <Bot /> Ask the Copilot
-              </Link>
-            </Button>
-          )}
-        </div>
-      </header>
+    <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-1">
+        <p className="text-sm text-muted-foreground">
+          {greeting()}
+          {state.profile.isDemo ? " (demo profile)" : ""}
+        </p>
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">
+          What would you like to afford?
+        </h1>
+      </div>
 
+      {/* The main entry point */}
+      <section className="flex flex-col gap-4 rounded-3xl bg-accent/60 p-5 sm:p-7">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-lg font-semibold">Can I afford this?</h2>
+          <p className="text-sm text-muted-foreground">
+            Tell FinPulse what you&apos;re planning. It checks your finances, works out the costs,
+            stress-tests the plan and prepares next steps for you to approve.
+          </p>
+        </div>
+        <GoalInput />
+        <ModeStrip status={state.status} />
+      </section>
+
+      {/* Snapshot */}
       <Section
-        title="Financial snapshot"
-        description={
-          state.profile.isDemo ? "From the fictional demo profile." : "From your Financial Profile."
-        }
+        title="Your money this month"
+        description={state.profile.isDemo ? "From the fictional demo profile." : undefined}
         actions={
-          <Link href="/profile" className="text-xs text-primary hover:underline">
-            Edit profile
-          </Link>
+          hasCore ? (
+            <Link href="/profile" className="text-sm font-medium text-primary hover:underline">
+              Edit
+            </Link>
+          ) : null
         }
+        card={false}
       >
         {hasCore && flow ? (
-          <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
-            <Kpi label="Take-home / month" value={formatINR(v.monthlyIncome)} />
-            <Kpi label="Living expenses" value={formatINR(v.monthlyExpenses)} />
-            <Kpi label="Existing EMIs" value={formatINR(v.existingEmis)} />
-            <Kpi
-              label="Monthly surplus"
+          <div className="grid grid-cols-2 gap-x-6 gap-y-5 rounded-2xl border p-5 sm:grid-cols-4 sm:divide-x sm:p-6 [&>*]:sm:pl-6 [&>*:first-child]:sm:pl-0">
+            <Stat label="Take-home pay" value={formatINR(v.monthlyIncome)} />
+            <Stat
+              label="Spending + EMIs"
+              value={formatINR(
+                v.monthlyExpenses! + v.existingEmis! + (v.otherMonthlyObligations ?? 0),
+              )}
+            />
+            <Stat
+              label="Left over"
               value={formatINR(flow.monthlySurplus)}
               tone={flow.monthlySurplus < 0 ? "bad" : "good"}
               sub={
                 flow.savingsRate !== null
-                  ? `${(flow.savingsRate * 100).toFixed(0)}% of income`
+                  ? `${Math.round(flow.savingsRate * 100)}% of pay`
                   : undefined
               }
             />
-            <Kpi label="Liquid savings" value={formatINR(v.liquidSavings, { compact: true })} />
-            <Kpi
-              label="Emergency cover"
-              value={cover === null ? "—" : `${cover.toFixed(1)} mo`}
-              tone={
-                cover !== null && cover < 3 ? "bad" : cover !== null && cover < 6 ? "warn" : "good"
-              }
+            <Stat
+              label="Savings"
+              value={formatINR(v.liquidSavings, { compact: true })}
+              sub={cover !== null ? `${cover.toFixed(1)} months of spending` : undefined}
             />
           </div>
         ) : (
-          <div className="flex flex-col items-start gap-3 rounded-lg border border-dashed p-5 text-sm text-muted-foreground">
-            No profile yet. Load the fictional demo profile to explore, or enter your own figures.
-            <div className="flex gap-2">
-              <Button size="sm" onClick={demo} disabled={busy}>
-                <Wand2 /> Try Demo
-              </Button>
-              <Button size="sm" variant="outline" asChild>
-                <Link href="/profile">Enter my details</Link>
-              </Button>
-            </div>
-          </div>
+          <EmptyState
+            title="Add your finances to get personal answers"
+            action={
+              <div className="flex flex-wrap justify-center gap-2">
+                <Button onClick={demo} disabled={busy}>
+                  <Wand2 /> Try the demo profile
+                </Button>
+                <Button variant="outline" asChild>
+                  <Link href="/profile">Enter my details</Link>
+                </Button>
+              </div>
+            }
+          >
+            Income, spending, savings and EMIs are enough. The demo uses a fictional person.
+          </EmptyState>
         )}
       </Section>
 
-      <div className="grid gap-5 lg:grid-cols-2">
-        <Section
-          title="Active goal"
-          actions={
-            latest ? (
-              <Link
-                href={`/afford?run=${latest.id}`}
-                className="text-xs text-primary hover:underline"
-              >
-                Open results
-              </Link>
-            ) : null
-          }
-        >
-          {latest ? (
-            <div className="flex flex-col gap-2">
-              <div className="text-sm font-medium">{latest.goal}</div>
-              {latest.analysis ? (
-                <AssessmentBadge label={latest.analysis.label} long />
-              ) : (
-                <span className="text-sm text-muted-foreground">
-                  Status: {latest.status.replace("_", " ")}
-                </span>
-              )}
-              {latest.analysis ? (
-                <div className="grid grid-cols-3 gap-2">
-                  <Kpi label="EMI" value={formatINR(latest.analysis.emi)} />
-                  <Kpi
-                    label="Savings after"
-                    value={formatINR(latest.analysis.postPurchaseSavings, { compact: true })}
-                  />
-                  <Kpi
-                    label="Left monthly"
-                    value={formatINR(latest.analysis.after.cashFlow.monthlySurplus)}
-                  />
-                </div>
-              ) : null}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              {v.goals ?? "No analysis yet."}{" "}
-              <Link href="/afford" className="text-primary hover:underline">
-                Run one
-              </Link>
-              .
-            </p>
-          )}
-        </Section>
-
-        <Section title="Risk alerts" description="Derived from your profile and latest analysis.">
-          {alerts.length ? (
-            <ul className="flex flex-col gap-2">
-              {alerts.slice(0, 5).map((a) => (
-                <li key={a.text}>
-                  <Notice tone={a.tone}>{a.text}</Notice>
+      <div className="grid gap-8 lg:grid-cols-2">
+        <Section title="Needs your attention" card={false}>
+          {attention.length ? (
+            <ul className="flex flex-col divide-y rounded-2xl border">
+              {attention.slice(0, 5).map((a) => (
+                <li key={a.key} className="flex items-center gap-3 px-4 py-3 text-sm">
+                  <span
+                    className={
+                      a.tone === "error"
+                        ? "text-text-critical"
+                        : a.tone === "warning"
+                          ? "text-text-warning"
+                          : "text-primary"
+                    }
+                  >
+                    {a.href === "/documents" ? (
+                      <FileText className="size-4" />
+                    ) : (
+                      <ClipboardCheck className="size-4" />
+                    )}
+                  </span>
+                  <span className="min-w-0 flex-1 text-pretty">{a.text}</span>
+                  {a.href ? (
+                    <Link
+                      href={a.href}
+                      className="shrink-0 font-medium text-primary hover:underline"
+                    >
+                      {a.cta}
+                    </Link>
+                  ) : null}
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-muted-foreground">
+            <p className="rounded-2xl border px-4 py-5 text-sm text-muted-foreground">
               {hasCore
-                ? "No alerts from your current figures."
-                : "Alerts appear once your profile has figures."}
+                ? "Nothing needs you right now."
+                : "Alerts appear once your finances are added."}
             </p>
           )}
         </Section>
 
-        <Section
-          title="Pending tasks"
-          actions={
-            <Link href="/actions" className="text-xs text-primary hover:underline">
-              Action Center
-            </Link>
-          }
-        >
-          {pending.length ? (
-            <ul className="flex flex-col divide-y rounded-lg border">
-              {pending.map((p) => (
-                <li key={p.id} className="flex items-center justify-between gap-3 p-3 text-sm">
-                  <span className="flex min-w-0 items-center gap-2">
-                    <ClipboardCheck className="size-4 shrink-0 text-muted-foreground" />
-                    <span className="truncate">{p.title}</span>
-                  </span>
-                  <ApprovalBadge status={p.status} />
+        <Section title="Recent analyses" card={false}>
+          {analyses.length ? (
+            <ul className="flex flex-col divide-y rounded-2xl border">
+              {analyses.map((r) => (
+                <li key={r.id}>
+                  <Link
+                    href={`/afford?run=${r.id}`}
+                    className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50"
+                  >
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span className="truncate text-sm font-medium">{r.label}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {r.emi !== null ? `EMI ${formatINR(r.emi)} · ` : ""}
+                        {new Date(r.createdAt).toLocaleString("en-IN", {
+                          day: "numeric",
+                          month: "short",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    </span>
+                    {r.assessment ? (
+                      <AssessmentBadge label={r.assessment} />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">
+                        {r.status.replace("_", " ")}
+                      </span>
+                    )}
+                    <ChevronRight className="size-4 text-muted-foreground" />
+                  </Link>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-muted-foreground">Nothing waiting for you.</p>
+            <p className="rounded-2xl border px-4 py-5 text-sm text-muted-foreground">
+              No analyses yet. Try “I want to buy a ₹75 lakh house”.
+            </p>
           )}
-        </Section>
-
-        <Section
-          title="Recent agent activity"
-          actions={
-            <Link href="/audit" className="text-xs text-primary hover:underline">
-              Full audit trail
-            </Link>
-          }
-        >
-          {state.audit.length ? (
-            <ol className="flex flex-col gap-2">
-              {state.audit.slice(0, 7).map((e) => (
-                <li key={e.id} className="flex gap-3 text-xs">
-                  <span className="tabular w-14 shrink-0 text-muted-foreground">
-                    {new Date(e.at).toLocaleTimeString("en-IN", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      hour12: false,
-                    })}
-                  </span>
-                  <span className="w-28 shrink-0 truncate text-primary">{e.actor}</span>
-                  <span className="min-w-0 text-pretty">{e.summary}</span>
-                </li>
-              ))}
-            </ol>
-          ) : (
-            <p className="text-sm text-muted-foreground">No activity yet.</p>
-          )}
-          <Link
-            href="/afford"
-            className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-          >
-            Launch a new analysis <ArrowRight className="size-3" />
-          </Link>
         </Section>
       </div>
+
+      <Disclosure
+        title="Recent activity"
+        hint="What FinPulse's agents and you did, as recorded by the server"
+      >
+        {state.audit.length ? (
+          <ol className="flex flex-col gap-2.5">
+            {state.audit.slice(0, 8).map((e) => (
+              <li key={e.id} className="flex gap-3 text-sm">
+                <span className="tabular w-12 shrink-0 text-xs text-muted-foreground">
+                  {new Date(e.at).toLocaleTimeString("en-IN", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: false,
+                  })}
+                </span>
+                <span className="min-w-0 text-pretty">{e.summary}</span>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p className="text-sm text-muted-foreground">No activity yet.</p>
+        )}
+        <Link
+          href="/audit"
+          className="mt-3 inline-block text-sm font-medium text-primary hover:underline"
+        >
+          Full activity log
+        </Link>
+      </Disclosure>
+      {state.actionPlans.some((p) => p.status === "approved") ? (
+        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+          In progress:
+          {state.actionPlans
+            .filter((p) => p.status === "approved")
+            .map((p) => (
+              <Link key={p.id} href="/actions" className="inline-flex items-center gap-1.5">
+                <ApprovalBadge status={p.status} /> {p.title.replace("Next steps: ", "")}
+              </Link>
+            ))}
+        </div>
+      ) : null}
     </div>
   );
 }

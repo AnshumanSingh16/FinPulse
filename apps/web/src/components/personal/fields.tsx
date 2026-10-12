@@ -3,7 +3,7 @@
 import { useId, useState, type ReactNode } from "react";
 
 import { formatINR } from "@/lib/format";
-import { parseINRAmount } from "@/lib/personal/finance/parse-inr";
+import { inrWords, parseINRAmount } from "@/lib/personal/finance/parse-inr";
 import { cn } from "@/lib/utils";
 
 import { inputClass } from "./ui";
@@ -36,16 +36,16 @@ export function Field({
   return (
     <div className="flex min-w-0 flex-col gap-1.5">
       <div className="flex items-center justify-between gap-2">
-        <label htmlFor={htmlFor} className="text-xs font-medium text-muted-foreground">
+        <label htmlFor={htmlFor} className="text-sm font-medium text-foreground">
           {label}
         </label>
         {badge}
       </div>
       {children}
       {error ? (
-        <span className="text-[11px] text-chart-negative">{error}</span>
+        <span className="text-xs text-text-critical">{error}</span>
       ) : hint ? (
-        <span className="text-[11px] text-muted-foreground">{hint}</span>
+        <span className="text-xs text-muted-foreground">{hint}</span>
       ) : null}
     </div>
   );
@@ -72,12 +72,13 @@ export function MoneyInput({
   highlight?: boolean;
 }) {
   const id = useId();
-  const [text, setText] = useState(value === null ? "" : String(value));
+  const show = (n: number | null) => (n === null ? "" : n.toLocaleString("en-IN"));
+  const [text, setText] = useState(show(value));
   const [lastValue, setLastValue] = useState(value);
   // Resync when the value changes from outside (e.g. "Try Demo").
   if (value !== lastValue) {
     setLastValue(value);
-    if (parseMoneyInput(text) !== value) setText(value === null ? "" : String(value));
+    if (parseMoneyInput(text) !== value) setText(show(value));
   }
   const parsed = parseMoneyInput(text);
   const invalid = text.trim() !== "" && parsed === null;
@@ -95,7 +96,7 @@ export function MoneyInput({
       }
       hint={
         parsed !== null
-          ? `${formatINR(parsed)}${parsed >= 1e5 ? ` (${formatINR(parsed, { compact: true })})` : ""}`
+          ? `${formatINR(parsed)}${parsed >= 1e5 ? ` · ${inrWords(parsed)}` : ""}`
           : hint
       }
     >
@@ -114,7 +115,7 @@ export function MoneyInput({
         }}
         className={cn(
           inputClass,
-          (invalid || (highlight && parsed === null)) && "border-chart-negative/60",
+          (invalid || (highlight && parsed === null)) && "border-text-critical/60",
         )}
       />
     </Field>

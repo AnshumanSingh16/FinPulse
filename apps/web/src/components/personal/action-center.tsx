@@ -13,10 +13,8 @@ export function ActionCenter() {
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-1">
-        <div className="text-xs font-medium tracking-wide text-primary uppercase">
-          Financial Action Agent
-        </div>
-        <h1 className="text-2xl font-semibold tracking-tight">Action Center</h1>
+        <div className="text-xs font-medium text-primary">Prepared by the Action Agent</div>
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">Next steps</h1>
         <p className="max-w-2xl text-sm text-muted-foreground">
           Next-step plans prepared by the Action Agent. Each one waits for your review; approval,
           rejection and completion are enforced by the server. FinPulse never submits applications,

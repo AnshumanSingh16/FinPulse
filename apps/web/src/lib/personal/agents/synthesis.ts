@@ -12,7 +12,13 @@ import { findINRAmounts } from "../finance/parse-inr";
 import type { ScenarioResult } from "../finance/scenarios";
 import { describeAiError, effort, getClient, modelId, textOf } from "./llm";
 import type { RunContext } from "./runtime";
-import { calculateEmiTool, comfortablePriceTool, savingsPlanTool } from "./tools";
+import {
+  analysePurchaseTool,
+  calculateEmiTool,
+  comfortablePriceTool,
+  savingsPlanTool,
+} from "./tools";
+import { LABEL_TEXT } from "../finance/affordability";
 import type { Alternative, Finding, Recommendation, ResolvedInputs } from "./types";
 
 const HEADLINE = {
@@ -89,6 +95,29 @@ export async function buildAlternatives(
         });
       }
     }
+  }
+
+  if (purchase.downPaymentPct < 100 && analysis.loanAmount > 0) {
+    const higher = Math.min(100, purchase.downPaymentPct + 10);
+    const alt = await ctx.callTool(
+      analysePurchaseTool,
+      { ...inputs, purchase: { ...purchase, downPaymentPct: higher } },
+      stepId,
+    );
+    out.push({
+      id: "higher_down_payment",
+      title: `Put ${higher}% down instead of ${purchase.downPaymentPct}%`,
+      description: `A smaller loan and EMI, but less cash left after buying. Result: ${LABEL_TEXT[alt.label].toLowerCase()}.`,
+      figures: [
+        { label: "EMI", value: alt.emi, unit: "INR" },
+        { label: "Savings after purchase", value: alt.postPurchaseSavings, unit: "INR" },
+        {
+          label: "Interest saved",
+          value: Math.round(analysis.totalInterest - alt.totalInterest),
+          unit: "INR",
+        },
+      ],
+    });
   }
 
   const maxTenure = MAX_TENURE[String(ctx.run.request.type)] ?? 60;

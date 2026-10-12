@@ -1,50 +1,55 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-/* Design tokens (shadcn/ui convention). FinPulse uses one dark theme: deep navy surfaces with a
-   restrained teal accent. Chart colours are the validated dark-mode steps of the reference palette. */
+/* Design tokens (shadcn/ui convention). FinPulse's consumer look: a light, quiet surface, dark
+   high-contrast type, one deep-emerald accent for primary actions and good outcomes, and amber/red
+   reserved for real warnings and risks. Chart colours are the validated light steps of the
+   reference palette. */
 :root {
-  color-scheme: dark;
-  --radius: 0.625rem;
-  --background: oklch(0.165 0.022 256);
-  --foreground: oklch(0.96 0.006 250);
-  --card: oklch(0.205 0.026 256);
-  --card-foreground: oklch(0.96 0.006 250);
-  --primary: oklch(0.76 0.115 182);
-  --primary-foreground: oklch(0.18 0.03 220);
-  --secondary: oklch(0.26 0.028 256);
-  --secondary-foreground: oklch(0.96 0.006 250);
-  --muted: oklch(0.25 0.026 256);
-  --muted-foreground: oklch(0.72 0.02 252);
-  --accent: oklch(0.27 0.03 256);
-  --accent-foreground: oklch(0.96 0.006 250);
-  --success: oklch(0.76 0.14 158);
-  --warning: oklch(0.82 0.13 80);
-  --destructive: oklch(0.71 0.17 25);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 14%);
-  --ring: oklch(0.7 0.1 182);
-  --sidebar: oklch(0.135 0.022 258);
-  --sidebar-foreground: oklch(0.93 0.01 250);
-  --sidebar-muted: oklch(0.68 0.02 252);
-  --sidebar-accent: oklch(0.22 0.03 256);
+  color-scheme: light;
+  --radius: 0.75rem;
+  --background: #ffffff;
+  --foreground: #1b1f24;
+  --card: #ffffff;
+  --card-foreground: #1b1f24;
+  --primary: #0b7d57;
+  --primary-foreground: #ffffff;
+  --secondary: #f3f5f7;
+  --secondary-foreground: #1b1f24;
+  --muted: #f4f6f8;
+  --muted-foreground: #5f6670;
+  --accent: #eef7f3;
+  --accent-foreground: #0b5c41;
+  --success: #0b7d57;
+  --warning: #b45309;
+  --destructive: #c0352b;
+  --border: #e6e9ed;
+  --input: #d9dde3;
+  --ring: #0b7d57;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #1b1f24;
+  --sidebar-muted: #5f6670;
+  --sidebar-accent: #eef7f3;
 
-  /* Charts: validated reference palette (dark steps). Text never uses these. */
-  --chart-surface: oklch(0.205 0.026 256);
-  --chart-1: #3987e5;
-  --chart-2: #d95926;
-  --chart-3: #199e70;
-  --chart-negative: #e66767;
-  --chart-grid: #2a3142;
-  --chart-axis: #3a4254;
-  --chart-ink-muted: #8d95a8;
-  /* Status: reserved for meaning (always with icon + label). */
+  /* Charts: validated reference palette (light steps). Text never uses these. */
+  --chart-surface: #ffffff;
+  --chart-1: #2a78d6;
+  --chart-2: #eb6834;
+  --chart-3: #1baf7a;
+  --chart-negative: #e34948;
+  --chart-grid: #e9eaee;
+  --chart-axis: #c3c2b7;
+  --chart-ink-muted: #7a808a;
+  /* Status: reserved for meaning (always with icon + label). Fills, not text. */
   --status-good: #0ca30c;
-  --status-warning: #fab219;
+  --status-warning: #f2a516;
   --status-serious: #ec835a;
   --status-critical: #d03b3b;
-  --status-info: #8a97b3;
-  --text-good: #3ccf6e;
+  --status-info: #6b7a99;
+  /* Status text: AA contrast on white. */
+  --text-good: #0b6e4c;
+  --text-warning: #9a4d00;
+  --text-critical: #b42318;
 }
 
 @theme inline {
@@ -86,6 +91,8 @@
   --color-status-critical: var(--status-critical);
   --color-status-info: var(--status-info);
   --color-text-good: var(--text-good);
+  --color-text-warning: var(--text-warning);
+  --color-text-critical: var(--text-critical);
 }
 
 @layer base {

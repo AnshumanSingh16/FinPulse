@@ -48,7 +48,10 @@ describe("affordability workflow (no AI key)", () => {
     expect(run.research?.sources[0]?.kind).toBe("illustrative");
     expect(run.scenarios?.length).toBeGreaterThanOrEqual(4);
     expect(run.recommendation?.narrative).toBeNull(); // no AI: no AI narrative, never canned text
-    expect(run.recommendation?.alternatives.map((a) => a.id)).toContain("lower_price");
+    expect(run.recommendation?.alternatives.map((a) => a.id)).toEqual(
+      expect.arrayContaining(["lower_price", "save_first", "higher_down_payment"]),
+    );
+    expect(run.plan[0]?.title).toBe("Understanding your goal");
     // upfront costs and ownership costs were not entered: disclosed, not silent
     expect(run.assumptions.find((a) => a.id === "in_upfront")?.basis).toBe("illustrative");
     expect(run.findings.some((f) => f.field === "monthlyOwnershipCost")).toBe(true);

@@ -10,7 +10,7 @@ import type { ActionPlan } from "@/lib/personal/store";
 import { cn } from "@/lib/utils";
 
 import { usePersonal } from "./provider";
-import { ApprovalBadge, Notice } from "./ui";
+import { ApprovalBadge, ConfirmDialog, Notice, inputClass } from "./ui";
 
 const CATEGORY: Record<string, string> = {
   savings: "Savings",
@@ -43,6 +43,7 @@ export function ActionPlanCard({ plan, compact = false }: { plan: ActionPlan; co
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState("");
+  const [confirm, setConfirm] = useState<"approve" | "reject" | "complete" | null>(null);
 
   async function act(body: Record<string, unknown>, key: string) {
     setBusy(key);
@@ -79,7 +80,7 @@ export function ActionPlanCard({ plan, compact = false }: { plan: ActionPlan; co
       </div>
 
       {plan.savingsPlan ? (
-        <div className="rounded-lg border bg-background/40 p-3 text-sm">
+        <div className="rounded-xl bg-accent/60 p-4 text-sm">
           <div className="font-medium">Savings plan</div>
           <div className="text-muted-foreground">
             Save{" "}
@@ -99,9 +100,9 @@ export function ActionPlanCard({ plan, compact = false }: { plan: ActionPlan; co
         </div>
       ) : null}
 
-      <ul className="flex flex-col gap-1.5">
+      <ul className="flex flex-col divide-y">
         {plan.items.map((item) => (
-          <li key={item.id} className="flex gap-3 rounded-lg border bg-background/30 p-3">
+          <li key={item.id} className="flex gap-3 py-3">
             <button
               type="button"
               disabled={!canTick || item.requiresIntegration || busy !== null}
@@ -135,8 +136,8 @@ export function ActionPlanCard({ plan, compact = false }: { plan: ActionPlan; co
                   {CATEGORY[item.category]}
                 </span>
                 {item.requiresIntegration ? (
-                  <span className="inline-flex items-center gap-1 rounded bg-status-warning/10 px-1.5 py-0.5 text-[10px] text-status-warning">
-                    <PlugZap className="size-3" /> No integration — not executable here
+                  <span className="inline-flex items-center gap-1 rounded bg-status-warning/10 px-1.5 py-0.5 text-[10px] text-text-warning">
+                    <PlugZap className="size-3" /> Do this with the provider
                   </span>
                 ) : null}
               </div>
@@ -185,44 +186,37 @@ export function ActionPlanCard({ plan, compact = false }: { plan: ActionPlan; co
       <div className="flex flex-col gap-2 border-t pt-3">
         {plan.status === "awaiting_review" ? (
           <>
-            <input
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              maxLength={300}
-              placeholder="Optional note (e.g. why you are rejecting)"
-              className="h-9 rounded-md border bg-background/60 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
-            <div className="flex flex-wrap gap-2">
-              <Button
-                onClick={() => act({ action: "approve", note: note || undefined }, "approve")}
-                disabled={busy !== null}
-              >
-                {busy === "approve" ? "Approving…" : "Approve checklist"}
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button size="lg" onClick={() => setConfirm("approve")} disabled={busy !== null}>
+                Approve these steps
               </Button>
               <Button
                 variant="outline"
-                onClick={() => act({ action: "reject", note: note || undefined }, "reject")}
+                size="lg"
+                onClick={() => setConfirm("reject")}
                 disabled={busy !== null}
               >
-                {busy === "reject" ? "Rejecting…" : "Reject"}
+                Not now
               </Button>
             </div>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               Approving lets you track these steps here. It does not contact any lender or move
               money.
             </p>
           </>
         ) : null}
         {plan.status === "approved" ? (
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-3">
             <Button
-              onClick={() => act({ action: "complete" }, "complete")}
+              onClick={() => setConfirm("complete")}
               disabled={busy !== null || openItems > 0}
             >
-              Mark plan completed
+              Mark all done
             </Button>
             <span className="text-xs text-muted-foreground">
-              {openItems ? `${openItems} item(s) still open` : "All trackable items are done"}
+              {openItems
+                ? `${openItems} step(s) still to tick off`
+                : "Every trackable step is done"}
             </span>
           </div>
         ) : null}
@@ -240,6 +234,57 @@ export function ActionPlanCard({ plan, compact = false }: { plan: ActionPlan; co
           Download checklist (.md)
         </Button>
       </div>
+      <ConfirmDialog
+        open={confirm === "approve"}
+        title="Approve these next steps?"
+        confirmLabel="Approve"
+        busy={busy === "approve"}
+        onClose={() => setConfirm(null)}
+        onConfirm={async () => {
+          await act({ action: "approve" }, "approve");
+          setConfirm(null);
+        }}
+      >
+        You&apos;ll be able to tick steps off as you do them. FinPulse won&apos;t contact lenders,
+        submit applications or move money — steps marked “do it with the provider” stay with you.
+      </ConfirmDialog>
+      <ConfirmDialog
+        open={confirm === "reject"}
+        title="Set these steps aside?"
+        confirmLabel="Set aside"
+        busy={busy === "reject"}
+        onClose={() => setConfirm(null)}
+        onConfirm={async () => {
+          await act({ action: "reject", note: note || undefined }, "reject");
+          setConfirm(null);
+        }}
+      >
+        <span className="mb-3 block">You can reopen them later from Next steps.</span>
+        <label className="flex flex-col gap-1.5 text-foreground">
+          <span className="text-sm font-medium">Why? (optional)</span>
+          <input
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            maxLength={300}
+            placeholder="e.g. waiting for a better rate"
+            className={inputClass}
+          />
+        </label>
+      </ConfirmDialog>
+      <ConfirmDialog
+        open={confirm === "complete"}
+        title="Mark this plan as done?"
+        confirmLabel="Mark done"
+        busy={busy === "complete"}
+        onClose={() => setConfirm(null)}
+        onConfirm={async () => {
+          await act({ action: "complete" }, "complete");
+          setConfirm(null);
+        }}
+      >
+        Steps that need a bank or lender are not done by FinPulse; make sure you&apos;ve handled
+        them directly.
+      </ConfirmDialog>
     </div>
   );
 }

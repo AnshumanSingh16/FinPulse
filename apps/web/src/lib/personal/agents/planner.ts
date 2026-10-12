@@ -223,54 +223,58 @@ export function buildPlan(opts: { research: boolean; liveResearch: boolean }): P
   });
   return [
     step(
+      "understand",
+      "planner",
+      "Understanding your goal",
+      "Reading what you want to buy and the details you mentioned.",
+    ),
+    step(
       "collect",
       "planner",
-      "Check profile and purchase details",
-      "A meaningful answer needs income, expenses, savings and existing EMIs.",
+      "Checking your financial profile",
+      "A reliable answer needs income, expenses, savings and existing EMIs.",
     ),
     ...(opts.research
       ? [
           step(
             "research",
             "research",
+            "Researching available options",
             opts.liveResearch
-              ? "Research current financing options"
-              : "Gather financing assumptions",
-            opts.liveResearch
-              ? "Live web search for published rates, each kept only with a retrieved source."
-              : "Live research is not configured: clearly labelled illustrative ranges are used.",
+              ? "Live web search for published rates; each kept only with a retrieved source."
+              : "Live research isn't configured, so clearly labelled illustrative ranges are used.",
           ),
         ]
       : []),
     step(
       "analyse",
       "analysis",
-      "Calculate loan and cash-flow outcomes",
-      "EMI, total interest, post-purchase savings and debt load, from deterministic formulas.",
+      "Calculating costs",
+      "EMI, interest, upfront cash and what's left each month, from tested formulas.",
     ),
     step(
       "stress",
       "risk",
-      "Stress-test downside scenarios",
-      "How the plan holds up if income falls, expenses or rates rise, or a shock hits.",
+      "Stress-testing your finances",
+      "What happens if income falls, costs or rates rise, or a shock hits.",
     ),
     step(
       "verify",
       "verification",
-      "Verify inputs and challenge assumptions",
-      "Flag missing, inconsistent or optimistic inputs before anything is recommended.",
+      "Verifying assumptions",
+      "Flagging missing, inconsistent or optimistic inputs.",
     ),
     step(
       "synthesise",
       "planner",
-      "Synthesise recommendation and alternatives",
-      "Combine the findings; compute safer alternatives with the same tools.",
+      "Preparing your recommendation",
+      "Combining the findings and working out safer alternatives.",
     ),
     step(
       "act",
       "action",
-      "Prepare next steps for your approval",
-      "A checklist and document list you review; nothing is submitted anywhere.",
+      "Preparing your next steps",
+      "A checklist for you to review. Nothing is submitted anywhere.",
     ),
   ];
 }

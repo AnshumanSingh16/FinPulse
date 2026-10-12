@@ -54,10 +54,8 @@ export function DocumentCenter() {
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-1">
-        <div className="text-xs font-medium tracking-wide text-primary uppercase">
-          Document intelligence
-        </div>
-        <h1 className="text-2xl font-semibold tracking-tight">Documents</h1>
+        <div className="text-xs font-medium text-primary">Check your documents</div>
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">Documents</h1>
         <p className="max-w-2xl text-sm text-muted-foreground">
           Upload salary slips, bank statements or loan quotes. FinPulse extracts figures, compares
           them with your profile and flags mismatches. Extracted values are proposals — nothing
@@ -172,7 +170,7 @@ function DocumentCard({ doc }: { doc: DocumentRecord }) {
               ? "bg-status-good/10 text-text-good"
               : doc.review === "dismissed"
                 ? "bg-muted text-muted-foreground"
-                : "bg-status-warning/10 text-status-warning",
+                : "bg-status-warning/10 text-text-warning",
           )}
         >
           Review: {doc.review}
@@ -247,7 +245,7 @@ function DocumentCard({ doc }: { doc: DocumentRecord }) {
                           {pf ? "No profile value" : "Reference only"}
                         </span>
                       ) : diff > 0.05 ? (
-                        <span className="text-status-warning">
+                        <span className="text-text-warning">
                           Differs by {Math.round(diff * 100)}%
                         </span>
                       ) : (

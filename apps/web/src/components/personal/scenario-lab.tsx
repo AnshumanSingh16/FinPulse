@@ -80,10 +80,8 @@ export function ScenarioLab() {
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-1">
-        <div className="text-xs font-medium tracking-wide text-primary uppercase">
-          Risk agent · what-if lab
-        </div>
-        <h1 className="text-2xl font-semibold tracking-tight">Scenarios</h1>
+        <div className="text-xs font-medium text-primary">Stress-test a plan</div>
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">What-if scenarios</h1>
         <p className="max-w-2xl text-sm text-muted-foreground">
           Change the assumptions and stress events, then re-run the Risk Agent&apos;s simulation.
           These are hypothetical scenarios, not predictions.
@@ -186,7 +184,7 @@ export function ScenarioLab() {
               {scenarios.map((s, i) => (
                 <div
                   key={s.id}
-                  className="grid items-end gap-3 rounded-lg border bg-background/30 p-3 sm:grid-cols-2 lg:grid-cols-[1.4fr_repeat(5,1fr)_auto]"
+                  className="grid items-end gap-3 rounded-2xl border p-4 sm:grid-cols-2 lg:grid-cols-[1.4fr_repeat(5,1fr)_auto]"
                 >
                   <div className="flex flex-col gap-1.5">
                     <label
@@ -276,7 +274,7 @@ export function ScenarioLab() {
                       "flex flex-col gap-2 rounded-lg border p-3 text-left transition",
                       focus === r.params.id
                         ? "border-primary/60 bg-primary/5"
-                        : "bg-background/30 hover:border-foreground/30",
+                        : "hover:border-foreground/30",
                       r.isBaseline && "cursor-default",
                     )}
                   >
@@ -294,7 +292,7 @@ export function ScenarioLab() {
                       <dd
                         className={cn(
                           "tabular text-right",
-                          r.monthlySurplus < 0 && "text-chart-negative",
+                          r.monthlySurplus < 0 && "text-text-critical",
                         )}
                       >
                         {formatINR(r.monthlySurplus)}
@@ -305,7 +303,7 @@ export function ScenarioLab() {
                       <dd
                         className={cn(
                           "tabular text-right",
-                          r.savingsAfterHorizon < 0 && "text-chart-negative",
+                          r.savingsAfterHorizon < 0 && "text-text-critical",
                         )}
                       >
                         {formatINR(r.savingsAfterHorizon)}
@@ -316,12 +314,12 @@ export function ScenarioLab() {
                       </dd>
                     </dl>
                     {r.monthExhausted !== null ? (
-                      <span className="text-xs text-chart-negative">
+                      <span className="text-xs text-text-critical">
                         Savings run out in month {r.monthExhausted}
                       </span>
                     ) : null}
                     {r.breaches.length ? (
-                      <span className="text-xs text-status-warning">
+                      <span className="text-xs text-text-warning">
                         Breaches: {r.breaches.join(", ")}
                       </span>
                     ) : null}

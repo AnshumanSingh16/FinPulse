@@ -15,7 +15,8 @@ import { formatINR } from "@/lib/format";
 import { analysePurchase, LABEL_TEXT } from "../finance/affordability";
 import { findINRAmounts, inrWords } from "../finance/parse-inr";
 import { runScenarioSet, type ScenarioParams } from "../finance/scenarios";
-import { PURCHASE_TYPES, type PurchaseRequest, type PurchaseType } from "../schemas";
+import { detectPurchaseType } from "../goal";
+import { PURCHASE_TYPES, type PurchaseRequest } from "../schemas";
 import { audit, newId, type SessionState } from "../store";
 import { aiStatus, describeAiError, effort, getClient, modelId, UNTRUSTED_DATA_RULE } from "./llm";
 import { runAffordabilityWorkflow, type WorkflowListener } from "./orchestrator";
@@ -460,16 +461,6 @@ async function aiTurn(
 
 // ---------------------------------------------------------------- rule-based mode
 
-function detectType(text: string): PurchaseType | null {
-  const t = text.toLowerCase();
-  if (/\b(house|home|flat|apartment|villa|property|2bhk|3bhk|bhk)\b/.test(t)) return "house";
-  if (/\b(car|suv|vehicle|bike|scooter)\b/.test(t)) return "car";
-  if (/\b(mba|education|college|degree|course|masters|university|study|studies)\b/.test(t))
-    return "education";
-  if (/\b(business|shop|startup|franchise|store)\b/.test(t)) return "business";
-  return null;
-}
-
 function scenarioFromText(text: string): z.infer<typeof ScenarioArgs> | null {
   const t = text.toLowerCase();
   const args: z.infer<typeof ScenarioArgs> = {};
@@ -515,7 +506,7 @@ async function ruleTurn(
   const amounts = findINRAmounts(message).filter(
     (a) => a.hasCurrency || a.hasUnit || a.value >= 10_000,
   );
-  const type = detectType(message);
+  const type = detectPurchaseType(message);
 
   if (/compare|versus|\bvs\.?\b/.test(t) && amounts.length >= 2) {
     const { ok, output } = await executeTool(

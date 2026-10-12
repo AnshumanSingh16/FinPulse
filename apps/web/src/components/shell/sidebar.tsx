@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, Briefcase, Menu, Presentation, ServerCog, X } from "lucide-react";
+import { Activity, Briefcase, Ellipsis, Presentation, ServerCog, X } from "lucide-react";
 import Link from "next/link";
 import { useParams, usePathname, useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -8,23 +8,15 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 import { SECTIONS, currentSection, sectionHref } from "./nav";
-import { PERSONAL_SECTIONS } from "./personal-nav";
+import { PERSONAL_SECTIONS, isActive } from "./personal-nav";
 
 function Brand() {
   return (
-    <Link
-      href="/"
-      className="flex items-center gap-2.5 font-semibold tracking-tight text-sidebar-foreground"
-    >
-      <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+    <Link href="/" className="flex items-center gap-2.5 font-semibold tracking-tight">
+      <span className="flex size-8 items-center justify-center rounded-xl bg-primary text-primary-foreground">
         <Activity className="size-4" aria-hidden />
       </span>
-      <span className="flex flex-col leading-none">
-        <span>FinPulse</span>
-        <span className="mt-1 text-[10px] font-medium tracking-[0.12em] text-sidebar-muted uppercase">
-          On autopilot
-        </span>
-      </span>
+      <span className="text-[17px]">FinPulse</span>
     </Link>
   );
 }
@@ -34,34 +26,30 @@ function NavLink({
   active,
   icon: Icon,
   children,
-  highlight,
 }: {
   href: string;
   active: boolean;
   icon: typeof Activity;
   children: React.ReactNode;
-  highlight?: boolean;
 }) {
   return (
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm transition-colors",
+        "flex min-h-10 items-center gap-3 rounded-xl px-3 text-sm transition-colors",
         active
-          ? "bg-sidebar-accent font-medium text-sidebar-foreground"
-          : highlight
-            ? "text-primary hover:bg-sidebar-accent/60"
-            : "text-sidebar-muted hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
+          ? "bg-accent font-medium text-accent-foreground"
+          : "text-muted-foreground hover:bg-muted hover:text-foreground",
       )}
     >
-      <Icon className="size-4 shrink-0" aria-hidden />
+      <Icon className="size-[18px] shrink-0" aria-hidden />
       <span className="truncate">{children}</span>
     </Link>
   );
 }
 
-function SidebarBody() {
+function NavBody() {
   const pathname = usePathname();
   const params = useParams<{ entityId?: string }>();
   const asOf = useSearchParams().get("asOf");
@@ -71,31 +59,27 @@ function SidebarBody() {
     pathname.startsWith("/business") || pathname.startsWith("/entities") || pathname === "/demo";
 
   return (
-    <div className="flex h-full flex-col gap-6 overflow-y-auto p-4">
-      <Brand />
+    <div className="flex h-full flex-col gap-6 overflow-y-auto px-3 py-5">
+      <div className="px-2">
+        <Brand />
+      </div>
       <nav aria-label="Main" className="flex flex-col gap-0.5">
         {PERSONAL_SECTIONS.map((s) => (
-          <NavLink
-            key={s.href}
-            href={s.href}
-            active={s.href === "/" ? pathname === "/" : pathname.startsWith(s.href)}
-            icon={s.icon}
-            highlight={s.primary}
-          >
+          <NavLink key={s.href} href={s.href} active={isActive(pathname, s.href)} icon={s.icon}>
             {s.label}
           </NavLink>
         ))}
       </nav>
       <nav aria-label="Business module" className="flex flex-col gap-0.5">
-        <div className="mb-1 px-2.5 text-[10px] font-semibold tracking-[0.12em] text-sidebar-muted uppercase">
-          Business module
+        <div className="mb-1 px-3 text-[11px] font-medium text-muted-foreground">
+          For businesses
         </div>
         <NavLink href="/business" active={pathname === "/business"} icon={Briefcase}>
-          Business risk portfolio
+          Business risk
         </NavLink>
         {inBusiness ? (
           <NavLink href="/demo" active={pathname === "/demo"} icon={Presentation}>
-            Business demo walkthrough
+            Business demo
           </NavLink>
         ) : null}
         {entityId
@@ -115,56 +99,92 @@ function SidebarBody() {
         <NavLink href="/system" active={pathname === "/system"} icon={ServerCog}>
           System status
         </NavLink>
-        <p className="px-2.5 text-[11px] leading-relaxed text-sidebar-muted">
-          Decision support, not financial advice. Demo data is fictional. FinPulse never submits
-          applications or moves money.
+        <p className="px-3 text-[11px] leading-relaxed text-muted-foreground">
+          Decision support, not financial advice. FinPulse never submits applications or moves
+          money.
         </p>
       </div>
     </div>
   );
 }
 
+/** Desktop: a quiet left rail. Mobile: a top bar plus a thumb-reachable bottom tab bar. */
 export function Sidebar() {
   const pathname = usePathname();
-  // The menu belongs to the page it was opened on: navigating closes it.
+  // "More" belongs to the page it was opened on: navigating closes it.
   const [openOn, setOpenOn] = useState<string | null>(null);
   const open = openOn === pathname;
-  const setOpen = (value: boolean) => setOpenOn(value ? pathname : null);
+  const tabs = PERSONAL_SECTIONS.filter((s) => s.tab);
+  const moreActive = !tabs.some((t) => isActive(pathname, t.href));
 
   return (
     <>
-      <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 bg-sidebar lg:block">
-        <SidebarBody />
+      <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 border-r bg-sidebar lg:block">
+        <NavBody />
       </aside>
-      <header className="sticky top-0 z-30 flex h-14 items-center justify-between bg-sidebar px-4 lg:hidden">
+
+      <header className="sticky top-0 z-30 flex h-14 items-center border-b bg-background/95 px-4 backdrop-blur lg:hidden">
         <Brand />
+      </header>
+
+      <nav
+        aria-label="Main"
+        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
+      >
+        {tabs.map((t) => {
+          const active = isActive(pathname, t.href);
+          return (
+            <Link
+              key={t.href}
+              href={t.href}
+              aria-current={active ? "page" : undefined}
+              className={cn(
+                "flex min-h-14 flex-col items-center justify-center gap-0.5 text-[11px]",
+                active ? "font-medium text-primary" : "text-muted-foreground",
+              )}
+            >
+              <t.icon className="size-5" aria-hidden />
+              {t.short}
+            </Link>
+          );
+        })}
         <button
           type="button"
-          onClick={() => setOpen(true)}
-          className="rounded-md p-2 text-sidebar-foreground hover:bg-sidebar-accent"
-          aria-label="Open navigation"
+          onClick={() => setOpenOn(pathname)}
+          className={cn(
+            "flex min-h-14 flex-col items-center justify-center gap-0.5 text-[11px]",
+            moreActive ? "font-medium text-primary" : "text-muted-foreground",
+          )}
+          aria-haspopup="dialog"
         >
-          <Menu className="size-5" />
+          <Ellipsis className="size-5" aria-hidden />
+          More
         </button>
-      </header>
+      </nav>
+
       {open ? (
-        <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true">
+        <div
+          className="fixed inset-0 z-40 lg:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-label="More"
+        >
           <button
             type="button"
-            className="absolute inset-0 bg-black/50"
-            aria-label="Close navigation"
-            onClick={() => setOpen(false)}
+            className="absolute inset-0 bg-black/40"
+            aria-label="Close menu"
+            onClick={() => setOpenOn(null)}
           />
-          <div className="absolute inset-y-0 left-0 w-72 bg-sidebar shadow-xl">
+          <div className="absolute inset-x-0 bottom-0 max-h-[85dvh] overflow-y-auto rounded-t-2xl bg-background shadow-xl">
             <button
               type="button"
-              onClick={() => setOpen(false)}
-              className="absolute top-3 right-3 rounded-md p-2 text-sidebar-foreground hover:bg-sidebar-accent"
-              aria-label="Close navigation"
+              onClick={() => setOpenOn(null)}
+              className="absolute top-4 right-4 rounded-full p-2 hover:bg-muted"
+              aria-label="Close menu"
             >
               <X className="size-5" />
             </button>
-            <SidebarBody />
+            <NavBody />
           </div>
         </div>
       ) : null}

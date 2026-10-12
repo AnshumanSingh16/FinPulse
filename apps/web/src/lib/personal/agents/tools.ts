@@ -17,6 +17,7 @@ import {
 import { monthlySavingsRequired, monthsToReachGoal } from "../finance/health";
 import { calculateEMI, calculateTotalInterest, calculateTotalRepayment } from "../finance/loan";
 import { runScenarioSet, STANDARD_SCENARIOS, type ScenarioResult } from "../finance/scenarios";
+import { interpretGoal } from "../goal";
 import { ProfileValuesSchema, PurchaseRequestSchema, PURCHASE_TYPES } from "../schemas";
 import { buildActionPlan, type ActionPlanInput } from "./action";
 import { resolveInputs } from "./planner";
@@ -81,6 +82,19 @@ export const resolveInputsTool: ToolDef<
     o.missing.length
       ? `${o.missing.length} required input(s) missing: ${o.missing.map((m) => m.label).join(", ")}`
       : `all required inputs present; ${o.assumptions.filter((a) => a.basis === "illustrative" || a.basis === "default").length} disclosed assumption(s)`,
+};
+
+export const interpretGoalTool: ToolDef<{ goal: string }, ReturnType<typeof interpretGoal>> = {
+  name: "interpret_goal",
+  agent: "planner",
+  description:
+    "Extract the purchase type, price and any stated loan terms from the user's goal text (rule-based).",
+  input: z.object({ goal: z.string().max(500) }),
+  run: ({ goal }) => interpretGoal(goal),
+  summarize: (o) =>
+    o.understood.length
+      ? `understood ${o.understood.join("; ")}`
+      : "no purchase details found in the text",
 };
 
 export const researchTool: ToolDef<

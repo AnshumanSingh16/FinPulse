@@ -1,49 +1,73 @@
 "use client";
 
+/**
+ * FinPulse's design system for the personal product. Light, quiet surfaces; dark type; one
+ * emerald accent; amber and red only for real warnings. Every page reuses these so spacing, type
+ * and interaction patterns stay consistent.
+ */
 import {
   AlertTriangle,
   CheckCircle2,
+  ChevronDown,
   Info,
   OctagonAlert,
   ShieldAlert,
   Sparkles,
 } from "lucide-react";
-import type * as React from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 
+import { Button } from "@/components/ui/button";
 import type { AffordabilityLabel, CheckStatus } from "@/lib/personal/finance/affordability";
 import type { StateView } from "@/lib/personal/client";
 import type { FieldSourceKind } from "@/lib/personal/schemas";
 import type { ApprovalStatus } from "@/lib/personal/store";
 import { cn } from "@/lib/utils";
 
+// ---------------------------------------------------------------- assessment & status
+
+export type Tone = "good" | "warn" | "bad" | "neutral";
+
 export const ASSESSMENT: Record<
   AffordabilityLabel,
-  { text: string; short: string; className: string; icon: typeof Info }
+  { text: string; short: string; tone: Tone; icon: typeof Info }
 > = {
   comfortable: {
     text: "Comfortable under the stated assumptions",
     short: "Comfortable",
-    className: "border-status-good/40 bg-status-good/10 text-text-good",
+    tone: "good",
     icon: CheckCircle2,
   },
   manageable_limited_buffer: {
     text: "Potentially manageable, but with limited buffer",
     short: "Limited buffer",
-    className: "border-status-warning/40 bg-status-warning/10 text-status-warning",
+    tone: "warn",
     icon: AlertTriangle,
   },
   high_strain: {
     text: "High financial strain under the stated assumptions",
     short: "High strain",
-    className: "border-status-critical/50 bg-status-critical/10 text-chart-negative",
+    tone: "bad",
     icon: OctagonAlert,
   },
   insufficient_information: {
     text: "Insufficient information for a reliable assessment",
     short: "Need more info",
-    className: "border-border bg-muted text-muted-foreground",
+    tone: "neutral",
     icon: Info,
   },
+};
+
+export const TONE_TEXT: Record<Tone, string> = {
+  good: "text-text-good",
+  warn: "text-text-warning",
+  bad: "text-text-critical",
+  neutral: "text-muted-foreground",
+};
+export const TONE_SOFT: Record<Tone, string> = {
+  good: "bg-status-good/10 text-text-good",
+  warn: "bg-status-warning/15 text-text-warning",
+  bad: "bg-status-critical/10 text-text-critical",
+  neutral: "bg-muted text-muted-foreground",
 };
 
 export function AssessmentBadge({
@@ -60,8 +84,8 @@ export function AssessmentBadge({
   return (
     <span
       className={cn(
-        "inline-flex w-fit items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium",
-        a.className,
+        "inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium",
+        TONE_SOFT[a.tone],
         className,
       )}
     >
@@ -73,19 +97,19 @@ export function AssessmentBadge({
 
 export function CheckBadge({ status }: { status: CheckStatus }) {
   const map = {
-    pass: { t: "Pass", c: "text-text-good bg-status-good/10", i: CheckCircle2 },
-    warn: { t: "Watch", c: "text-status-warning bg-status-warning/10", i: AlertTriangle },
-    fail: { t: "Breach", c: "text-chart-negative bg-status-critical/10", i: OctagonAlert },
-  }[status];
-  const Icon = map.i;
+    pass: { t: "Pass", tone: "good", i: CheckCircle2 },
+    warn: { t: "Watch", tone: "warn", i: AlertTriangle },
+    fail: { t: "Breach", tone: "bad", i: OctagonAlert },
+  } as const;
+  const m = map[status];
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium",
-        map.c,
+        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
+        TONE_SOFT[m.tone],
       )}
     >
-      <Icon className="size-3" aria-hidden /> {map.t}
+      <m.i className="size-3" aria-hidden /> {m.t}
     </span>
   );
 }
@@ -94,13 +118,13 @@ const SOURCE: Record<
   FieldSourceKind | "illustrative" | "default" | "research",
   { t: string; c: string }
 > = {
-  user: { t: "You entered", c: "bg-primary/10 text-primary" },
-  demo: { t: "Demo data", c: "bg-chart-1/15 text-[#8fb8ee]" },
-  document: { t: "From document", c: "bg-chart-3/15 text-[#6fd3ad]" },
+  user: { t: "You entered", c: "bg-accent text-accent-foreground" },
+  demo: { t: "Demo data", c: "bg-[#eaf1fb] text-[#1d5aa6]" },
+  document: { t: "From document", c: "bg-[#e9f6f0] text-[#0b6e4c]" },
   derived: { t: "Calculated", c: "bg-muted text-muted-foreground" },
-  illustrative: { t: "Illustrative", c: "bg-status-warning/10 text-status-warning" },
-  default: { t: "Default assumption", c: "bg-status-warning/10 text-status-warning" },
-  research: { t: "Researched", c: "bg-chart-3/15 text-[#6fd3ad]" },
+  illustrative: { t: "Estimate", c: "bg-status-warning/15 text-text-warning" },
+  default: { t: "Assumed", c: "bg-status-warning/15 text-text-warning" },
+  research: { t: "Researched", c: "bg-[#e9f6f0] text-[#0b6e4c]" },
 };
 
 export function SourceBadge({ kind }: { kind: keyof typeof SOURCE }) {
@@ -108,7 +132,7 @@ export function SourceBadge({ kind }: { kind: keyof typeof SOURCE }) {
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[10px] font-medium tracking-wide uppercase",
+        "inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10.5px] font-medium",
         s.c,
       )}
     >
@@ -117,13 +141,13 @@ export function SourceBadge({ kind }: { kind: keyof typeof SOURCE }) {
   );
 }
 
-export const APPROVAL: Record<ApprovalStatus, { t: string; c: string }> = {
-  draft: { t: "Draft", c: "bg-muted text-muted-foreground" },
-  awaiting_review: { t: "Awaiting your review", c: "bg-status-warning/10 text-status-warning" },
-  approved: { t: "Approved", c: "bg-primary/15 text-primary" },
-  rejected: { t: "Rejected", c: "bg-status-critical/10 text-chart-negative" },
-  completed: { t: "Completed", c: "bg-status-good/10 text-text-good" },
-  failed: { t: "Failed", c: "bg-status-critical/10 text-chart-negative" },
+export const APPROVAL: Record<ApprovalStatus, { t: string; tone: Tone }> = {
+  draft: { t: "Draft", tone: "neutral" },
+  awaiting_review: { t: "Waiting for your review", tone: "warn" },
+  approved: { t: "Approved", tone: "good" },
+  rejected: { t: "Rejected", tone: "bad" },
+  completed: { t: "Completed", tone: "good" },
+  failed: { t: "Failed", tone: "bad" },
 };
 
 export function ApprovalBadge({ status }: { status: ApprovalStatus }) {
@@ -131,8 +155,8 @@ export function ApprovalBadge({ status }: { status: ApprovalStatus }) {
   return (
     <span
       className={cn(
-        "inline-flex w-fit items-center rounded-md px-2 py-0.5 text-xs font-medium",
-        s.c,
+        "inline-flex w-fit items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
+        TONE_SOFT[s.tone],
       )}
     >
       {s.t}
@@ -140,150 +164,332 @@ export function ApprovalBadge({ status }: { status: ApprovalStatus }) {
   );
 }
 
+// ---------------------------------------------------------------- feedback
+
 export function Notice({
   tone = "info",
   title,
   children,
   className,
+  action,
 }: {
   tone?: "info" | "warning" | "error" | "success";
-  title?: React.ReactNode;
-  children?: React.ReactNode;
+  title?: ReactNode;
+  children?: ReactNode;
   className?: string;
+  action?: ReactNode;
 }) {
   const map = {
-    info: { c: "border-border bg-muted/50", i: Info, ic: "text-muted-foreground" },
-    warning: {
-      c: "border-status-warning/40 bg-status-warning/5",
-      i: AlertTriangle,
-      ic: "text-status-warning",
-    },
-    error: {
-      c: "border-status-critical/50 bg-status-critical/5",
-      i: ShieldAlert,
-      ic: "text-chart-negative",
-    },
-    success: { c: "border-status-good/40 bg-status-good/5", i: CheckCircle2, ic: "text-text-good" },
+    info: { c: "bg-muted", i: Info, ic: "text-muted-foreground" },
+    warning: { c: "bg-status-warning/10", i: AlertTriangle, ic: "text-text-warning" },
+    error: { c: "bg-status-critical/8", i: ShieldAlert, ic: "text-text-critical" },
+    success: { c: "bg-status-good/8", i: CheckCircle2, ic: "text-text-good" },
   }[tone];
   const Icon = map.i;
   return (
     <div
       role={tone === "error" ? "alert" : undefined}
-      className={cn("flex gap-3 rounded-xl border p-3.5 text-sm", map.c, className)}
+      className={cn("flex gap-3 rounded-xl p-3.5 text-sm", map.c, className)}
     >
       <Icon className={cn("mt-0.5 size-4 shrink-0", map.ic)} aria-hidden />
-      <div className="flex min-w-0 flex-col gap-1">
-        {title ? <div className="font-medium">{title}</div> : null}
-        {children ? <div className="text-muted-foreground">{children}</div> : null}
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        {title ? <div className="font-medium text-foreground">{title}</div> : null}
+        {children ? <div className="text-pretty text-muted-foreground">{children}</div> : null}
       </div>
+      {action ? <div className="shrink-0 self-center">{action}</div> : null}
     </div>
   );
 }
 
-/** Which AI / research mode is active — shown wherever results are produced. */
+/** Which AI / research mode is active, stated quietly. */
 export function ModeStrip({ status }: { status: StateView["status"] | undefined }) {
   if (!status) return null;
   return (
-    <div className="flex flex-wrap items-center gap-2 text-xs">
-      <span
-        className={cn(
-          "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1",
-          status.ai.enabled ? "border-primary/40 text-primary" : "text-muted-foreground",
-        )}
-      >
-        <Sparkles className="size-3.5" aria-hidden />
-        {status.ai.enabled ? `AI: ${status.ai.model}` : "AI not configured — deterministic mode"}
+    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+      <span className="inline-flex items-center gap-1">
+        <Sparkles className={cn("size-3.5", status.ai.enabled && "text-primary")} aria-hidden />
+        {status.ai.enabled ? "AI assistant on" : "AI off — calculations still work"}
       </span>
-      <span
-        className={cn(
-          "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1",
-          status.research.mode === "live"
-            ? "border-primary/40 text-primary"
-            : "text-muted-foreground",
-        )}
-      >
-        Research: {status.research.mode === "live" ? "live web search" : "illustrative assumptions"}
+      <span aria-hidden>·</span>
+      <span>
+        {status.research.mode === "live"
+          ? "Live rate research"
+          : "Rates are illustrative estimates"}
       </span>
-    </div>
+    </p>
   );
 }
 
 export function Loading({ label = "Loading…" }: { label?: string }) {
   return (
-    <div className="flex items-center gap-3 rounded-xl border bg-card p-6 text-sm text-muted-foreground">
-      <span
-        className="size-4 animate-spin rounded-full border-2 border-primary border-t-transparent"
-        aria-hidden
-      />
-      {label}
+    <div className="flex flex-col gap-3" aria-busy="true" aria-live="polite">
+      <span className="sr-only">{label}</span>
+      <div className="h-7 w-56 animate-pulse rounded-md bg-muted" />
+      <div className="h-4 w-80 max-w-full animate-pulse rounded bg-muted" />
+      <div className="mt-2 grid grid-cols-2 gap-4 md:grid-cols-4">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="h-16 animate-pulse rounded-xl bg-muted" />
+        ))}
+      </div>
     </div>
   );
 }
 
+export function EmptyState({
+  title,
+  children,
+  action,
+  icon: Icon = Info,
+}: {
+  title: string;
+  children?: ReactNode;
+  action?: ReactNode;
+  icon?: typeof Info;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-2 rounded-2xl bg-muted/70 px-6 py-10 text-center">
+      <Icon className="size-6 text-muted-foreground" aria-hidden />
+      <p className="text-sm font-medium">{title}</p>
+      {children ? <div className="max-w-md text-sm text-muted-foreground">{children}</div> : null}
+      {action ? <div className="mt-2">{action}</div> : null}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------- layout
+
+export function PageTitle({
+  eyebrow,
+  title,
+  description,
+  actions,
+}: {
+  eyebrow?: string;
+  title: string;
+  description?: ReactNode;
+  actions?: ReactNode;
+}) {
+  return (
+    <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex min-w-0 flex-col gap-1">
+        {eyebrow ? <div className="text-xs font-medium text-primary">{eyebrow}</div> : null}
+        <h1 className="text-2xl font-semibold tracking-tight text-balance sm:text-[28px]">
+          {title}
+        </h1>
+        {description ? (
+          <p className="max-w-2xl text-sm text-pretty text-muted-foreground">{description}</p>
+        ) : null}
+      </div>
+      {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
+    </header>
+  );
+}
+
+/** A titled block. `card` gives it a white surface with a hairline border; otherwise it's flat. */
 export function Section({
   title,
   description,
   actions,
   children,
   className,
+  card = true,
+  id,
 }: {
-  title: React.ReactNode;
-  description?: React.ReactNode;
-  actions?: React.ReactNode;
-  children: React.ReactNode;
+  title?: ReactNode;
+  description?: ReactNode;
+  actions?: ReactNode;
+  children: ReactNode;
   className?: string;
+  card?: boolean;
+  id?: string;
 }) {
   return (
     <section
+      id={id}
       className={cn(
-        "flex flex-col gap-4 rounded-xl border bg-card p-4 shadow-sm sm:p-5",
+        "flex scroll-mt-20 flex-col gap-4",
+        card && "rounded-2xl border bg-card p-4 sm:p-6",
         className,
       )}
     >
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex min-w-0 flex-col gap-1">
-          <h2 className="text-base font-semibold">{title}</h2>
-          {description ? (
-            <p className="text-sm text-pretty text-muted-foreground">{description}</p>
+      {title || actions ? (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 flex-col gap-1">
+            {title ? <h2 className="text-lg font-semibold tracking-tight">{title}</h2> : null}
+            {description ? (
+              <p className="text-sm text-pretty text-muted-foreground">{description}</p>
+            ) : null}
+          </div>
+          {actions ? (
+            <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>
           ) : null}
         </div>
-        {actions ? (
-          <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>
-        ) : null}
-      </div>
+      ) : null}
       {children}
     </section>
   );
 }
 
-export function Kpi({
+/** A financial figure: small grey label, large value, optional caption. No box. */
+export function Stat({
   label,
   value,
   sub,
   tone,
+  size = "md",
 }: {
-  label: string;
-  value: React.ReactNode;
-  sub?: React.ReactNode;
-  tone?: "good" | "bad" | "warn";
+  label: ReactNode;
+  value: ReactNode;
+  sub?: ReactNode;
+  tone?: "good" | "warn" | "bad";
+  size?: "md" | "lg";
 }) {
   return (
-    <div className="flex min-w-0 flex-col gap-1 rounded-lg border bg-background/40 p-3">
-      <span className="text-[11px] font-medium text-muted-foreground">{label}</span>
+    <div className="flex min-w-0 flex-col gap-0.5">
+      <span className="text-xs text-muted-foreground">{label}</span>
       <span
         className={cn(
-          "tabular truncate text-lg leading-tight font-semibold",
-          tone === "bad" && "text-chart-negative",
-          tone === "good" && "text-text-good",
-          tone === "warn" && "text-status-warning",
+          "tabular truncate font-semibold tracking-tight",
+          size === "lg" ? "text-2xl sm:text-[28px]" : "text-lg",
+          tone && TONE_TEXT[tone],
         )}
       >
         {value}
       </span>
-      {sub ? <span className="text-[11px] text-muted-foreground">{sub}</span> : null}
+      {sub ? <span className="text-xs text-muted-foreground">{sub}</span> : null}
     </div>
   );
 }
 
+/** Label–value rows separated by hairlines: the clearest way to read a few figures. */
+export function StatRows({
+  rows,
+}: {
+  rows: {
+    label: ReactNode;
+    value: ReactNode;
+    hint?: ReactNode;
+    tone?: "good" | "warn" | "bad";
+    strong?: boolean;
+  }[];
+}) {
+  return (
+    <dl className="flex flex-col divide-y">
+      {rows.map((r, i) => (
+        <div key={i} className="flex items-baseline justify-between gap-4 py-2.5">
+          <dt className="min-w-0 text-sm text-muted-foreground">
+            {r.label}
+            {r.hint ? <span className="block text-xs">{r.hint}</span> : null}
+          </dt>
+          <dd
+            className={cn(
+              "tabular shrink-0 text-right text-sm",
+              r.strong ? "text-base font-semibold" : "font-medium",
+              r.tone && TONE_TEXT[r.tone],
+            )}
+          >
+            {r.value}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/** Progressive disclosure: a quiet row that expands to the detail. */
+export function Disclosure({
+  title,
+  hint,
+  children,
+  defaultOpen = false,
+  className,
+}: {
+  title: ReactNode;
+  hint?: ReactNode;
+  children: ReactNode;
+  defaultOpen?: boolean;
+  className?: string;
+}) {
+  return (
+    <details className={cn("group rounded-2xl border bg-card", className)} open={defaultOpen}>
+      <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-4 py-3 select-none hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none [&::-webkit-details-marker]:hidden">
+        <span className="flex min-w-0 flex-col">
+          <span className="text-sm font-medium">{title}</span>
+          {hint ? <span className="text-xs text-muted-foreground">{hint}</span> : null}
+        </span>
+        <ChevronDown
+          className="size-4 shrink-0 text-muted-foreground transition group-open:rotate-180"
+          aria-hidden
+        />
+      </summary>
+      <div className="border-t px-4 py-4">{children}</div>
+    </details>
+  );
+}
+
+// ---------------------------------------------------------------- dialog
+
+/** Accessible confirmation dialog (native <dialog>: focus trap, Esc to close). */
+export function ConfirmDialog({
+  open,
+  title,
+  children,
+  confirmLabel,
+  cancelLabel = "Cancel",
+  tone = "default",
+  busy = false,
+  onConfirm,
+  onClose,
+}: {
+  open: boolean;
+  title: string;
+  children?: ReactNode;
+  confirmLabel: string;
+  cancelLabel?: string;
+  tone?: "default" | "danger";
+  busy?: boolean;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
+  useEffect(() => {
+    const d = ref.current;
+    if (!d) return;
+    if (open && !d.open) d.showModal();
+    if (!open && d.open) d.close();
+  }, [open]);
+  return (
+    <dialog
+      ref={ref}
+      aria-labelledby={titleId}
+      onClose={onClose}
+      onClick={(e) => e.target === ref.current && onClose()}
+      className="m-auto w-[min(92vw,440px)] rounded-2xl border bg-card p-0 text-foreground shadow-xl backdrop:bg-black/40"
+    >
+      <div className="flex flex-col gap-3 p-5">
+        <h2 id={titleId} className="text-lg font-semibold">
+          {title}
+        </h2>
+        {children ? (
+          <div className="text-sm text-pretty text-muted-foreground">{children}</div>
+        ) : null}
+        <div className="mt-2 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button variant="outline" onClick={onClose} disabled={busy}>
+            {cancelLabel}
+          </Button>
+          <Button
+            onClick={onConfirm}
+            disabled={busy}
+            className={cn(tone === "danger" && "bg-destructive text-white hover:bg-destructive/90")}
+          >
+            {busy ? "Working…" : confirmLabel}
+          </Button>
+        </div>
+      </div>
+    </dialog>
+  );
+}
+
 export const inputClass =
-  "h-9 w-full rounded-md border bg-background/60 px-3 text-sm tabular shadow-xs outline-none placeholder:text-muted-foreground/60 focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60";
+  "h-11 w-full rounded-xl border border-input bg-background px-3.5 text-[15px] tabular outline-none transition placeholder:text-muted-foreground/70 hover:border-foreground/25 focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-primary/15 disabled:opacity-60";
