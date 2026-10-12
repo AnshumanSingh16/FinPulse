@@ -7,7 +7,7 @@
 //   4. starts the web app at http://localhost:3000 (or the next free port)
 //
 // It needs no Python, database or API key: the personal-finance product runs entirely inside the
-// web app. (The separate business-risk module needs the Python API: see `npm run demo`.)
+// web app.
 import { spawn, spawnSync } from "node:child_process";
 import { copyFileSync, existsSync } from "node:fs";
 import path from "node:path";

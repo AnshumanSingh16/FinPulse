@@ -10,25 +10,8 @@ next-env.d.ts
 *.tsbuildinfo
 coverage/
 
-# python
-.venv/
-__pycache__/
-*.py[cod]
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-*.egg-info/
-dist/
-build/
-
 # editors / os
 .DS_Store
 .idea/
 .vscode/*
 !.vscode/extensions.json
-
-# synthetic data exports (regenerate with `finpulse synthetic export`)
-synthetic-export/
-
-# Saved investigations (INVESTIGATIONS_DIR)
-investigations/

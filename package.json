@@ -1,32 +1,23 @@
 {
   "name": "finpulse",
   "private": true,
-  "description": "FinPulse monorepo: Next.js web app, FastAPI backend, shared API contracts",
+  "description": "FinPulse: an agentic AI financial copilot \u2014 \"Can I afford this, and what should I do next?\"",
   "packageManager": "npm@10.9.4",
   "engines": {
     "node": ">=22.12"
   },
   "workspaces": [
-    "apps/web",
-    "packages/*"
+    "apps/web"
   ],
   "scripts": {
     "start": "node scripts/start.mjs",
-    "demo": "node scripts/demo.mjs",
-    "dev": "node scripts/dev.mjs",
-    "dev:web": "npm run dev -w @finpulse/web",
-    "dev:api": "uv run --project apps/api python -m finpulse",
+    "dev": "npm run dev -w @finpulse/web",
     "build": "npm run build -w @finpulse/web",
-    "lint": "npm run lint --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint -w @finpulse/web",
+    "typecheck": "npm run typecheck -w @finpulse/web",
+    "test": "npm run test -w @finpulse/web",
     "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "contracts:generate": "uv run --project apps/api python -m finpulse.openapi packages/contracts/openapi.json && npm run generate -w @finpulse/contracts",
-    "db:init": "cd apps/api && uv run finpulse db init",
-    "db:seed": "cd apps/api && uv run finpulse db seed",
-    "db:reset": "cd apps/api && uv run finpulse db reset --yes",
-    "demo:reset": "cd apps/api && uv run finpulse demo reset"
+    "format:check": "prettier --check ."
   },
   "devDependencies": {
     "prettier": "^3.9.9",

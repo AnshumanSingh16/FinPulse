@@ -2,8 +2,6 @@ import "server-only";
 
 import { type NextRequest, NextResponse } from "next/server";
 
-import { isSameOrigin } from "@/lib/api/proxy-policy";
-
 import { aiStatus, liveResearchEnabled } from "./agents/llm";
 import type { WorkflowRun } from "./agents/types";
 import type { SessionState } from "./store";
@@ -13,6 +11,19 @@ export function jsonError(status: number, message: string, details?: unknown) {
     { error: message, ...(details ? { details } : {}) },
     { status, headers: { "cache-control": "no-store" } },
   );
+}
+
+/**
+ * True when a request comes from this app's own pages. Browsers send Sec-Fetch-Site and/or
+ * Origin; a mutating request must carry an Origin equal to the app's.
+ */
+export function isSameOrigin(method: string, headers: Headers, appOrigin: string): boolean {
+  const site = headers.get("sec-fetch-site");
+  if (site !== null && site !== "same-origin") return false;
+  const origin = headers.get("origin");
+  if (method !== "GET" && origin !== appOrigin) return false;
+  if (origin !== null && origin !== appOrigin) return false;
+  return site !== null || origin !== null;
 }
 
 /** Mutating requests must come from this app's own pages (CSRF protection). */

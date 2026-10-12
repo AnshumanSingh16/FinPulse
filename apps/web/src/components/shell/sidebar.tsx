@@ -1,13 +1,12 @@
 "use client";
 
-import { Activity, Briefcase, Ellipsis, Presentation, ServerCog, X } from "lucide-react";
+import { Activity, Ellipsis, X } from "lucide-react";
 import Link from "next/link";
-import { useParams, usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 
 import { cn } from "@/lib/utils";
 
-import { SECTIONS, currentSection, sectionHref } from "./nav";
 import { PERSONAL_SECTIONS, isActive } from "./personal-nav";
 
 function Brand() {
@@ -51,13 +50,6 @@ function NavLink({
 
 function NavBody() {
   const pathname = usePathname();
-  const params = useParams<{ entityId?: string }>();
-  const asOf = useSearchParams().get("asOf");
-  const entityId = params.entityId;
-  const section = currentSection(pathname);
-  const inBusiness =
-    pathname.startsWith("/business") || pathname.startsWith("/entities") || pathname === "/demo";
-
   return (
     <div className="flex h-full flex-col gap-6 overflow-y-auto px-3 py-5">
       <div className="px-2">
@@ -70,35 +62,7 @@ function NavBody() {
           </NavLink>
         ))}
       </nav>
-      <nav aria-label="Business module" className="flex flex-col gap-0.5">
-        <div className="mb-1 px-3 text-[11px] font-medium text-muted-foreground">
-          For businesses
-        </div>
-        <NavLink href="/business" active={pathname === "/business"} icon={Briefcase}>
-          Business risk
-        </NavLink>
-        {inBusiness ? (
-          <NavLink href="/demo" active={pathname === "/demo"} icon={Presentation}>
-            Business demo
-          </NavLink>
-        ) : null}
-        {entityId
-          ? SECTIONS.map((s) => (
-              <NavLink
-                key={s.slug}
-                href={sectionHref(entityId, s.slug, asOf)}
-                active={section === s.slug}
-                icon={s.icon}
-              >
-                {s.label}
-              </NavLink>
-            ))
-          : null}
-      </nav>
       <div className="mt-auto flex flex-col gap-3">
-        <NavLink href="/system" active={pathname === "/system"} icon={ServerCog}>
-          System status
-        </NavLink>
         <p className="px-3 text-[11px] leading-relaxed text-muted-foreground">
           Decision support, not financial advice. FinPulse never submits applications or moves
           money.

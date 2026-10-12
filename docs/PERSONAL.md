@@ -1,9 +1,7 @@
-# FinPulse Personal — "Can I afford this, and what should I do next?"
+# FinPulse — "Can I afford this, and what should I do next?"
 
-The web app's main product: an agentic financial copilot for individuals in India. It runs
-entirely inside the Next.js app (`apps/web`) — **no Python API or database needed** — so
-`npm run dev:web` is enough for the demo. The older business-risk module (Sharma Electricals,
-FastAPI + PostgreSQL) still lives under **Business risk portfolio** in the sidebar.
+An agentic financial copilot for individuals in India. It runs entirely inside one Next.js app
+(`apps/web`) — **no Python, database or API key needed**.
 
 ## Run it
 
@@ -59,7 +57,7 @@ Steps, More) on phones, a quiet sidebar on desktop.
    both are flagged; the next analysis's Verification Agent raises the mismatch.
 9. **Audit Trail**: every goal, step, flag and approval, as recorded by the server.
 
-To rehearse without AI even when a key is configured: `FINPULSE_AI=off npm run dev:web`.
+To rehearse without AI even when a key is configured: set `FINPULSE_AI=off` in `.env` and restart.
 
 ## Architecture
 

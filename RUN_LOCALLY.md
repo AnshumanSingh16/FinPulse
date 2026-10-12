@@ -14,7 +14,7 @@ Open a **new** terminal afterwards and check: `node -v` should print `v22.…`.
 ## 2. Get the code (once)
 
 ```bash
-git clone -b claude/magical-ptolemy-32eje5 https://github.com/AnshumanSingh16/FinPulse.git
+git clone https://github.com/AnshumanSingh16/FinPulse.git
 cd FinPulse
 ```
 
@@ -54,7 +54,6 @@ Restart `npm start`. Never commit this file — it is already git-ignored.
 | Port 3000 is already in use | Next.js picks the next free port automatically — use the address it prints (e.g. http://localhost:3001). |
 | `npm install` fails | Check your internet connection. On a college/company network you may need its proxy: `npm config set proxy http://proxy:port`. |
 | Your data disappeared | Data is kept in the server's memory for the demo; stopping the server clears it. Click **Try the demo profile** again. |
-| "Business risk" pages say the API isn't running | That separate module needs Python and PostgreSQL. Use `npm run demo` for it (see the README). The personal product doesn't need it. |
 
 ## For developers
 
