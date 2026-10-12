@@ -39,12 +39,23 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   for (const key of body.applyKeys) {
     const field = doc.extraction.fields.find((f) => f.key === key);
     const target = field?.profileField as (typeof PROFILE_FIELDS)[number] | undefined;
-    if (!field || !target || typeof field.value !== "number" || !PROFILE_FIELDS.includes(target)) continue;
+    if (!field || !target || typeof field.value !== "number" || !PROFILE_FIELDS.includes(target))
+      continue;
     (update as Record<string, number>)[target] = field.value;
   }
-  const changed = applyProfileUpdate(session, update, { kind: "document", at: new Date().toISOString(), documentId: doc.id, note: `From "${doc.name}" (confirmed by you)` });
+  const changed = applyProfileUpdate(session, update, {
+    kind: "document",
+    at: new Date().toISOString(),
+    documentId: doc.id,
+    note: `From "${doc.name}" (confirmed by you)`,
+  });
   doc.review = "confirmed";
   doc.appliedFields = [...new Set([...doc.appliedFields, ...changed])];
-  audit(session, "document_confirmed", "user", `Reviewed "${doc.name}"${changed.length ? `; applied ${changed.join(", ")} to the profile` : "; nothing applied"}`);
+  audit(
+    session,
+    "document_confirmed",
+    "user",
+    `Reviewed "${doc.name}"${changed.length ? `; applied ${changed.join(", ")} to the profile` : "; nothing applied"}`,
+  );
   return NextResponse.json(stateView(session));
 }

@@ -14,10 +14,21 @@ import type Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 
 import type { PurchaseType } from "../schemas";
-import { describeAiError, effort, getClient, liveResearchEnabled, modelId, UNTRUSTED_DATA_RULE } from "./llm";
+import {
+  describeAiError,
+  effort,
+  getClient,
+  liveResearchEnabled,
+  modelId,
+  UNTRUSTED_DATA_RULE,
+} from "./llm";
 import type { FinancingOption, ResearchResult, Source } from "./types";
 
-export type ResearchQuery = { purchaseType: PurchaseType; loanAmount: number; tenureMonths: number | null };
+export type ResearchQuery = {
+  purchaseType: PurchaseType;
+  loanAmount: number;
+  tenureMonths: number | null;
+};
 
 export interface ResearchProvider {
   readonly id: string;
@@ -26,12 +37,45 @@ export interface ResearchProvider {
 }
 
 /** Illustrative ranges by purchase type. Demonstration assumptions, not market data. */
-const ILLUSTRATIVE: Record<PurchaseType, { name: string; min: number; max: number; tenures: number[]; fees: string }> = {
-  house: { name: "Home loan (illustrative)", min: 8.0, max: 9.0, tenures: [180, 240, 300], fees: "Processing fees often apply; check each lender" },
-  car: { name: "Car loan (illustrative)", min: 8.75, max: 10.75, tenures: [36, 60, 84], fees: "Processing fees often apply; check each lender" },
-  education: { name: "Education loan (illustrative)", min: 9.5, max: 12.0, tenures: [60, 84, 120], fees: "May need a co-applicant and collateral above some amounts" },
-  business: { name: "Business loan (illustrative)", min: 11.0, max: 16.0, tenures: [36, 60, 84], fees: "Terms vary widely with business vintage and collateral" },
-  custom: { name: "Personal loan (illustrative)", min: 10.5, max: 16.0, tenures: [24, 36, 60], fees: "Processing fees often apply; check each lender" },
+const ILLUSTRATIVE: Record<
+  PurchaseType,
+  { name: string; min: number; max: number; tenures: number[]; fees: string }
+> = {
+  house: {
+    name: "Home loan (illustrative)",
+    min: 8.0,
+    max: 9.0,
+    tenures: [180, 240, 300],
+    fees: "Processing fees often apply; check each lender",
+  },
+  car: {
+    name: "Car loan (illustrative)",
+    min: 8.75,
+    max: 10.75,
+    tenures: [36, 60, 84],
+    fees: "Processing fees often apply; check each lender",
+  },
+  education: {
+    name: "Education loan (illustrative)",
+    min: 9.5,
+    max: 12.0,
+    tenures: [60, 84, 120],
+    fees: "May need a co-applicant and collateral above some amounts",
+  },
+  business: {
+    name: "Business loan (illustrative)",
+    min: 11.0,
+    max: 16.0,
+    tenures: [36, 60, 84],
+    fees: "Terms vary widely with business vintage and collateral",
+  },
+  custom: {
+    name: "Personal loan (illustrative)",
+    min: 10.5,
+    max: 16.0,
+    tenures: [24, 36, 60],
+    fees: "Processing fees often apply; check each lender",
+  },
 };
 
 export const DEFAULT_TENURE: Record<PurchaseType, number> = {
@@ -61,10 +105,15 @@ export class IllustrativeResearchProvider implements ResearchProvider {
       kind: "illustrative",
       supports: `${r.name}: ${r.min}%–${r.max}% p.a. Demonstration ranges only — not current lender quotes.`,
     };
-    const tenures = [...new Set([...(query.tenureMonths ? [query.tenureMonths] : []), ...r.tenures])].sort((a, b) => a - b);
+    const tenures = [
+      ...new Set([...(query.tenureMonths ? [query.tenureMonths] : []), ...r.tenures]),
+    ].sort((a, b) => a - b);
     const options: FinancingOption[] = [];
     for (const tenure of tenures) {
-      for (const [suffix, rate] of [["lower end", r.min], ["upper end", r.max]] as const) {
+      for (const [suffix, rate] of [
+        ["lower end", r.min],
+        ["upper end", r.max],
+      ] as const) {
         options.push({
           id: `opt_${tenure}_${suffix.replace(" ", "_")}`,
           name: `${r.name.replace(" (illustrative)", "")} · ${tenure / 12} yrs · ${suffix} of range`,
@@ -148,17 +197,24 @@ export class ClaudeWebSearchProvider implements ResearchProvider {
       .join("\n");
     const parsed = LiveResponseSchema.safeParse(extractJson(text));
     const warnings: string[] = [];
-    if (!parsed.success) warnings.push("The research response could not be parsed; no live figures were used.");
+    if (!parsed.success)
+      warnings.push("The research response could not be parsed; no live figures were used.");
     const kept = (parsed.success ? parsed.data.options : []).filter((o) => {
       const ok = seenUrls.has(normaliseUrl(o.source_url)) && o.rate_min <= o.rate_max;
-      if (!ok) warnings.push(`Dropped "${o.lender}": its cited source was not among the pages actually retrieved.`);
+      if (!ok)
+        warnings.push(
+          `Dropped "${o.lender}": its cited source was not among the pages actually retrieved.`,
+        );
       return ok;
     });
     if (kept.length === 0) {
       const fb = await this.fallback.research(query);
       return {
         ...fb,
-        warnings: [...warnings, "Live research returned no verifiable figures; illustrative ranges used instead."],
+        warnings: [
+          ...warnings,
+          "Live research returned no verifiable figures; illustrative ranges used instead.",
+        ],
       };
     }
     const sources: Source[] = kept.map((o, i) => ({
@@ -187,7 +243,7 @@ export class ClaudeWebSearchProvider implements ResearchProvider {
       options,
       sources,
       notes: [
-        "Published rates are starting rates (\"from\"); the rate offered to you depends on your credit profile and the lender's assessment.",
+        'Published rates are starting rates ("from"); the rate offered to you depends on your credit profile and the lender\'s assessment.',
         "EMIs below use each lender's lowest published rate, so they are best cases.",
       ],
       warnings,

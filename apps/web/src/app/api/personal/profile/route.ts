@@ -14,9 +14,23 @@ export async function PUT(request: NextRequest) {
   if (refused) return refused;
   const body = await readJson(request);
   const parsed = ProfileValuesSchema.partial().safeParse((body as { values?: unknown })?.values);
-  if (!parsed.success) return jsonError(400, "Invalid profile values", parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`));
+  if (!parsed.success)
+    return jsonError(
+      400,
+      "Invalid profile values",
+      parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`),
+    );
   const session = await getSession();
-  const changed = applyProfileUpdate(session, parsed.data, { kind: "user", at: new Date().toISOString() });
-  if (changed.length) audit(session, "profile_updated", "user", `Updated ${changed.length} profile field(s): ${changed.join(", ")}`);
+  const changed = applyProfileUpdate(session, parsed.data, {
+    kind: "user",
+    at: new Date().toISOString(),
+  });
+  if (changed.length)
+    audit(
+      session,
+      "profile_updated",
+      "user",
+      `Updated ${changed.length} profile field(s): ${changed.join(", ")}`,
+    );
   return NextResponse.json(stateView(session));
 }

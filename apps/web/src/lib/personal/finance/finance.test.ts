@@ -4,7 +4,12 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { analysePurchase, DEFAULT_RULES, evaluateRules, findComfortablePrice } from "./affordability";
+import {
+  analysePurchase,
+  DEFAULT_RULES,
+  evaluateRules,
+  findComfortablePrice,
+} from "./affordability";
 import { FinanceInputError } from "./errors";
 import {
   debtToIncomeRatio,
@@ -121,12 +126,19 @@ describe("down payment and loan amount", () => {
 
 describe("health tools", () => {
   it("summarises cash flow", () => {
-    const s = summariseCashFlow({ monthlyIncome: 200_000, monthlyExpenses: 70_000, monthlyDebtPayments: 15_000 });
+    const s = summariseCashFlow({
+      monthlyIncome: 200_000,
+      monthlyExpenses: 70_000,
+      monthlyDebtPayments: 15_000,
+    });
     expect(s.monthlySurplus).toBe(115_000);
     expect(s.savingsRate).toBeCloseTo(0.575);
   });
   it("reports a deficit as negative surplus", () => {
-    expect(summariseCashFlow({ monthlyIncome: 50_000, monthlyExpenses: 60_000, monthlyDebtPayments: 0 }).monthlySurplus).toBe(-10_000);
+    expect(
+      summariseCashFlow({ monthlyIncome: 50_000, monthlyExpenses: 60_000, monthlyDebtPayments: 0 })
+        .monthlySurplus,
+    ).toBe(-10_000);
   });
   it("computes DTI on take-home income, null for zero income", () => {
     expect(debtToIncomeRatio(67_069.39, 200_000)).toBeCloseTo(0.3353, 4);
@@ -197,7 +209,10 @@ describe("analysePurchase (demo profile, ₹75 lakh house)", () => {
     expect(b.checks.find((c) => c.id === "upfront_cash")?.status).toBe("fail");
   });
   it("handles an all-cash purchase (100% down)", () => {
-    const c = analysePurchase({ ...DEMO_PURCHASE, purchasePrice: 1_000_000, downPaymentPct: 100, upfrontCashCosts: 0 }, DEMO_HOUSEHOLD);
+    const c = analysePurchase(
+      { ...DEMO_PURCHASE, purchasePrice: 1_000_000, downPaymentPct: 100, upfrontCashCosts: 0 },
+      DEMO_HOUSEHOLD,
+    );
     expect(c.loanAmount).toBe(0);
     expect(c.emi).toBe(0);
     expect(c.yearly).toHaveLength(0);
@@ -241,6 +256,7 @@ describe("scenarios", () => {
     const r = byId.income_stops_6m!;
     // 5,50,000 − 1,37,069.39 × n < 0 at n = 5
     expect(r.monthExhausted).toBe(5);
+    expect(r.monthlySurplus).toBeCloseTo(-137069.39, 2); // surplus while income has stopped
     expect(r.label).toBe("high_strain");
   });
   it("a rate rise recalculates the EMI", () => {
@@ -274,6 +290,8 @@ describe("parseINRAmount", () => {
     expect(parseINRAmount(text)).toBe(expected);
   });
   it("finds several amounts in order", () => {
-    expect(findINRAmounts("Compare a ₹15 lakh car with a ₹20 lakh car").map((a) => a.value)).toEqual([1_500_000, 2_000_000]);
+    expect(
+      findINRAmounts("Compare a ₹15 lakh car with a ₹20 lakh car").map((a) => a.value),
+    ).toEqual([1_500_000, 2_000_000]);
   });
 });

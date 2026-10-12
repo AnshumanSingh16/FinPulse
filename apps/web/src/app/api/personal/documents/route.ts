@@ -16,10 +16,13 @@ const MAX_DOCUMENTS = 20;
 export async function POST(request: NextRequest) {
   const refused = refuseCrossOrigin(request);
   if (refused) return refused;
-  if (Number(request.headers.get("content-length") ?? "0") > MAX_UPLOAD_BYTES + 64_000) return jsonError(413, "File too large (max 2 MB)");
+  if (Number(request.headers.get("content-length") ?? "0") > MAX_UPLOAD_BYTES + 64_000)
+    return jsonError(413, "File too large (max 2 MB)");
   const session = await getSession();
-  if (!consumeRateLimit(session)) return jsonError(429, "Too many requests. Wait a minute and try again.");
-  if (session.documents.length >= MAX_DOCUMENTS) return jsonError(409, "Document limit reached; remove some first.");
+  if (!consumeRateLimit(session))
+    return jsonError(429, "Too many requests. Wait a minute and try again.");
+  if (session.documents.length >= MAX_DOCUMENTS)
+    return jsonError(409, "Document limit reached; remove some first.");
   let file: File | null = null;
   try {
     const form = await request.formData();
@@ -37,13 +40,19 @@ export async function POST(request: NextRequest) {
 
   let result: Pick<DocumentRecord, "docType" | "extraction" | "flags">;
   if (kind === "pdf") {
-    if (bytes.subarray(0, 5).toString() !== "%PDF-") return jsonError(415, "That file is not a valid PDF.");
+    if (bytes.subarray(0, 5).toString() !== "%PDF-")
+      return jsonError(415, "That file is not a valid PDF.");
     result = aiStatus().enabled
       ? await extractPdfWithAi(name, bytes.toString("base64"))
       : {
           docType: "unknown",
           flags: [],
-          extraction: { status: "not_extracted", method: "none", note: "PDF reading needs the AI provider (ANTHROPIC_API_KEY), which is not configured. The file was stored for reference only; enter its figures manually, or upload a .txt/.csv version.", fields: [] },
+          extraction: {
+            status: "not_extracted",
+            method: "none",
+            note: "PDF reading needs the AI provider (ANTHROPIC_API_KEY), which is not configured. The file was stored for reference only; enter its figures manually, or upload a .txt/.csv version.",
+            fields: [],
+          },
         };
   } else {
     const text = bytes.toString("utf8");
@@ -61,6 +70,11 @@ export async function POST(request: NextRequest) {
     appliedFields: [],
   };
   session.documents.unshift(doc);
-  audit(session, "document_uploaded", "user", `Uploaded "${name}": ${doc.extraction.status.replace("_", " ")} (${doc.extraction.fields.length} field(s), ${doc.extraction.method.replace(/_/g, " ")})`);
+  audit(
+    session,
+    "document_uploaded",
+    "user",
+    `Uploaded "${name}": ${doc.extraction.status.replace("_", " ")} (${doc.extraction.fields.length} field(s), ${doc.extraction.method.replace(/_/g, " ")})`,
+  );
   return NextResponse.json({ document: doc, state: stateView(session) });
 }

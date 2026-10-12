@@ -9,7 +9,10 @@ import type { WorkflowRun } from "./agents/types";
 import type { SessionState } from "./store";
 
 export function jsonError(status: number, message: string, details?: unknown) {
-  return NextResponse.json({ error: message, ...(details ? { details } : {}) }, { status, headers: { "cache-control": "no-store" } });
+  return NextResponse.json(
+    { error: message, ...(details ? { details } : {}) },
+    { status, headers: { "cache-control": "no-store" } },
+  );
 }
 
 /** Mutating requests must come from this app's own pages (CSRF protection). */
@@ -58,7 +61,11 @@ export function ndjsonStream(work: (send: (item: unknown) => void) => Promise<vo
     },
   });
   return new Response(stream, {
-    headers: { "content-type": "application/x-ndjson; charset=utf-8", "cache-control": "no-store", "x-accel-buffering": "no" },
+    headers: {
+      "content-type": "application/x-ndjson; charset=utf-8",
+      "cache-control": "no-store",
+      "x-accel-buffering": "no",
+    },
   });
 }
 

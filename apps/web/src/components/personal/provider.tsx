@@ -30,7 +30,11 @@ export function PersonalProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void refresh();
   }, [refresh]);
-  return <PersonalContext.Provider value={{ state, error, refresh, setState }}>{children}</PersonalContext.Provider>;
+  return (
+    <PersonalContext.Provider value={{ state, error, refresh, setState }}>
+      {children}
+    </PersonalContext.Provider>
+  );
 }
 
 export function usePersonal(): Ctx {

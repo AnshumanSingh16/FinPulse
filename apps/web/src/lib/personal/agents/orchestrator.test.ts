@@ -18,7 +18,12 @@ describe("affordability workflow (no AI key)", () => {
     const session = loadSession("test");
     const run = await runAffordabilityWorkflow(session, "Can I afford a house?", DEMO_PURCHASE);
     expect(run.status).toBe("needs_input");
-    expect(run.missing.map((m) => m.field)).toEqual(["monthlyIncome", "monthlyExpenses", "liquidSavings", "existingEmis"]);
+    expect(run.missing.map((m) => m.field)).toEqual([
+      "monthlyIncome",
+      "monthlyExpenses",
+      "liquidSavings",
+      "existingEmis",
+    ]);
     expect(run.analysis).toBeNull();
     expect(run.plan.filter((s) => s.status === "skipped").length).toBeGreaterThan(0);
   });
@@ -27,7 +32,12 @@ describe("affordability workflow (no AI key)", () => {
     const session = loadSession("test");
     session.profile = { values: { ...DEMO_PROFILE }, sources: {}, isDemo: true, updatedAt: null };
     const events: AgentEvent[] = [];
-    const run = await runAffordabilityWorkflow(session, "Can I afford a ₹75 lakh house?", DEMO_PURCHASE, (e) => events.push(e));
+    const run = await runAffordabilityWorkflow(
+      session,
+      "Can I afford a ₹75 lakh house?",
+      DEMO_PURCHASE,
+      (e) => events.push(e),
+    );
 
     expect(run.status).toBe("completed");
     expect(run.mode).toEqual({ ai: false, research: "illustrative" });
@@ -52,7 +62,14 @@ describe("affordability workflow (no AI key)", () => {
     expect(plan.status).toBe("awaiting_review");
     expect(plan.items.some((i) => i.requiresIntegration)).toBe(true);
     expect(session.audit.map((a) => a.type)).toEqual(
-      expect.arrayContaining(["goal_submitted", "plan_created", "calculation_completed", "scenario_executed", "recommendation_generated", "approval_requested"]),
+      expect.arrayContaining([
+        "goal_submitted",
+        "plan_created",
+        "calculation_completed",
+        "scenario_executed",
+        "recommendation_generated",
+        "approval_requested",
+      ]),
     );
   });
 
@@ -65,14 +82,24 @@ describe("affordability workflow (no AI key)", () => {
     expect(() => transitionActionPlan(plan, "approved", "agent")).toThrow(TransitionError);
     transitionActionPlan(plan, "approved", "user");
     transitionActionPlan(plan, "completed", "user");
-    expect(plan.statusHistory.map((h) => h.status)).toEqual(["draft", "awaiting_review", "approved", "completed"]);
+    expect(plan.statusHistory.map((h) => h.status)).toEqual([
+      "draft",
+      "awaiting_review",
+      "approved",
+      "completed",
+    ]);
   });
 });
 
 describe("verifyFigures", () => {
   it("accepts figures that match tool outputs and rejects invented ones", () => {
     const allowed = [52069.39, 6_000_000, 550_000];
-    expect(verifyFigures("An EMI of ₹52,069 on a ₹60 lakh loan leaves ₹5.5 lakh.", allowed, [33.5])).toEqual([]);
-    expect(verifyFigures("Banks offer ₹70 lakh at 7.2%.", allowed, [33.5])).toEqual(["₹70 lakh", "7.2%"]);
+    expect(
+      verifyFigures("An EMI of ₹52,069 on a ₹60 lakh loan leaves ₹5.5 lakh.", allowed, [33.5]),
+    ).toEqual([]);
+    expect(verifyFigures("Banks offer ₹70 lakh at 7.2%.", allowed, [33.5])).toEqual([
+      "₹70 lakh",
+      "7.2%",
+    ]);
   });
 });

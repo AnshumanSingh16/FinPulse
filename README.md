@@ -7,6 +7,23 @@ history.
 > trustworthy, and detect if their financial health is deteriorating before a traditional credit
 > system would?
 
+**Your Financial Life. On Autopilot.** The web app's main product is **FinPulse Personal**: an
+agentic copilot that answers *"Can I afford this, and what should I do next?"* — an orchestrator
+plans the question and delegates to research, analysis, risk, verification and action agents that
+call tested, deterministic financial tools; you see every step and approve every next action.
+It runs inside the Next.js app with **no database or Python needed**:
+
+```bash
+npm install && npm run dev:web     # http://localhost:3000 → "Try Demo"
+```
+
+Architecture, demo script and tests: **[docs/PERSONAL.md](docs/PERSONAL.md)**. An
+`ANTHROPIC_API_KEY` in `.env` enables live research and the AI copilot; without it everything
+else works in a clearly labelled deterministic mode.
+
+The rest of this README describes the original **business-risk module** (thin-file SMB credit
+risk), now under *Business risk portfolio* in the sidebar.
+
 **Status: deterministic core, AI agent layer and frontend built.** The platform foundation is in place,
 along with:
 
@@ -68,7 +85,7 @@ npm run demo
 
 It checks Node and uv, creates `.env` from `.env.example` if missing, and installs dependencies.
 It then applies migrations, starting the Docker database if PostgreSQL isn't reachable, seeds the
-demo data, and starts the API and web app. Open **http://localhost:3000/demo**. You need Node.js
+demo data, and starts the API and web app. Open **http://localhost:3000/demo** for the business-risk demo. You need Node.js
 ≥ 22.12, [uv](https://docs.astral.sh/uv/), and either Docker Desktop or a PostgreSQL database
 in `DATABASE_URL`.
 
@@ -101,7 +118,7 @@ clearly labelled, verified demo-script mode) explains why and the red team argue
 `make demo-reset` (or the **Reset demo** button) restores the exact demo state at any time. The
 script, the expected figures and how the AI part works: [docs/DEMO.md](docs/DEMO.md).
 
-Open http://localhost:3000. The overview page shows three live checks:
+Open http://localhost:3000/system. The system status page shows three live checks:
 
 | Card | Path it proves |
 |---|---|

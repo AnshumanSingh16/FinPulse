@@ -43,7 +43,14 @@ export class RunContext {
     message: string,
     extra: Partial<Pick<AgentEvent, "stepId" | "toolCallId" | "level" | "plan">> = {},
   ): AgentEvent {
-    const event: AgentEvent = { id: newId("evt"), at: new Date().toISOString(), agent, kind, message, ...extra };
+    const event: AgentEvent = {
+      id: newId("evt"),
+      at: new Date().toISOString(),
+      agent,
+      kind,
+      message,
+      ...extra,
+    };
     this.run.events.push(event);
     this.listener(event);
     return event;
@@ -56,7 +63,8 @@ export class RunContext {
   checkLimits(): void {
     const { maxDurationMs, maxToolCalls } = this.run.limits;
     if (this.elapsedMs > maxDurationMs) throw new LimitExceededError("Workflow time limit reached");
-    if (this.run.toolCalls.length >= maxToolCalls) throw new LimitExceededError("Tool-call limit reached");
+    if (this.run.toolCalls.length >= maxToolCalls)
+      throw new LimitExceededError("Tool-call limit reached");
   }
 
   useLlmCall(): boolean {
@@ -86,7 +94,9 @@ export class RunContext {
     const parsed = tool.input.safeParse(rawInput);
     if (!parsed.success) {
       record.status = "rejected";
-      record.error = parsed.error.issues.map((i) => `${i.path.join(".") || "input"}: ${i.message}`).join("; ");
+      record.error = parsed.error.issues
+        .map((i) => `${i.path.join(".") || "input"}: ${i.message}`)
+        .join("; ");
       this.emit(tool.agent, "tool_error", `${tool.name} rejected invalid input: ${record.error}`, {
         stepId,
         toolCallId: record.id,

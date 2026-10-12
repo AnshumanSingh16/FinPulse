@@ -18,7 +18,13 @@ const UNIT: Record<string, number> = {
 const AMOUNT_RE =
   /(?:₹|rs\.?|inr)?\s*(\d{1,3}(?:,\d{2,3})+(?:\.\d+)?|\d+(?:\.\d+)?)\s*(k|thousand|lakhs?|lacs?|l|crores?|cr)?\b/gi;
 
-export type ParsedAmount = { value: number; text: string; index: number; hasCurrency: boolean; hasUnit: boolean };
+export type ParsedAmount = {
+  value: number;
+  text: string;
+  index: number;
+  hasCurrency: boolean;
+  hasUnit: boolean;
+};
 
 export function findINRAmounts(text: string): ParsedAmount[] {
   const out: ParsedAmount[] = [];

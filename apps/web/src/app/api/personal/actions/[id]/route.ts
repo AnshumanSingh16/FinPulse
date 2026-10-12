@@ -38,25 +38,52 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         break;
       case "reject":
         transitionActionPlan(plan, "rejected", "user", body.note);
-        audit(session, "approval_decision", "user", `Rejected "${plan.title}"${body.note ? `: ${body.note}` : ""}`, plan.runId);
+        audit(
+          session,
+          "approval_decision",
+          "user",
+          `Rejected "${plan.title}"${body.note ? `: ${body.note}` : ""}`,
+          plan.runId,
+        );
         break;
       case "reopen":
         transitionActionPlan(plan, "awaiting_review", "user");
-        audit(session, "approval_requested", "user", `Reopened "${plan.title}" for review`, plan.runId);
+        audit(
+          session,
+          "approval_requested",
+          "user",
+          `Reopened "${plan.title}" for review`,
+          plan.runId,
+        );
         break;
       case "complete": {
-        if (plan.status !== "approved") return jsonError(409, `Cannot complete a plan that is "${plan.status.replace("_", " ")}"; it must be approved first.`);
+        if (plan.status !== "approved")
+          return jsonError(
+            409,
+            `Cannot complete a plan that is "${plan.status.replace("_", " ")}"; it must be approved first.`,
+          );
         const open = plan.items.filter((i) => !i.done && !i.requiresIntegration);
         if (open.length) return jsonError(409, `${open.length} checklist item(s) are still open.`);
         transitionActionPlan(plan, "completed", "user");
-        audit(session, "action_completed", "user", `Completed "${plan.title}" (items needing an external integration were not executed)`, plan.runId);
+        audit(
+          session,
+          "action_completed",
+          "user",
+          `Completed "${plan.title}" (items needing an external integration were not executed)`,
+          plan.runId,
+        );
         break;
       }
       case "toggle_item": {
-        if (plan.status !== "approved") return jsonError(409, "Approve the plan before ticking off items.");
+        if (plan.status !== "approved")
+          return jsonError(409, "Approve the plan before ticking off items.");
         const item = plan.items.find((i) => i.id === body.itemId);
         if (!item) return jsonError(404, "Item not found");
-        if (item.requiresIntegration) return jsonError(409, "This step needs an external integration FinPulse does not have; do it directly with the provider.");
+        if (item.requiresIntegration)
+          return jsonError(
+            409,
+            "This step needs an external integration FinPulse does not have; do it directly with the provider.",
+          );
         item.done = !item.done;
         break;
       }

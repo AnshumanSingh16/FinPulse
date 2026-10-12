@@ -39,7 +39,11 @@ const DOCUMENTS: Record<PurchaseType, string[]> = {
     "ITR and audited financials for the last 2–3 years",
     "Business plan / project report",
   ],
-  custom: ["PAN card and Aadhaar", "Salary slips for the last 3 months", "Bank statements for the last 6 months"],
+  custom: [
+    "PAN card and Aadhaar",
+    "Salary slips for the last 3 months",
+    "Bank statements for the last 6 months",
+  ],
 };
 
 export type ActionPlanInput = {
@@ -57,8 +61,17 @@ export type ActionPlanDraft = Omit<ActionPlan, "id" | "createdAt" | "status" | "
 export function buildActionPlan(input: ActionPlanInput): ActionPlanDraft {
   const { request: r, analysis: a, profile: p } = input;
   const items: ChecklistItem[] = [];
-  const add = (item: Omit<ChecklistItem, "id" | "done" | "requiresIntegration"> & { requiresIntegration?: boolean }) =>
-    items.push({ id: `item_${items.length + 1}`, done: false, requiresIntegration: false, ...item });
+  const add = (
+    item: Omit<ChecklistItem, "id" | "done" | "requiresIntegration"> & {
+      requiresIntegration?: boolean;
+    },
+  ) =>
+    items.push({
+      id: `item_${items.length + 1}`,
+      done: false,
+      requiresIntegration: false,
+      ...item,
+    });
 
   const saveFirst = input.alternatives.find((x) => x.id === "save_first");
   const months = saveFirst?.figures.find((f) => f.unit === "months")?.value;
@@ -75,27 +88,70 @@ export function buildActionPlan(input: ActionPlanInput): ActionPlanDraft {
       : null;
 
   if (savingsPlan) {
-    add({ category: "savings", title: `Build the buffer: save ${formatINR(savingsPlan.monthlySaving)}/month for ${savingsPlan.months} months`, detail: savingsPlan.rationale });
+    add({
+      category: "savings",
+      title: `Build the buffer: save ${formatINR(savingsPlan.monthlySaving)}/month for ${savingsPlan.months} months`,
+      detail: savingsPlan.rationale,
+    });
   } else {
-    add({ category: "savings", title: "Keep the post-purchase emergency fund separate", detail: `Ring-fence the ${formatINR(a.postPurchaseSavings)} left after the purchase in a liquid account; don't spend it on furnishing or upgrades.` });
+    add({
+      category: "savings",
+      title: "Keep the post-purchase emergency fund separate",
+      detail: `Ring-fence the ${formatINR(a.postPurchaseSavings)} left after the purchase in a liquid account; don't spend it on furnishing or upgrades.`,
+    });
   }
   if (a.loanAmount > 0) {
-    add({ category: "research", title: "Get written loan quotes from at least three lenders", detail: `Compare the rate, processing fee, prepayment terms and whether the rate is floating. ${input.researchLive ? "The research sources are starting points." : "The rates used so far are illustrative."}` });
-    add({ category: "research", title: "Re-run this analysis with the quoted rate", detail: "Replace the assumed rate with the lowest written quote and confirm the result still holds." });
-    add({ category: "application", title: "Check your credit report before applying", detail: "Download your free annual credit report and fix any errors; multiple hard enquiries in a short time can lower your score." });
+    add({
+      category: "research",
+      title: "Get written loan quotes from at least three lenders",
+      detail: `Compare the rate, processing fee, prepayment terms and whether the rate is floating. ${input.researchLive ? "The research sources are starting points." : "The rates used so far are illustrative."}`,
+    });
+    add({
+      category: "research",
+      title: "Re-run this analysis with the quoted rate",
+      detail:
+        "Replace the assumed rate with the lowest written quote and confirm the result still holds.",
+    });
+    add({
+      category: "application",
+      title: "Check your credit report before applying",
+      detail:
+        "Download your free annual credit report and fix any errors; multiple hard enquiries in a short time can lower your score.",
+    });
   }
   if (r.type === "house") {
-    add({ category: "research", title: "Have a lawyer verify the property title", detail: "Title chain, encumbrance certificate, approvals and (for new builds) RERA registration." });
+    add({
+      category: "research",
+      title: "Have a lawyer verify the property title",
+      detail:
+        "Title chain, encumbrance certificate, approvals and (for new builds) RERA registration.",
+    });
   }
   if ((p.dependents ?? 0) > 0 && a.loanAmount > 0) {
-    add({ category: "protection", title: "Review term life and health cover", detail: `Cover should at least clear the ${formatINR(a.loanAmount)} loan so dependents are not left with it.` });
+    add({
+      category: "protection",
+      title: "Review term life and health cover",
+      detail: `Cover should at least clear the ${formatINR(a.loanAmount)} loan so dependents are not left with it.`,
+    });
   }
-  for (const f of input.findings.filter((x) => x.category === "missing" || x.category === "document")) {
+  for (const f of input.findings.filter(
+    (x) => x.category === "missing" || x.category === "document",
+  )) {
     add({ category: "documents", title: `Resolve: ${f.message}`, detail: f.suggestion ?? "" });
   }
-  add({ category: "documents", title: "Gather the application documents", detail: "See the document list below. Lenders' requirements vary." });
+  add({
+    category: "documents",
+    title: "Gather the application documents",
+    detail: "See the document list below. Lenders' requirements vary.",
+  });
   if (a.loanAmount > 0) {
-    add({ category: "application", title: "Submit the loan application", detail: "FinPulse cannot submit applications: no lender integration is configured. Use the draft answers below on the lender's own form.", requiresIntegration: true });
+    add({
+      category: "application",
+      title: "Submit the loan application",
+      detail:
+        "FinPulse cannot submit applications: no lender integration is configured. Use the draft answers below on the lender's own form.",
+      requiresIntegration: true,
+    });
   }
 
   const draftAnswers: ActionPlan["draftAnswers"] = [];
@@ -106,7 +162,11 @@ export function buildActionPlan(input: ActionPlanInput): ActionPlanDraft {
   answer("Existing monthly EMIs", p.existingEmis, "Financial profile");
   answer("Loan amount requested", a.loanAmount || null, "FinPulse calculation");
   answer("Own contribution (down payment)", a.downPayment || null, "FinPulse calculation");
-  draftAnswers.push({ question: "Purpose of loan", answer: r.label, source: "Your purchase details" });
+  draftAnswers.push({
+    question: "Purpose of loan",
+    answer: r.label,
+    source: "Your purchase details",
+  });
 
   return {
     runId: input.runId,

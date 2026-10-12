@@ -55,7 +55,10 @@ export function debtToIncomeRatio(monthlyDebtPayments: number, monthlyTakeHome: 
  * Months the liquid savings would cover essential monthly outflows (living expenses + debt
  * repayments + other fixed obligations) with no income. Null when there are no outflows.
  */
-export function emergencyFundCoverageMonths(liquidSavings: number, monthlyEssentialOutflow: number) {
+export function emergencyFundCoverageMonths(
+  liquidSavings: number,
+  monthlyEssentialOutflow: number,
+) {
   requireFinite("liquidSavings", liquidSavings);
   requireNonNegative("monthlyEssentialOutflow", monthlyEssentialOutflow);
   if (monthlyEssentialOutflow === 0) return null;

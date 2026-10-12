@@ -20,7 +20,11 @@ import type { YearlyAmortization } from "@/lib/personal/finance/loan";
 import type { ScenarioResult } from "@/lib/personal/finance/scenarios";
 import { cn } from "@/lib/utils";
 
-const axis = { stroke: "var(--chart-axis)", tickLine: false, tick: { fill: "var(--chart-ink-muted)", fontSize: 11 } } as const;
+const axis = {
+  stroke: "var(--chart-axis)",
+  tickLine: false,
+  tick: { fill: "var(--chart-ink-muted)", fontSize: 11 },
+} as const;
 const compact = (v: number) => formatINR(v, { compact: true });
 
 type Series = { key: string; label: string; color: string };
@@ -38,14 +42,25 @@ function Legend({ series }: { series: Series[] }) {
   );
 }
 
-function TooltipBox({ title, rows }: { title: string; rows: { label: string; value: string; color?: string }[] }) {
+function TooltipBox({
+  title,
+  rows,
+}: {
+  title: string;
+  rows: { label: string; value: string; color?: string }[];
+}) {
   return (
-    <div className="min-w-44 rounded-lg border px-3 py-2 text-xs shadow-md" style={{ background: "var(--card)" }}>
+    <div
+      className="min-w-44 rounded-lg border px-3 py-2 text-xs shadow-md"
+      style={{ background: "var(--card)" }}
+    >
       <div className="mb-1 font-medium text-muted-foreground">{title}</div>
       {rows.map((r) => (
         <div key={r.label} className="flex items-center justify-between gap-4">
           <span className="flex items-center gap-1.5 text-muted-foreground">
-            {r.color ? <span className="inline-block size-2 rounded-sm" style={{ background: r.color }} /> : null}
+            {r.color ? (
+              <span className="inline-block size-2 rounded-sm" style={{ background: r.color }} />
+            ) : null}
             {r.label}
           </span>
           <span className="tabular font-semibold text-foreground">{r.value}</span>
@@ -55,15 +70,38 @@ function TooltipBox({ title, rows }: { title: string; rows: { label: string; val
   );
 }
 
-function ChartFrame({ legend, table, children, height }: { legend?: React.ReactNode; table: React.ReactNode; children: React.ReactElement; height: number }) {
+function ChartFrame({
+  legend,
+  table,
+  children,
+  height,
+}: {
+  legend?: React.ReactNode;
+  table: React.ReactNode;
+  children: React.ReactElement;
+  height: number;
+}) {
   const [view, setView] = useState<"chart" | "table">("chart");
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
         {legend ?? <span />}
-        <div className="flex rounded-md border p-0.5 text-[11px]" role="group" aria-label="Chart or table">
+        <div
+          className="flex rounded-md border p-0.5 text-[11px]"
+          role="group"
+          aria-label="Chart or table"
+        >
           {(["chart", "table"] as const).map((v) => (
-            <button key={v} type="button" onClick={() => setView(v)} aria-pressed={view === v} className={cn("rounded px-2 py-0.5 capitalize", view === v ? "bg-muted font-medium" : "text-muted-foreground")}>
+            <button
+              key={v}
+              type="button"
+              onClick={() => setView(v)}
+              aria-pressed={view === v}
+              className={cn(
+                "rounded px-2 py-0.5 capitalize",
+                view === v ? "bg-muted font-medium" : "text-muted-foreground",
+              )}
+            >
               {v}
             </button>
           ))}
@@ -119,11 +157,26 @@ export function AmortizationChart({ yearly }: { yearly: YearlyAmortization[] }) 
     <ChartFrame
       height={240}
       legend={<Legend series={series} />}
-      table={<Table head={["Year", "Principal", "Interest", "Balance at year end"]} rows={yearly.map((y) => [y.year, formatINR(y.principalPaid), formatINR(y.interestPaid), formatINR(y.closingBalance)])} />}
+      table={
+        <Table
+          head={["Year", "Principal", "Interest", "Balance at year end"]}
+          rows={yearly.map((y) => [
+            y.year,
+            formatINR(y.principalPaid),
+            formatINR(y.interestPaid),
+            formatINR(y.closingBalance),
+          ])}
+        />
+      }
     >
       <BarChart data={yearly} margin={{ top: 8, right: 8, bottom: 0, left: 0 }} barCategoryGap={2}>
         <CartesianGrid vertical={false} stroke="var(--chart-grid)" />
-        <XAxis dataKey="year" {...axis} tickFormatter={(v) => `Y${v}`} interval="preserveStartEnd" />
+        <XAxis
+          dataKey="year"
+          {...axis}
+          tickFormatter={(v) => `Y${v}`}
+          interval="preserveStartEnd"
+        />
         <YAxis {...axis} width={56} tickFormatter={compact} axisLine={false} />
         <Tooltip
           cursor={{ fill: "var(--muted)", opacity: 0.4 }}
@@ -131,13 +184,30 @@ export function AmortizationChart({ yearly }: { yearly: YearlyAmortization[] }) 
             active && payload?.length ? (
               <TooltipBox
                 title={`Year ${label}`}
-                rows={series.map((s) => ({ label: s.label, value: formatINR(Number(payload.find((p) => p.dataKey === s.key)?.value ?? 0)), color: s.color }))}
+                rows={series.map((s) => ({
+                  label: s.label,
+                  value: formatINR(Number(payload.find((p) => p.dataKey === s.key)?.value ?? 0)),
+                  color: s.color,
+                }))}
               />
             ) : null
           }
         />
-        <Bar dataKey="principalPaid" stackId="a" fill="var(--chart-1)" stroke="var(--chart-surface)" strokeWidth={1} />
-        <Bar dataKey="interestPaid" stackId="a" fill="var(--chart-2)" stroke="var(--chart-surface)" strokeWidth={1} radius={[4, 4, 0, 0]} />
+        <Bar
+          dataKey="principalPaid"
+          stackId="a"
+          fill="var(--chart-1)"
+          stroke="var(--chart-surface)"
+          strokeWidth={1}
+        />
+        <Bar
+          dataKey="interestPaid"
+          stackId="a"
+          fill="var(--chart-2)"
+          stroke="var(--chart-surface)"
+          strokeWidth={1}
+          radius={[4, 4, 0, 0]}
+        />
       </BarChart>
     </ChartFrame>
   );
@@ -145,22 +215,45 @@ export function AmortizationChart({ yearly }: { yearly: YearlyAmortization[] }) 
 
 /** Monthly surplus (or deficit) in each scenario: one measure, one axis. */
 export function ScenarioSurplusChart({ results }: { results: ScenarioResult[] }) {
-  const data = results.map((r) => ({ name: r.params.name, value: r.monthlySurplus, label: r.label }));
+  const data = results.map((r) => ({
+    name: r.params.name,
+    value: r.monthlySurplus,
+    label: r.label,
+  }));
   return (
     <ChartFrame
       height={Math.max(180, data.length * 38)}
-      table={<Table head={["Scenario", "Monthly surplus", "Savings after 12 months"]} rows={results.map((r) => [r.params.name, formatINR(r.monthlySurplus), formatINR(r.savingsAfterHorizon)])} />}
+      table={
+        <Table
+          head={["Scenario", "Monthly surplus", "Savings after 12 months"]}
+          rows={results.map((r) => [
+            r.params.name,
+            formatINR(r.monthlySurplus),
+            formatINR(r.savingsAfterHorizon),
+          ])}
+        />
+      }
     >
       <BarChart data={data} layout="vertical" margin={{ top: 4, right: 16, bottom: 0, left: 0 }}>
         <CartesianGrid horizontal={false} stroke="var(--chart-grid)" />
         <XAxis type="number" {...axis} tickFormatter={compact} />
-        <YAxis type="category" dataKey="name" {...axis} width={150} axisLine={false} tick={{ fill: "var(--muted-foreground)", fontSize: 11 }} />
+        <YAxis
+          type="category"
+          dataKey="name"
+          {...axis}
+          width={150}
+          axisLine={false}
+          tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
+        />
         <ReferenceLine x={0} stroke="var(--chart-axis)" />
         <Tooltip
           cursor={{ fill: "var(--muted)", opacity: 0.4 }}
           content={({ active, payload }) =>
             active && payload?.length ? (
-              <TooltipBox title={String(payload[0]!.payload.name)} rows={[{ label: "Monthly surplus", value: formatINR(Number(payload[0]!.value)) }]} />
+              <TooltipBox
+                title={String(payload[0]!.payload.name)}
+                rows={[{ label: "Monthly surplus", value: formatINR(Number(payload[0]!.value)) }]}
+              />
             ) : null
           }
         />
@@ -175,8 +268,18 @@ export function ScenarioSurplusChart({ results }: { results: ScenarioResult[] })
 }
 
 /** Liquid savings month by month: baseline vs one chosen scenario. */
-export function SavingsTrajectoryChart({ baseline, scenario }: { baseline: ScenarioResult; scenario: ScenarioResult }) {
-  const data = baseline.trajectory.map((p, i) => ({ month: p.month, baseline: p.savings, scenario: scenario.trajectory[i]?.savings ?? null }));
+export function SavingsTrajectoryChart({
+  baseline,
+  scenario,
+}: {
+  baseline: ScenarioResult;
+  scenario: ScenarioResult;
+}) {
+  const data = baseline.trajectory.map((p, i) => ({
+    month: p.month,
+    baseline: p.savings,
+    scenario: scenario.trajectory[i]?.savings ?? null,
+  }));
   const series: Series[] = [
     { key: "baseline", label: "Baseline", color: "var(--chart-1)" },
     { key: "scenario", label: scenario.params.name, color: "var(--chart-2)" },
@@ -185,7 +288,12 @@ export function SavingsTrajectoryChart({ baseline, scenario }: { baseline: Scena
     <ChartFrame
       height={240}
       legend={<Legend series={series} />}
-      table={<Table head={["Month", "Baseline", scenario.params.name]} rows={data.map((d) => [d.month, formatINR(d.baseline), formatINR(d.scenario)])} />}
+      table={
+        <Table
+          head={["Month", "Baseline", scenario.params.name]}
+          rows={data.map((d) => [d.month, formatINR(d.baseline), formatINR(d.scenario)])}
+        />
+      }
     >
       <LineChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
         <CartesianGrid vertical={false} stroke="var(--chart-grid)" />
@@ -198,20 +306,44 @@ export function SavingsTrajectoryChart({ baseline, scenario }: { baseline: Scena
             active && payload?.length ? (
               <TooltipBox
                 title={Number(label) === 0 ? "Right after purchase" : `Month ${label}`}
-                rows={series.map((s) => ({ label: s.label, value: formatINR(Number(payload.find((p) => p.dataKey === s.key)?.value ?? 0)), color: s.color }))}
+                rows={series.map((s) => ({
+                  label: s.label,
+                  value: formatINR(Number(payload.find((p) => p.dataKey === s.key)?.value ?? 0)),
+                  color: s.color,
+                }))}
               />
             ) : null
           }
         />
-        <Line type="monotone" dataKey="baseline" stroke="var(--chart-1)" strokeWidth={2} dot={false} activeDot={{ r: 4, stroke: "var(--chart-surface)", strokeWidth: 2 }} />
-        <Line type="monotone" dataKey="scenario" stroke="var(--chart-2)" strokeWidth={2} dot={false} activeDot={{ r: 4, stroke: "var(--chart-surface)", strokeWidth: 2 }} />
+        <Line
+          type="monotone"
+          dataKey="baseline"
+          stroke="var(--chart-1)"
+          strokeWidth={2}
+          dot={false}
+          activeDot={{ r: 4, stroke: "var(--chart-surface)", strokeWidth: 2 }}
+        />
+        <Line
+          type="monotone"
+          dataKey="scenario"
+          stroke="var(--chart-2)"
+          strokeWidth={2}
+          dot={false}
+          activeDot={{ r: 4, stroke: "var(--chart-surface)", strokeWidth: 2 }}
+        />
       </LineChart>
     </ChartFrame>
   );
 }
 
 /** Where take-home pay goes after the purchase. Magnitude bars in one hue (not a categorical chart). */
-export function IncomeAllocation({ rows, income }: { rows: { label: string; value: number }[]; income: number }) {
+export function IncomeAllocation({
+  rows,
+  income,
+}: {
+  rows: { label: string; value: number }[];
+  income: number;
+}) {
   return (
     <ul className="flex flex-col gap-2">
       {rows.map((r) => {
@@ -221,11 +353,20 @@ export function IncomeAllocation({ rows, income }: { rows: { label: string; valu
             <div className="flex items-baseline justify-between gap-2 text-xs">
               <span className="text-muted-foreground">{r.label}</span>
               <span className={cn("tabular font-medium", r.value < 0 && "text-chart-negative")}>
-                {formatINR(r.value)} <span className="text-muted-foreground">· {income > 0 ? `${Math.round((r.value / income) * 100)}%` : "—"}</span>
+                {formatINR(r.value)}{" "}
+                <span className="text-muted-foreground">
+                  · {income > 0 ? `${Math.round((r.value / income) * 100)}%` : "—"}
+                </span>
               </span>
             </div>
             <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-              <div className={cn("h-full rounded-full", r.value < 0 ? "bg-chart-negative" : "bg-chart-1")} style={{ width: `${Math.min(100, share * 100)}%` }} />
+              <div
+                className={cn(
+                  "h-full rounded-full",
+                  r.value < 0 ? "bg-chart-negative" : "bg-chart-1",
+                )}
+                style={{ width: `${Math.min(100, share * 100)}%` }}
+              />
             </div>
           </li>
         );

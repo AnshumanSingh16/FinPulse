@@ -18,7 +18,21 @@ export function parseMoneyInput(text: string): number | null {
   return parsed !== null && parsed >= 0 ? parsed : null;
 }
 
-export function Field({ label, hint, children, htmlFor, badge, error }: { label: string; hint?: ReactNode; children: ReactNode; htmlFor?: string; badge?: ReactNode; error?: string | null }) {
+export function Field({
+  label,
+  hint,
+  children,
+  htmlFor,
+  badge,
+  error,
+}: {
+  label: string;
+  hint?: ReactNode;
+  children: ReactNode;
+  htmlFor?: string;
+  badge?: ReactNode;
+  error?: string | null;
+}) {
   return (
     <div className="flex min-w-0 flex-col gap-1.5">
       <div className="flex items-center justify-between gap-2">
@@ -28,7 +42,11 @@ export function Field({ label, hint, children, htmlFor, badge, error }: { label:
         {badge}
       </div>
       {children}
-      {error ? <span className="text-[11px] text-chart-negative">{error}</span> : hint ? <span className="text-[11px] text-muted-foreground">{hint}</span> : null}
+      {error ? (
+        <span className="text-[11px] text-chart-negative">{error}</span>
+      ) : hint ? (
+        <span className="text-[11px] text-muted-foreground">{hint}</span>
+      ) : null}
     </div>
   );
 }
@@ -68,8 +86,18 @@ export function MoneyInput({
       label={`${label}${required ? " *" : ""}`}
       htmlFor={id}
       badge={badge}
-      error={invalid ? "Enter an amount like 200000, 2,00,000 or 75 lakh" : highlight && parsed === null ? "Required for the analysis" : null}
-      hint={parsed !== null ? `${formatINR(parsed)}${parsed >= 1e5 ? ` (${formatINR(parsed, { compact: true })})` : ""}` : hint}
+      error={
+        invalid
+          ? "Enter an amount like 200000, 2,00,000 or 75 lakh"
+          : highlight && parsed === null
+            ? "Required for the analysis"
+            : null
+      }
+      hint={
+        parsed !== null
+          ? `${formatINR(parsed)}${parsed >= 1e5 ? ` (${formatINR(parsed, { compact: true })})` : ""}`
+          : hint
+      }
     >
       <input
         id={id}
@@ -84,13 +112,38 @@ export function MoneyInput({
             onChange(p);
           }
         }}
-        className={cn(inputClass, (invalid || (highlight && parsed === null)) && "border-chart-negative/60")}
+        className={cn(
+          inputClass,
+          (invalid || (highlight && parsed === null)) && "border-chart-negative/60",
+        )}
       />
     </Field>
   );
 }
 
-export function NumberInput({ label, value, onChange, suffix, min, max, step, placeholder, hint, badge }: { label: string; value: number | null; onChange: (v: number | null) => void; suffix?: string; min?: number; max?: number; step?: number; placeholder?: string; hint?: ReactNode; badge?: ReactNode }) {
+export function NumberInput({
+  label,
+  value,
+  onChange,
+  suffix,
+  min,
+  max,
+  step,
+  placeholder,
+  hint,
+  badge,
+}: {
+  label: string;
+  value: number | null;
+  onChange: (v: number | null) => void;
+  suffix?: string;
+  min?: number;
+  max?: number;
+  step?: number;
+  placeholder?: string;
+  hint?: ReactNode;
+  badge?: ReactNode;
+}) {
   const id = useId();
   return (
     <Field label={label} htmlFor={id} hint={hint} badge={badge}>
@@ -110,7 +163,11 @@ export function NumberInput({ label, value, onChange, suffix, min, max, step, pl
           }}
           className={cn(inputClass, suffix && "pr-14")}
         />
-        {suffix ? <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-muted-foreground">{suffix}</span> : null}
+        {suffix ? (
+          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-muted-foreground">
+            {suffix}
+          </span>
+        ) : null}
       </div>
     </Field>
   );

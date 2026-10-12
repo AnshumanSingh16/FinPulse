@@ -5,7 +5,8 @@ import { describe, expect, it } from "vitest";
 
 import { extractFromText, kindFor } from "./extract";
 
-const sample = (name: string) => readFileSync(path.resolve(__dirname, "../../../../public/samples", name), "utf8");
+const sample = (name: string) =>
+  readFileSync(path.resolve(__dirname, "../../../../public/samples", name), "utf8");
 
 describe("document extraction (rule-based)", () => {
   it("reads a salary slip and flags embedded instructions", () => {

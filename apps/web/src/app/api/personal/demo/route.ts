@@ -15,7 +15,12 @@ export async function POST(request: NextRequest) {
   const at = new Date().toISOString();
   session.profile = {
     values: { ...DEMO_PROFILE },
-    sources: Object.fromEntries(PROFILE_FIELDS.filter((f) => DEMO_PROFILE[f] !== null).map((f) => [f, { kind: "demo", at, note: "Fictional demo profile" }])),
+    sources: Object.fromEntries(
+      PROFILE_FIELDS.filter((f) => DEMO_PROFILE[f] !== null).map((f) => [
+        f,
+        { kind: "demo", at, note: "Fictional demo profile" },
+      ]),
+    ),
     isDemo: true,
     updatedAt: at,
   };

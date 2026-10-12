@@ -15,7 +15,14 @@ import "server-only";
 import { formatINR } from "@/lib/format";
 
 import type { ProfileValues, PurchaseRequest } from "../schemas";
-import { audit, newId, saveRun, transitionActionPlan, type ActionPlan, type SessionState } from "../store";
+import {
+  audit,
+  newId,
+  saveRun,
+  transitionActionPlan,
+  type ActionPlan,
+  type SessionState,
+} from "../store";
 import { aiStatus, liveResearchEnabled } from "./llm";
 import { buildPlan } from "./planner";
 import { LimitExceededError, RunContext } from "./runtime";
@@ -36,7 +43,12 @@ import { riskFindings, type DocumentFact } from "./verification";
 
 export type WorkflowListener = (event: AgentEvent) => void;
 
-function newRun(goal: string, request: PurchaseRequest, profile: ProfileValues, research: boolean): WorkflowRun {
+function newRun(
+  goal: string,
+  request: PurchaseRequest,
+  profile: ProfileValues,
+  research: boolean,
+): WorkflowRun {
   const ai = aiStatus().enabled;
   const live = liveResearchEnabled();
   return {
@@ -72,7 +84,12 @@ function documentFacts(session: SessionState): DocumentFact[] {
     .flatMap((d) =>
       d.extraction.fields
         .filter((f) => f.profileField && typeof f.value === "number")
-        .map((f) => ({ documentName: d.name, profileField: f.profileField!, label: f.label, value: f.value as number })),
+        .map((f) => ({
+          documentName: d.name,
+          profileField: f.profileField!,
+          label: f.label,
+          value: f.value as number,
+        })),
     );
 }
 
@@ -122,15 +139,29 @@ export async function runAffordabilityWorkflow(
       run.missing = resolved.missing;
       current.status = "needs_input";
       current.summary = `Missing: ${resolved.missing.map((m) => m.label).join(", ")}`;
-      ctx.emit("planner", "needs_input", `I need ${resolved.missing.length} more detail(s) before a reliable assessment: ${resolved.missing.map((m) => m.label).join(", ")}.`, { stepId: current.id, level: "warning" });
+      ctx.emit(
+        "planner",
+        "needs_input",
+        `I need ${resolved.missing.length} more detail(s) before a reliable assessment: ${resolved.missing.map((m) => m.label).join(", ")}.`,
+        { stepId: current.id, level: "warning" },
+      );
       for (const s of run.plan) if (s.status === "pending") s.status = "skipped";
       run.status = "needs_input";
       run.finishedAt = new Date().toISOString();
-      audit(session, "missing_information", "agent:planner", `Asked for: ${resolved.missing.map((m) => m.label).join(", ")}`, run.id);
+      audit(
+        session,
+        "missing_information",
+        "agent:planner",
+        `Asked for: ${resolved.missing.map((m) => m.label).join(", ")}`,
+        run.id,
+      );
       return run;
     }
     const inputs = resolved.inputs;
-    finish(current, `All required inputs present. ${resolved.assumptions.filter((a) => a.basis === "illustrative" || a.basis === "default").length} gap(s) filled with disclosed assumptions.`);
+    finish(
+      current,
+      `All required inputs present. ${resolved.assumptions.filter((a) => a.basis === "illustrative" || a.basis === "default").length} gap(s) filled with disclosed assumptions.`,
+    );
 
     // 2. Research ------------------------------------------------------------------------------
     if (needsResearch) {
@@ -138,7 +169,10 @@ export async function runAffordabilityWorkflow(
       start(current);
       const query = {
         purchaseType: request.type,
-        loanAmount: Math.round(inputs.purchase.purchasePrice * (1 - inputs.purchase.downPaymentPct / 100) + inputs.purchase.financedCosts),
+        loanAmount: Math.round(
+          inputs.purchase.purchasePrice * (1 - inputs.purchase.downPaymentPct / 100) +
+            inputs.purchase.financedCosts,
+        ),
         tenureMonths: inputs.purchase.tenureMonths,
       };
       let research: ResearchResult;
@@ -149,7 +183,13 @@ export async function runAffordabilityWorkflow(
         } catch (error) {
           if (error instanceof LimitExceededError) throw error;
           note = " Live research failed, so illustrative ranges were used.";
-          audit(session, "service_unavailable", "agent:research", "Live research failed; fell back to illustrative assumptions", run.id);
+          audit(
+            session,
+            "service_unavailable",
+            "agent:research",
+            "Live research failed; fell back to illustrative assumptions",
+            run.id,
+          );
           research = await ctx.callTool(illustrativeResearchTool, query, current.id);
         }
       } else {
@@ -166,10 +206,14 @@ export async function runAffordabilityWorkflow(
       }
       run.research = research;
       if (resolved.needsRate) {
-        const rates = research.options.filter((o) => o.tenureMonths === inputs.purchase.tenureMonths).map((o) => o.rateUsed);
+        const rates = research.options
+          .filter((o) => o.tenureMonths === inputs.purchase.tenureMonths)
+          .map((o) => o.rateUsed);
         const pool = rates.length ? rates : research.options.map((o) => o.rateUsed);
         const sorted = [...pool].sort((a, b) => a - b);
-        const rate = research.live ? sorted[Math.floor(sorted.length / 2)]! : (research.options[0]!.annualRateMin + research.options[0]!.annualRateMax) / 2;
+        const rate = research.live
+          ? sorted[Math.floor(sorted.length / 2)]!
+          : (research.options[0]!.annualRateMin + research.options[0]!.annualRateMax) / 2;
         inputs.purchase.annualInterestRate = Math.round(rate * 100) / 100;
         run.assumptions.push({
           id: "in_rate",
@@ -181,9 +225,19 @@ export async function runAffordabilityWorkflow(
             : "Midpoint of an illustrative range, not a current lender quote.",
         });
       }
-      for (const w of research.warnings) ctx.emit("research", "finding", w, { stepId: current.id, level: "warning" });
-      audit(session, "research_completed", "agent:research", `${research.live ? "Live" : "Illustrative"} financing research: ${research.options.length} option(s), ${research.sources.length} source(s)`, run.id);
-      finish(current, `${research.options.length} financing option(s) ${research.live ? `from ${research.sources.length} retrieved source(s)` : "from labelled illustrative ranges"}.${note}`);
+      for (const w of research.warnings)
+        ctx.emit("research", "finding", w, { stepId: current.id, level: "warning" });
+      audit(
+        session,
+        "research_completed",
+        "agent:research",
+        `${research.live ? "Live" : "Illustrative"} financing research: ${research.options.length} option(s), ${research.sources.length} source(s)`,
+        run.id,
+      );
+      finish(
+        current,
+        `${research.options.length} financing option(s) ${research.live ? `from ${research.sources.length} retrieved source(s)` : "from labelled illustrative ranges"}.${note}`,
+      );
     }
     run.inputs = inputs;
 
@@ -193,8 +247,17 @@ export async function runAffordabilityWorkflow(
     const analysis = await ctx.callTool(analysePurchaseTool, inputs, current.id);
     run.analysis = analysis;
     run.checks = analysis.checks;
-    audit(session, "calculation_completed", "agent:analysis", `EMI ${formatINR(analysis.emi)} on ${formatINR(analysis.loanAmount)}; post-purchase savings ${formatINR(analysis.postPurchaseSavings)}`, run.id);
-    finish(current, `EMI ${formatINR(analysis.emi)}/month; ${formatINR(analysis.after.cashFlow.monthlySurplus)} left monthly; ${analysis.after.emergencyMonths?.toFixed(1) ?? "—"} months of emergency cover.`);
+    audit(
+      session,
+      "calculation_completed",
+      "agent:analysis",
+      `EMI ${formatINR(analysis.emi)} on ${formatINR(analysis.loanAmount)}; post-purchase savings ${formatINR(analysis.postPurchaseSavings)}`,
+      run.id,
+    );
+    finish(
+      current,
+      `EMI ${formatINR(analysis.emi)}/month; ${formatINR(analysis.after.cashFlow.monthlySurplus)} left monthly; ${analysis.after.emergencyMonths?.toFixed(1) ?? "—"} months of emergency cover.`,
+    );
 
     // 4. Stress test ---------------------------------------------------------------------------
     current = step("stress");
@@ -202,9 +265,22 @@ export async function runAffordabilityWorkflow(
     const scenarios = await ctx.callTool(scenariosTool, { inputs }, current.id);
     run.scenarios = scenarios;
     const risks = riskFindings(scenarios);
-    for (const f of risks) ctx.emit("risk", "finding", f.message, { stepId: current.id, level: f.severity === "warning" ? "warning" : "info" });
-    audit(session, "scenario_executed", "agent:risk", `${scenarios.length - 1} stress scenarios; ${risks.filter((r) => r.severity === "warning").length} breach a rule`, run.id);
-    finish(current, `${scenarios.length - 1} scenarios run; ${scenarios.filter((s) => !s.isBaseline && s.label === "high_strain").length} breach a safety rule.`);
+    for (const f of risks)
+      ctx.emit("risk", "finding", f.message, {
+        stepId: current.id,
+        level: f.severity === "warning" ? "warning" : "info",
+      });
+    audit(
+      session,
+      "scenario_executed",
+      "agent:risk",
+      `${scenarios.length - 1} stress scenarios; ${risks.filter((r) => r.severity === "warning").length} breach a rule`,
+      run.id,
+    );
+    finish(
+      current,
+      `${scenarios.length - 1} scenarios run; ${scenarios.filter((s) => !s.isBaseline && s.label === "high_strain").length} breach a safety rule.`,
+    );
 
     // 5. Verification --------------------------------------------------------------------------
     current = step("verify");
@@ -224,15 +300,27 @@ export async function runAffordabilityWorkflow(
     );
     run.findings = [...findings, ...risks];
     for (const f of findings.filter((x) => x.severity !== "info")) {
-      ctx.emit("verification", "finding", f.message, { stepId: current.id, level: f.severity === "critical" ? "error" : "warning" });
+      ctx.emit("verification", "finding", f.message, {
+        stepId: current.id,
+        level: f.severity === "critical" ? "error" : "warning",
+      });
       audit(session, "verification_flag", "agent:verification", f.message, run.id);
     }
-    finish(current, `${findings.length} finding(s): ${findings.filter((f) => f.severity === "critical").length} critical, ${findings.filter((f) => f.severity === "warning").length} warnings.`);
+    finish(
+      current,
+      `${findings.length} finding(s): ${findings.filter((f) => f.severity === "critical").length} critical, ${findings.filter((f) => f.severity === "warning").length} warnings.`,
+    );
 
     // 6. Synthesis -----------------------------------------------------------------------------
     current = step("synthesise");
     start(current);
-    const alternatives = await buildAlternatives(ctx, inputs, analysis, session.profile.values.emergencyBufferMonths ?? 6, current.id);
+    const alternatives = await buildAlternatives(
+      ctx,
+      inputs,
+      analysis,
+      session.profile.values.emergencyBufferMonths ?? 6,
+      current.id,
+    );
     const summary = buildSummary(analysis, scenarios, run.findings);
     const narrative = await aiNarrative(
       ctx,
@@ -250,14 +338,28 @@ export async function runAffordabilityWorkflow(
         monthly_surplus_after: analysis.after.cashFlow.monthlySurplus,
         debt_to_income_after: analysis.after.dti,
         emergency_months_after: analysis.after.emergencyMonths,
-        scenarios: scenarios.map((s) => ({ name: s.params.name, label: s.label, month_savings_run_out: s.monthExhausted, monthly_surplus: s.monthlySurplus })),
+        scenarios: scenarios.map((s) => ({
+          name: s.params.name,
+          label: s.label,
+          month_savings_run_out: s.monthExhausted,
+          monthly_surplus: s.monthlySurplus,
+        })),
         alternatives: alternatives.map((a) => ({ title: a.title, figures: a.figures })),
       },
       current.id,
     );
     run.recommendation = buildRecommendation(analysis, summary, alternatives, narrative);
-    audit(session, "recommendation_generated", "agent:planner", `${run.recommendation.headline} (${analysis.label})`, run.id);
-    finish(current, `${run.recommendation.headline}. ${alternatives.length} alternative(s) computed.`);
+    audit(
+      session,
+      "recommendation_generated",
+      "agent:planner",
+      `${run.recommendation.headline} (${analysis.label})`,
+      run.id,
+    );
+    finish(
+      current,
+      `${run.recommendation.headline}. ${alternatives.length} alternative(s) computed.`,
+    );
 
     // 7. Action plan ---------------------------------------------------------------------------
     current = step("act");
@@ -276,21 +378,50 @@ export async function runAffordabilityWorkflow(
       current.id,
     );
     const now = new Date().toISOString();
-    const plan: ActionPlan = { ...draft, id: newId("plan"), createdAt: now, status: "draft", statusHistory: [{ status: "draft", at: now, by: "agent" }] };
+    const plan: ActionPlan = {
+      ...draft,
+      id: newId("plan"),
+      createdAt: now,
+      status: "draft",
+      statusHistory: [{ status: "draft", at: now, by: "agent" }],
+    };
     transitionActionPlan(plan, "awaiting_review", "agent", "Prepared by the Action Agent");
     session.actionPlans.unshift(plan);
     run.actionPlanId = plan.id;
-    audit(session, "action_prepared", "agent:action", `Prepared "${plan.title}" (${plan.items.length} items)`, run.id);
-    audit(session, "approval_requested", "agent:action", `Awaiting your review: "${plan.title}"`, run.id);
-    finish(current, `Checklist of ${plan.items.length} items prepared and awaiting your approval. Nothing has been submitted.`);
+    audit(
+      session,
+      "action_prepared",
+      "agent:action",
+      `Prepared "${plan.title}" (${plan.items.length} items)`,
+      run.id,
+    );
+    audit(
+      session,
+      "approval_requested",
+      "agent:action",
+      `Awaiting your review: "${plan.title}"`,
+      run.id,
+    );
+    finish(
+      current,
+      `Checklist of ${plan.items.length} items prepared and awaiting your approval. Nothing has been submitted.`,
+    );
 
     run.status = "completed";
     run.finishedAt = new Date().toISOString();
-    ctx.emit("orchestrator", "run_completed", `Recommendation ready: ${run.recommendation.headline}`);
+    ctx.emit(
+      "orchestrator",
+      "run_completed",
+      `Recommendation ready: ${run.recommendation.headline}`,
+    );
     return run;
   } catch (error) {
     const message =
-      error instanceof LimitExceededError ? error.message : error instanceof Error ? `A step failed: ${error.message}` : "A step failed";
+      error instanceof LimitExceededError
+        ? error.message
+        : error instanceof Error
+          ? `A step failed: ${error.message}`
+          : "A step failed";
     if (current && current.status === "running") {
       current.status = "failed";
       current.summary = message;

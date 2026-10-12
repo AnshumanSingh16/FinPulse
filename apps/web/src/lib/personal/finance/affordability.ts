@@ -42,8 +42,7 @@ export const DEFAULT_RULES: AffordabilityRules = {
 };
 
 export const RULE_NOTES = {
-  dti:
-    "Debt-to-income here is total EMIs ÷ monthly take-home pay (FOIR-style). Many Indian lenders cap FOIR somewhere around 40–60% depending on income and lender; FinPulse's thresholds are configurable heuristics, not a lender's rule.",
+  dti: "Debt-to-income here is total EMIs ÷ monthly take-home pay (FOIR-style). Many Indian lenders cap FOIR somewhere around 40–60% depending on income and lender; FinPulse's thresholds are configurable heuristics, not a lender's rule.",
   emergency:
     "Emergency cover = liquid savings after the purchase ÷ (living expenses + all EMIs + other fixed obligations). 3–6 months is a common rule of thumb; people with variable income or dependents may want more.",
   surplus:
@@ -51,10 +50,7 @@ export const RULE_NOTES = {
 };
 
 export type AffordabilityLabel =
-  | "comfortable"
-  | "manageable_limited_buffer"
-  | "high_strain"
-  | "insufficient_information";
+  "comfortable" | "manageable_limited_buffer" | "high_strain" | "insufficient_information";
 
 export const LABEL_TEXT: Record<AffordabilityLabel, string> = {
   comfortable: "Comfortable under the stated assumptions",
@@ -286,8 +282,10 @@ export function findComfortablePrice(
   household: HouseholdInputs,
   rules: AffordabilityRules = DEFAULT_RULES,
 ): number | null {
-  const costRatio = purchase.purchasePrice > 0 ? purchase.upfrontCashCosts / purchase.purchasePrice : 0;
-  const financedRatio = purchase.purchasePrice > 0 ? purchase.financedCosts / purchase.purchasePrice : 0;
+  const costRatio =
+    purchase.purchasePrice > 0 ? purchase.upfrontCashCosts / purchase.purchasePrice : 0;
+  const financedRatio =
+    purchase.purchasePrice > 0 ? purchase.financedCosts / purchase.purchasePrice : 0;
   const isComfortable = (price: number) =>
     analysePurchase(
       {

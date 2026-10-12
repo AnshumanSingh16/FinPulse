@@ -18,16 +18,37 @@ export async function POST(request: NextRequest) {
   const refused = refuseCrossOrigin(request);
   if (refused) return refused;
   const parsed = AnalyzeBodySchema.safeParse(await readJson(request));
-  if (!parsed.success) return jsonError(400, "Invalid analysis request", parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`));
+  if (!parsed.success)
+    return jsonError(
+      400,
+      "Invalid analysis request",
+      parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`),
+    );
   const session = await getSession();
-  if (!consumeRateLimit(session)) return jsonError(429, "Too many requests. Wait a minute and try again.");
+  if (!consumeRateLimit(session))
+    return jsonError(429, "Too many requests. Wait a minute and try again.");
   const { purchase, profile, goal } = parsed.data;
   if (profile) {
-    const changed = applyProfileUpdate(session, profile, { kind: "user", at: new Date().toISOString(), note: "Entered on the analysis form" });
-    if (changed.length) audit(session, "profile_updated", "user", `Updated ${changed.length} profile field(s) from the analysis form`);
+    const changed = applyProfileUpdate(session, profile, {
+      kind: "user",
+      at: new Date().toISOString(),
+      note: "Entered on the analysis form",
+    });
+    if (changed.length)
+      audit(
+        session,
+        "profile_updated",
+        "user",
+        `Updated ${changed.length} profile field(s) from the analysis form`,
+      );
   }
   return ndjsonStream(async (send) => {
-    const run = await runAffordabilityWorkflow(session, goal || `Can I afford ${purchase.label}?`, purchase, (event) => send({ type: "event", event }));
+    const run = await runAffordabilityWorkflow(
+      session,
+      goal || `Can I afford ${purchase.label}?`,
+      purchase,
+      (event) => send({ type: "event", event }),
+    );
     send({ type: "run", run });
   });
 }

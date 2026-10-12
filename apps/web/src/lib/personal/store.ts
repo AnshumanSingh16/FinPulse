@@ -11,12 +11,7 @@ import type { WorkflowRun } from "./agents/types";
 import { EMPTY_PROFILE, type FinancialProfile } from "./schemas";
 
 export type ApprovalStatus =
-  | "draft"
-  | "awaiting_review"
-  | "approved"
-  | "rejected"
-  | "completed"
-  | "failed";
+  "draft" | "awaiting_review" | "approved" | "rejected" | "completed" | "failed";
 
 export type ChecklistItem = {
   id: string;
@@ -36,7 +31,12 @@ export type ActionPlan = {
   status: ApprovalStatus;
   statusHistory: { status: ApprovalStatus; at: string; by: "agent" | "user"; note?: string }[];
   items: ChecklistItem[];
-  savingsPlan: { targetAmount: number; monthlySaving: number; months: number; rationale: string } | null;
+  savingsPlan: {
+    targetAmount: number;
+    monthlySaving: number;
+    months: number;
+    rationale: string;
+  } | null;
   draftAnswers: { question: string; answer: string; source: string }[];
   documentsNeeded: string[];
 };
@@ -164,7 +164,14 @@ export function audit(
   summary: string,
   runId?: string,
 ): AuditEvent {
-  const event: AuditEvent = { id: newId("aud"), at: new Date().toISOString(), actor, type, summary, runId };
+  const event: AuditEvent = {
+    id: newId("aud"),
+    at: new Date().toISOString(),
+    actor,
+    type,
+    summary,
+    runId,
+  };
   session.audit.push(event);
   if (session.audit.length > MAX_AUDIT) session.audit.splice(0, session.audit.length - MAX_AUDIT);
   return event;

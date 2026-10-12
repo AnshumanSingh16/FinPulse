@@ -26,10 +26,15 @@ export function ProfileEditor() {
   }
   if (!state || !draft) return <Loading label="Loading your profile…" />;
 
-  const set = <K extends ProfileField>(k: K, val: ProfileValues[K]) => setDraft({ ...draft, [k]: val });
+  const set = <K extends ProfileField>(k: K, val: ProfileValues[K]) =>
+    setDraft({ ...draft, [k]: val });
   const badge = (k: ProfileField) => {
     const s = state.profile.sources[k];
-    return s ? <span title={s.note}><SourceBadge kind={s.kind} /></span> : null;
+    return s ? (
+      <span title={s.note}>
+        <SourceBadge kind={s.kind} />
+      </span>
+    ) : null;
   };
   const dirty = JSON.stringify(draft) !== stored;
 
@@ -50,21 +55,33 @@ export function ProfileEditor() {
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div className="flex flex-col gap-1">
-          <div className="text-xs font-medium tracking-wide text-primary uppercase">Financial brain</div>
+          <div className="text-xs font-medium tracking-wide text-primary uppercase">
+            Financial brain
+          </div>
           <h1 className="text-2xl font-semibold tracking-tight">Financial Profile</h1>
           <p className="max-w-2xl text-sm text-muted-foreground">
-            The structured facts every agent works from. Each value shows where it came from. FinPulse never asks for bank passwords, card PINs or OTPs.
+            The structured facts every agent works from. Each value shows where it came from.
+            FinPulse never asks for bank passwords, card PINs or OTPs.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" disabled={busy} onClick={() => run(api.loadDemo, "Fictional demo profile loaded.")}>
+          <Button
+            variant="outline"
+            disabled={busy}
+            onClick={() => run(api.loadDemo, "Fictional demo profile loaded.")}
+          >
             <Wand2 /> Try Demo
           </Button>
           <Button
             variant="ghost"
             disabled={busy}
             onClick={() => {
-              if (window.confirm("Reset all data for this session: profile, analyses, action plans, documents and audit trail?")) void run(api.reset, "All session data was reset.");
+              if (
+                window.confirm(
+                  "Reset all data for this session: profile, analyses, action plans, documents and audit trail?",
+                )
+              )
+                void run(api.reset, "All session data was reset.");
             }}
           >
             <RotateCcw /> Reset all data
@@ -74,16 +91,40 @@ export function ProfileEditor() {
 
       {message ? <Notice tone={message.tone}>{message.text}</Notice> : null}
       <Notice tone="info">
-        Stored in server memory for this browser session only ({state.status.storage.toLowerCase()}). No bank accounts are connected — figures are entered by you, loaded from the demo, or imported from documents you confirm.
+        Stored in server memory for this browser session only ({state.status.storage.toLowerCase()}
+        ). No bank accounts are connected — figures are entered by you, loaded from the demo, or
+        imported from documents you confirm.
       </Notice>
 
       <Section title="Income & spending">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {(["monthlyIncome", "monthlyExpenses", "existingEmis", "otherMonthlyObligations"] as const).map((k) => (
-            <MoneyInput key={k} label={PROFILE_LABELS[k]} value={draft[k]} onChange={(x) => set(k, x)} badge={badge(k)} />
+          {(
+            ["monthlyIncome", "monthlyExpenses", "existingEmis", "otherMonthlyObligations"] as const
+          ).map((k) => (
+            <MoneyInput
+              key={k}
+              label={PROFILE_LABELS[k]}
+              value={draft[k]}
+              onChange={(x) => set(k, x)}
+              badge={badge(k)}
+            />
           ))}
-          <Field label={PROFILE_LABELS.incomeVariability} htmlFor="var" badge={badge("incomeVariability")}>
-            <select id="var" className={inputClass} value={draft.incomeVariability ?? ""} onChange={(e) => set("incomeVariability", (e.target.value || null) as ProfileValues["incomeVariability"])}>
+          <Field
+            label={PROFILE_LABELS.incomeVariability}
+            htmlFor="var"
+            badge={badge("incomeVariability")}
+          >
+            <select
+              id="var"
+              className={inputClass}
+              value={draft.incomeVariability ?? ""}
+              onChange={(e) =>
+                set(
+                  "incomeVariability",
+                  (e.target.value || null) as ProfileValues["incomeVariability"],
+                )
+              }
+            >
               <option value="">Not specified</option>
               <option value="stable">Stable (salaried)</option>
               <option value="variable">Variable (freelance, commission, business)</option>
@@ -95,13 +136,49 @@ export function ProfileEditor() {
       <Section title="Savings, assets & obligations">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {(["liquidSavings", "investments", "upcomingExpenses"] as const).map((k) => (
-            <MoneyInput key={k} label={PROFILE_LABELS[k]} value={draft[k]} onChange={(x) => set(k, x)} badge={badge(k)} hint={k === "liquidSavings" ? "Bank balance, FDs, liquid funds you could use quickly" : k === "investments" ? "Not counted as emergency money" : undefined} />
+            <MoneyInput
+              key={k}
+              label={PROFILE_LABELS[k]}
+              value={draft[k]}
+              onChange={(x) => set(k, x)}
+              badge={badge(k)}
+              hint={
+                k === "liquidSavings"
+                  ? "Bank balance, FDs, liquid funds you could use quickly"
+                  : k === "investments"
+                    ? "Not counted as emergency money"
+                    : undefined
+              }
+            />
           ))}
-          <NumberInput label={PROFILE_LABELS.dependents} min={0} max={20} step={1} value={draft.dependents} onChange={(x) => set("dependents", x === null ? null : Math.round(x))} badge={badge("dependents")} />
-          <NumberInput label={PROFILE_LABELS.emergencyBufferMonths} suffix="months" min={0} max={36} value={draft.emergencyBufferMonths} onChange={(x) => set("emergencyBufferMonths", x)} badge={badge("emergencyBufferMonths")} />
+          <NumberInput
+            label={PROFILE_LABELS.dependents}
+            min={0}
+            max={20}
+            step={1}
+            value={draft.dependents}
+            onChange={(x) => set("dependents", x === null ? null : Math.round(x))}
+            badge={badge("dependents")}
+          />
+          <NumberInput
+            label={PROFILE_LABELS.emergencyBufferMonths}
+            suffix="months"
+            min={0}
+            max={36}
+            value={draft.emergencyBufferMonths}
+            onChange={(x) => set("emergencyBufferMonths", x)}
+            badge={badge("emergencyBufferMonths")}
+          />
         </div>
         <Field label={PROFILE_LABELS.goals} htmlFor="goals" badge={badge("goals")}>
-          <textarea id="goals" maxLength={500} rows={2} className={`${inputClass} h-auto py-2`} value={draft.goals ?? ""} onChange={(e) => set("goals", e.target.value || null)} />
+          <textarea
+            id="goals"
+            maxLength={500}
+            rows={2}
+            className={`${inputClass} h-auto py-2`}
+            value={draft.goals ?? ""}
+            onChange={(e) => set("goals", e.target.value || null)}
+          />
         </Field>
       </Section>
 
@@ -110,14 +187,23 @@ export function ProfileEditor() {
           disabled={!dirty || busy}
           className="h-10 px-5 shadow-lg"
           onClick={() => {
-            const changed = Object.fromEntries(Object.entries(draft).filter(([k, val]) => val !== state.profile.values[k as ProfileField]));
-            void run(() => api.saveProfile(changed), "Profile saved. Changed fields are marked as entered by you.");
+            const changed = Object.fromEntries(
+              Object.entries(draft).filter(
+                ([k, val]) => val !== state.profile.values[k as ProfileField],
+              ),
+            );
+            void run(
+              () => api.saveProfile(changed),
+              "Profile saved. Changed fields are marked as entered by you.",
+            );
           }}
         >
           <Save /> {dirty ? "Save profile" : "Saved"}
         </Button>
       </div>
-      <p className="text-[11px] text-muted-foreground">Money fields accept 2,00,000 · 200000 · 2 lakh · 1.2 crore.</p>
+      <p className="text-[11px] text-muted-foreground">
+        Money fields accept 2,00,000 · 200000 · 2 lakh · 1.2 crore.
+      </p>
     </div>
   );
 }

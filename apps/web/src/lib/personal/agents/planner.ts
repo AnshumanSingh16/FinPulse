@@ -4,15 +4,33 @@
  */
 import { formatINR } from "@/lib/format";
 
-import { DEMO_PURCHASE, type FieldSource, type FinancialProfile, type PurchaseRequest, type PurchaseType } from "../schemas";
+import {
+  DEMO_PURCHASE,
+  type FieldSource,
+  type FinancialProfile,
+  type PurchaseRequest,
+  type PurchaseType,
+} from "../schemas";
 import { DEFAULT_TENURE } from "./research";
 import type { Assumption, MissingInput, PlanStep, ResolvedInputs } from "./types";
 
 const REQUIRED_PROFILE = [
   ["monthlyIncome", "Monthly take-home income", "What is your monthly take-home (in-hand) income?"],
-  ["monthlyExpenses", "Monthly living expenses", "Roughly how much do you spend each month on living expenses (rent, food, bills, transport)?"],
-  ["liquidSavings", "Liquid savings", "How much do you have in savings you could use quickly (bank balance, FDs, liquid funds)?"],
-  ["existingEmis", "Existing EMIs", "Do you pay any EMIs today? Enter the monthly total (₹0 if none)."],
+  [
+    "monthlyExpenses",
+    "Monthly living expenses",
+    "Roughly how much do you spend each month on living expenses (rent, food, bills, transport)?",
+  ],
+  [
+    "liquidSavings",
+    "Liquid savings",
+    "How much do you have in savings you could use quickly (bank balance, FDs, liquid funds)?",
+  ],
+  [
+    "existingEmis",
+    "Existing EMIs",
+    "Do you pay any EMIs today? Enter the monthly total (₹0 if none).",
+  ],
 ] as const;
 
 const DEFAULT_DOWN_PAYMENT: Record<PurchaseType, number> = {
@@ -29,8 +47,14 @@ const DEFAULT_UPFRONT: Record<PurchaseType, { share: number; note: string }> = {
     share: 0.06,
     note: "Illustrative 6% of price for stamp duty, registration and fees. Stamp duty varies by state (roughly 5–8% incl. registration); replace with your actual figure.",
   },
-  car: { share: 0, note: "Assumed the price is the on-road price (registration and first-year insurance included)." },
-  education: { share: 0, note: "Assumed no separate upfront costs beyond the fees being financed." },
+  car: {
+    share: 0,
+    note: "Assumed the price is the on-road price (registration and first-year insurance included).",
+  },
+  education: {
+    share: 0,
+    note: "Assumed no separate upfront costs beyond the fees being financed.",
+  },
   business: { share: 0, note: "Assumed no separate upfront costs; add setup costs if any." },
   custom: { share: 0, note: "Assumed no separate upfront costs." },
 };
@@ -51,7 +75,10 @@ function basisOf(source: FieldSource | undefined): Assumption["basis"] {
   return "user";
 }
 
-export function resolveInputs(profile: FinancialProfile, request: PurchaseRequest): InputResolution {
+export function resolveInputs(
+  profile: FinancialProfile,
+  request: PurchaseRequest,
+): InputResolution {
   const v = profile.values;
   const missing: MissingInput[] = [];
   const assumptions: Assumption[] = [];
@@ -67,7 +94,13 @@ export function resolveInputs(profile: FinancialProfile, request: PurchaseReques
         note: profile.sources[field]?.note ?? "From your financial profile",
       });
   }
-  assumptions.push({ id: "in_price", field: "Purchase price", value: formatINR(request.price), basis: "user", note: request.label });
+  assumptions.push({
+    id: "in_price",
+    field: "Purchase price",
+    value: formatINR(request.price),
+    basis: "user",
+    note: request.label,
+  });
 
   const downPaymentPct = request.downPaymentPct ?? DEFAULT_DOWN_PAYMENT[request.type];
   assumptions.push({
@@ -75,16 +108,31 @@ export function resolveInputs(profile: FinancialProfile, request: PurchaseReques
     field: "Down payment",
     value: `${downPaymentPct}%`,
     basis: request.downPaymentPct === null ? "default" : "user",
-    note: request.downPaymentPct === null ? "No down payment given: a common starting point was assumed. Change it to match your plan." : "As entered",
+    note:
+      request.downPaymentPct === null
+        ? "No down payment given: a common starting point was assumed. Change it to match your plan."
+        : "As entered",
   });
 
   let upfront = request.upfrontCosts;
   if (upfront === null) {
     const d = DEFAULT_UPFRONT[request.type];
     upfront = Math.round(request.price * d.share);
-    assumptions.push({ id: "in_upfront", field: "Upfront costs", value: formatINR(upfront), basis: "illustrative", note: d.note });
+    assumptions.push({
+      id: "in_upfront",
+      field: "Upfront costs",
+      value: formatINR(upfront),
+      basis: "illustrative",
+      note: d.note,
+    });
   } else {
-    assumptions.push({ id: "in_upfront", field: "Upfront costs", value: formatINR(upfront), basis: "user", note: request.financeUpfrontCosts ? "Added to the loan" : "Paid in cash" });
+    assumptions.push({
+      id: "in_upfront",
+      field: "Upfront costs",
+      value: formatINR(upfront),
+      basis: "user",
+      note: request.financeUpfrontCosts ? "Added to the loan" : "Paid in cash",
+    });
   }
 
   const tenure = request.tenureMonths ?? DEFAULT_TENURE[request.type];
@@ -93,7 +141,10 @@ export function resolveInputs(profile: FinancialProfile, request: PurchaseReques
     field: "Loan tenure",
     value: `${tenure} months (${(tenure / 12).toFixed(tenure % 12 ? 1 : 0)} years)`,
     basis: request.tenureMonths === null ? "default" : "user",
-    note: request.tenureMonths === null ? "No tenure given: a typical tenure for this loan type was assumed." : "As entered",
+    note:
+      request.tenureMonths === null
+        ? "No tenure given: a typical tenure for this loan type was assumed."
+        : "As entered",
   });
 
   if (request.interestRate !== null) {
@@ -123,10 +174,17 @@ export function resolveInputs(profile: FinancialProfile, request: PurchaseReques
 
   const other = v.otherMonthlyObligations ?? 0;
   if (v.otherMonthlyObligations === null) {
-    assumptions.push({ id: "in_other", field: "Other fixed obligations", value: "₹0", basis: "default", note: "Not provided; assumed none (insurance premiums, SIP commitments, family support)." });
+    assumptions.push({
+      id: "in_other",
+      field: "Other fixed obligations",
+      value: "₹0",
+      basis: "default",
+      note: "Not provided; assumed none (insurance premiums, SIP commitments, family support).",
+    });
   }
 
-  if (missing.length) return { missing, assumptions, inputs: null, needsRate: request.interestRate === null };
+  if (missing.length)
+    return { missing, assumptions, inputs: null, needsRate: request.interestRate === null };
 
   return {
     missing,
@@ -164,23 +222,55 @@ export function buildPlan(opts: { research: boolean; liveResearch: boolean }): P
     toolCallIds: [],
   });
   return [
-    step("collect", "planner", "Check profile and purchase details", "A meaningful answer needs income, expenses, savings and existing EMIs."),
+    step(
+      "collect",
+      "planner",
+      "Check profile and purchase details",
+      "A meaningful answer needs income, expenses, savings and existing EMIs.",
+    ),
     ...(opts.research
       ? [
           step(
             "research",
             "research",
-            opts.liveResearch ? "Research current financing options" : "Gather financing assumptions",
+            opts.liveResearch
+              ? "Research current financing options"
+              : "Gather financing assumptions",
             opts.liveResearch
               ? "Live web search for published rates, each kept only with a retrieved source."
               : "Live research is not configured: clearly labelled illustrative ranges are used.",
           ),
         ]
       : []),
-    step("analyse", "analysis", "Calculate loan and cash-flow outcomes", "EMI, total interest, post-purchase savings and debt load, from deterministic formulas."),
-    step("stress", "risk", "Stress-test downside scenarios", "How the plan holds up if income falls, expenses or rates rise, or a shock hits."),
-    step("verify", "verification", "Verify inputs and challenge assumptions", "Flag missing, inconsistent or optimistic inputs before anything is recommended."),
-    step("synthesise", "planner", "Synthesise recommendation and alternatives", "Combine the findings; compute safer alternatives with the same tools."),
-    step("act", "action", "Prepare next steps for your approval", "A checklist and document list you review; nothing is submitted anywhere."),
+    step(
+      "analyse",
+      "analysis",
+      "Calculate loan and cash-flow outcomes",
+      "EMI, total interest, post-purchase savings and debt load, from deterministic formulas.",
+    ),
+    step(
+      "stress",
+      "risk",
+      "Stress-test downside scenarios",
+      "How the plan holds up if income falls, expenses or rates rise, or a shock hits.",
+    ),
+    step(
+      "verify",
+      "verification",
+      "Verify inputs and challenge assumptions",
+      "Flag missing, inconsistent or optimistic inputs before anything is recommended.",
+    ),
+    step(
+      "synthesise",
+      "planner",
+      "Synthesise recommendation and alternatives",
+      "Combine the findings; compute safer alternatives with the same tools.",
+    ),
+    step(
+      "act",
+      "action",
+      "Prepare next steps for your approval",
+      "A checklist and document list you review; nothing is submitted anywhere.",
+    ),
   ];
 }

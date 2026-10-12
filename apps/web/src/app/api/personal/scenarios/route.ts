@@ -27,18 +27,33 @@ export async function POST(request: NextRequest) {
   const refused = refuseCrossOrigin(request);
   if (refused) return refused;
   const parsed = Body.safeParse(await readJson(request));
-  if (!parsed.success) return jsonError(400, "Invalid scenario request", parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`));
+  if (!parsed.success)
+    return jsonError(
+      400,
+      "Invalid scenario request",
+      parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`),
+    );
   const session = await getSession();
-  if (!consumeRateLimit(session)) return jsonError(429, "Too many requests. Wait a minute and try again.");
+  if (!consumeRateLimit(session))
+    return jsonError(429, "Too many requests. Wait a minute and try again.");
   const run = session.runs.find((r) => r.id === parsed.data.runId);
   if (!run?.inputs) return jsonError(404, "No completed analysis with that id");
-  const inputs = { purchase: { ...run.inputs.purchase, ...parsed.data.overrides }, household: run.inputs.household };
+  const inputs = {
+    purchase: { ...run.inputs.purchase, ...parsed.data.overrides },
+    household: run.inputs.household,
+  };
   const input = { inputs, scenarios: parsed.data.scenarios };
   const ok = scenariosTool.input.safeParse(input);
   if (!ok.success) return jsonError(400, "Invalid scenario parameters");
   try {
     const results = await scenariosTool.run(ok.data, new AbortController().signal);
-    audit(session, "scenario_executed", "agent:risk", `Custom stress test on "${run.request.label}": ${scenariosTool.summarize(results)}`, run.id);
+    audit(
+      session,
+      "scenario_executed",
+      "agent:risk",
+      `Custom stress test on "${run.request.label}": ${scenariosTool.summarize(results)}`,
+      run.id,
+    );
     return NextResponse.json({ results, inputs });
   } catch (error) {
     return jsonError(400, error instanceof Error ? error.message : "Scenario failed");

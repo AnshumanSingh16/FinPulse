@@ -1,12 +1,28 @@
 "use client";
 
-import { AlertTriangle, Check, CircleDashed, Loader2, MinusCircle, OctagonAlert, PauseCircle, Wrench } from "lucide-react";
+import {
+  AlertTriangle,
+  Check,
+  CircleDashed,
+  Loader2,
+  MinusCircle,
+  OctagonAlert,
+  PauseCircle,
+  Wrench,
+} from "lucide-react";
 import { useMemo } from "react";
 
 import { AGENT_LABELS, type AgentEvent, type StepStatus } from "@/lib/personal/agents/types";
 import { cn } from "@/lib/utils";
 
-type StepView = { id: string; agent: keyof typeof AGENT_LABELS; title: string; why: string; status: StepStatus; summary?: string };
+type StepView = {
+  id: string;
+  agent: keyof typeof AGENT_LABELS;
+  title: string;
+  why: string;
+  status: StepStatus;
+  summary?: string;
+};
 
 /** Derive plan-step status purely from the events the server emitted. */
 export function stepsFromEvents(events: AgentEvent[], running: boolean): StepView[] {
@@ -20,7 +36,9 @@ export function stepsFromEvents(events: AgentEvent[], running: boolean): StepVie
     if (e.kind === "step_failed") Object.assign(s, { status: "failed", summary: e.message });
     if (e.kind === "needs_input") Object.assign(s, { status: "needs_input", summary: e.message });
   }
-  const ended = events.some((e) => e.kind === "run_completed" || e.kind === "run_failed" || e.kind === "needs_input");
+  const ended = events.some(
+    (e) => e.kind === "run_completed" || e.kind === "run_failed" || e.kind === "needs_input",
+  );
   if (ended || !running) for (const s of steps) if (s.status === "pending") s.status = "skipped";
   return steps;
 }
@@ -43,7 +61,13 @@ export function PlanTracker({ events, running }: { events: AgentEvent[]; running
         const meta = STEP_ICON[s.status];
         const Icon = meta.icon;
         return (
-          <li key={s.id} className={cn("flex gap-3 rounded-lg px-2 py-2", s.status === "running" && "bg-primary/5")}>
+          <li
+            key={s.id}
+            className={cn(
+              "flex gap-3 rounded-lg px-2 py-2",
+              s.status === "running" && "bg-primary/5",
+            )}
+          >
             <span className="flex flex-col items-center">
               <Icon className={cn("size-4 shrink-0", meta.className)} aria-label={meta.label} />
               {i < steps.length - 1 ? <span className="mt-1 w-px flex-1 bg-border" /> : null}
@@ -51,9 +75,13 @@ export function PlanTracker({ events, running }: { events: AgentEvent[]; running
             <div className="flex min-w-0 flex-col gap-0.5 pb-1">
               <div className="flex flex-wrap items-baseline gap-x-2">
                 <span className="text-sm font-medium">{s.title}</span>
-                <span className="text-[11px] text-muted-foreground">{AGENT_LABELS[s.agent]} agent</span>
+                <span className="text-[11px] text-muted-foreground">
+                  {AGENT_LABELS[s.agent]} agent
+                </span>
               </div>
-              <span className="text-xs text-pretty text-muted-foreground">{s.summary ?? s.why}</span>
+              <span className="text-xs text-pretty text-muted-foreground">
+                {s.summary ?? s.why}
+              </span>
             </div>
           </li>
         );
@@ -69,16 +97,33 @@ function time(iso: string) {
 export function EventFeed({ events, max = 60 }: { events: AgentEvent[]; max?: number }) {
   const shown = events.slice(-max);
   return (
-    <ol className="flex max-h-96 flex-col gap-1 overflow-y-auto pr-1 font-mono text-[11.5px]" aria-live="polite">
+    <ol
+      className="flex max-h-96 flex-col gap-1 overflow-y-auto pr-1 font-mono text-[11.5px]"
+      aria-live="polite"
+    >
       {shown.map((e) => {
         const tool = e.kind === "tool_call" || e.kind === "tool_result";
         const warn = e.level === "warning";
         const err = e.level === "error";
         return (
           <li key={e.id} className="flex gap-2 leading-snug">
-            <span className="shrink-0 text-muted-foreground/70 tabular">{time(e.at)}</span>
-            <span className={cn("w-24 shrink-0 truncate", tool ? "text-muted-foreground" : "text-primary")}>{AGENT_LABELS[e.agent]}</span>
-            <span className={cn("min-w-0 break-words", tool && "text-muted-foreground", warn && "text-status-warning", err && "text-chart-negative")}>
+            <span className="tabular shrink-0 text-muted-foreground/70">{time(e.at)}</span>
+            <span
+              className={cn(
+                "w-24 shrink-0 truncate",
+                tool ? "text-muted-foreground" : "text-primary",
+              )}
+            >
+              {AGENT_LABELS[e.agent]}
+            </span>
+            <span
+              className={cn(
+                "min-w-0 break-words",
+                tool && "text-muted-foreground",
+                warn && "text-status-warning",
+                err && "text-chart-negative",
+              )}
+            >
               {tool ? <Wrench className="mr-1 inline size-3" aria-hidden /> : null}
               {warn || err ? <AlertTriangle className="mr-1 inline size-3" aria-hidden /> : null}
               {e.message}
@@ -86,7 +131,9 @@ export function EventFeed({ events, max = 60 }: { events: AgentEvent[]; max?: nu
           </li>
         );
       })}
-      {events.length === 0 ? <li className="text-muted-foreground">No agent activity yet.</li> : null}
+      {events.length === 0 ? (
+        <li className="text-muted-foreground">No agent activity yet.</li>
+      ) : null}
     </ol>
   );
 }

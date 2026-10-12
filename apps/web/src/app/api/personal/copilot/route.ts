@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
   const parsed = Body.safeParse(await readJson(request, 8_000));
   if (!parsed.success) return jsonError(400, "Message must be 1–1000 characters");
   const session = await getSession();
-  if (!consumeRateLimit(session)) return jsonError(429, "Too many requests. Wait a minute and try again.");
+  if (!consumeRateLimit(session))
+    return jsonError(429, "Too many requests. Wait a minute and try again.");
   return ndjsonStream((send) => copilotTurn(session, parsed.data.message, send));
 }

@@ -67,7 +67,8 @@ function SidebarBody() {
   const asOf = useSearchParams().get("asOf");
   const entityId = params.entityId;
   const section = currentSection(pathname);
-  const inBusiness = pathname.startsWith("/business") || pathname.startsWith("/entities") || pathname === "/demo";
+  const inBusiness =
+    pathname.startsWith("/business") || pathname.startsWith("/entities") || pathname === "/demo";
 
   return (
     <div className="flex h-full flex-col gap-6 overflow-y-auto p-4">

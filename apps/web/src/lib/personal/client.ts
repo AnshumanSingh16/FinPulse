@@ -30,7 +30,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     } catch {
       /* not JSON */
     }
-    throw new ClientError(body.error ?? `Request failed (HTTP ${res.status})`, res.status, body.details);
+    throw new ClientError(
+      body.error ?? `Request failed (HTTP ${res.status})`,
+      res.status,
+      body.details,
+    );
   }
   return res.json() as Promise<T>;
 }
@@ -43,12 +47,16 @@ const json = (method: string, body?: unknown): RequestInit => ({
 
 export const api = {
   state: () => request<StateView>("/api/personal/state"),
-  saveProfile: (values: Partial<ProfileValues>) => request<StateView>("/api/personal/profile", json("PUT", { values })),
+  saveProfile: (values: Partial<ProfileValues>) =>
+    request<StateView>("/api/personal/profile", json("PUT", { values })),
   loadDemo: () => request<StateView>("/api/personal/demo", json("POST")),
   reset: () => request<StateView>("/api/personal/reset", json("POST")),
   run: (id: string) => request<WorkflowRun>(`/api/personal/runs/${encodeURIComponent(id)}`),
   scenarios: (runId: string, scenarios: ScenarioParams[], overrides?: Record<string, number>) =>
-    request<{ results: ScenarioResult[] }>("/api/personal/scenarios", json("POST", { runId, scenarios, overrides })),
+    request<{ results: ScenarioResult[] }>(
+      "/api/personal/scenarios",
+      json("POST", { runId, scenarios, overrides }),
+    ),
   action: (planId: string, body: Record<string, unknown>) =>
     request<StateView>(`/api/personal/actions/${encodeURIComponent(planId)}`, json("POST", body)),
   documentAction: (docId: string, body: Record<string, unknown>) =>
@@ -56,7 +64,10 @@ export const api = {
   upload: (file: File) => {
     const form = new FormData();
     form.append("file", file);
-    return request<{ document: DocumentRecord; state: StateView }>("/api/personal/documents", { method: "POST", body: form });
+    return request<{ document: DocumentRecord; state: StateView }>("/api/personal/documents", {
+      method: "POST",
+      body: form,
+    });
   },
 };
 
@@ -89,7 +100,10 @@ async function stream<T>(path: string, body: unknown, onItem: (item: T) => void)
   if (buffer.trim()) onItem(JSON.parse(buffer) as T);
 }
 
-export type AnalyzeItem = { type: "event"; event: AgentEvent } | { type: "run"; run: WorkflowRun } | { type: "error"; message: string };
+export type AnalyzeItem =
+  | { type: "event"; event: AgentEvent }
+  | { type: "run"; run: WorkflowRun }
+  | { type: "error"; message: string };
 
 export function analyze(
   body: { goal?: string; purchase: PurchaseRequest; profile?: Partial<ProfileValues> },
@@ -98,6 +112,9 @@ export function analyze(
   return stream<AnalyzeItem>("/api/personal/analyze", body, onItem);
 }
 
-export function copilot(message: string, onItem: (item: CopilotStreamItem | { type: "error"; message: string }) => void) {
+export function copilot(
+  message: string,
+  onItem: (item: CopilotStreamItem | { type: "error"; message: string }) => void,
+) {
   return stream("/api/personal/copilot", { message }, onItem);
 }

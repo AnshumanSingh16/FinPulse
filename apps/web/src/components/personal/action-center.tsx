@@ -13,26 +13,46 @@ export function ActionCenter() {
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-1">
-        <div className="text-xs font-medium tracking-wide text-primary uppercase">Financial Action Agent</div>
+        <div className="text-xs font-medium tracking-wide text-primary uppercase">
+          Financial Action Agent
+        </div>
         <h1 className="text-2xl font-semibold tracking-tight">Action Center</h1>
         <p className="max-w-2xl text-sm text-muted-foreground">
-          Next-step plans prepared by the Action Agent. Each one waits for your review; approval, rejection and completion are enforced by the server. FinPulse never submits applications, contacts lenders or moves money.
+          Next-step plans prepared by the Action Agent. Each one waits for your review; approval,
+          rejection and completion are enforced by the server. FinPulse never submits applications,
+          contacts lenders or moves money.
         </p>
       </header>
       {plans.length === 0 ? (
         <Notice tone="info" title="No action plans yet">
-          Plans are prepared at the end of an affordability analysis. <Link href="/afford" className="text-primary hover:underline">Run one</Link>.
+          Plans are prepared at the end of an affordability analysis.{" "}
+          <Link href="/afford" className="text-primary hover:underline">
+            Run one
+          </Link>
+          .
         </Notice>
       ) : (
         plans.map((p) => (
-          <Section key={p.id} title={p.title} actions={<Link href={`/afford?run=${p.runId}`} className="text-xs text-primary hover:underline">View analysis</Link>}>
+          <Section
+            key={p.id}
+            title={p.title}
+            actions={
+              <Link
+                href={`/afford?run=${p.runId}`}
+                className="text-xs text-primary hover:underline"
+              >
+                View analysis
+              </Link>
+            }
+          >
             <ActionPlanCard plan={p} />
             <details className="text-xs text-muted-foreground">
               <summary className="cursor-pointer select-none">Approval history</summary>
               <ol className="mt-2 flex flex-col gap-1">
                 {p.statusHistory.map((h, i) => (
                   <li key={i}>
-                    {new Date(h.at).toLocaleString("en-IN")} — {h.status.replace("_", " ")} by {h.by}
+                    {new Date(h.at).toLocaleString("en-IN")} — {h.status.replace("_", " ")} by{" "}
+                    {h.by}
                     {h.note ? `: ${h.note}` : ""}
                   </li>
                 ))}
