@@ -1,32 +1,21 @@
-import type { EntitySummary } from "@finpulse/contracts";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
-import { getEntities } from "@/lib/api/finpulse";
 
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "FinPulse", template: "%s · FinPulse" },
+  title: { default: "FinPulse — Your Financial Life. On Autopilot.", template: "%s · FinPulse" },
   description:
-    "Financial intelligence for individuals and small businesses with thin or no credit history.",
+    "An agentic financial copilot that investigates financial decisions, simulates risks, verifies evidence and prepares next steps — with you in control.",
 };
 
-async function loadEntities(): Promise<EntitySummary[]> {
-  try {
-    return await getEntities();
-  } catch {
-    return []; // pages show the API error themselves; the shell still renders
-  }
-}
-
-export default async function RootLayout({ children }: { children: ReactNode }) {
-  const entities = await loadEntities();
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en-IN">
       <body>
-        <AppShell entities={entities}>{children}</AppShell>
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

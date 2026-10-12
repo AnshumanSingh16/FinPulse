@@ -9,7 +9,7 @@ import { getEntities, getMetrics, getPassport, getRiskSummary } from "@/lib/api/
 import { formatMetric, formatNumber, titleCase } from "@/lib/format";
 import { SEVERITY_ORDER } from "@/lib/severity";
 
-export const metadata: Metadata = { title: "Portfolio" };
+export const metadata: Metadata = { title: "Business risk · Portfolio" };
 export const dynamic = "force-dynamic";
 
 async function loadCard(id: string) {
@@ -46,7 +46,7 @@ export default async function PortfolioPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        eyebrow="Risk intelligence"
+        eyebrow="Business risk module"
         title="Portfolio"
         description="Every entity under review, highest early-warning risk first, with its prototype Financial Health score and cash runway — calculated by FinPulse's deterministic engines from bank, invoice and loan records."
         actions={<SyntheticBadge />}

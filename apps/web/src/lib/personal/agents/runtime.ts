@@ -41,7 +41,7 @@ export class RunContext {
     agent: AgentName,
     kind: AgentEvent["kind"],
     message: string,
-    extra: Partial<Pick<AgentEvent, "stepId" | "toolCallId" | "level">> = {},
+    extra: Partial<Pick<AgentEvent, "stepId" | "toolCallId" | "level" | "plan">> = {},
   ): AgentEvent {
     const event: AgentEvent = { id: newId("evt"), at: new Date().toISOString(), agent, kind, message, ...extra };
     this.run.events.push(event);

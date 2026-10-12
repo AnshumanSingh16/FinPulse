@@ -1,0 +1,17 @@
+Date,Description,Debit,Credit,Balance
+2026-07-01,Opening balance,,,2410000
+2026-07-01,Salary credit - Nimbus Analytics,,185000,2595000
+2026-07-03,Rent,32000,,2563000
+2026-07-05,Car loan EMI,15000,,2548000
+2026-07-12,Groceries & utilities,21000,,2527000
+2026-07-20,Other spending,19000,,2508000
+2026-08-01,Salary credit - Nimbus Analytics,,185000,2693000
+2026-08-03,Rent,32000,,2661000
+2026-08-05,Car loan EMI,15000,,2646000
+2026-08-14,Groceries & utilities,23000,,2623000
+2026-08-22,Other spending,24000,,2599000
+2026-09-01,Salary credit - Nimbus Analytics,,185000,2784000
+2026-09-03,Rent,32000,,2752000
+2026-09-05,Car loan EMI,15000,,2737000
+2026-09-11,Groceries & utilities,20000,,2717000
+2026-09-25,Investment transfer (SIP),217000,,2500000

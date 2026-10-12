@@ -45,3 +45,11 @@ export function parseINRAmount(text: string): number | null {
   const hit = findINRAmounts(text).find((a) => a.hasCurrency || a.hasUnit || a.value >= 1000);
   return hit ? hit.value : null;
 }
+
+/** "₹75 lakh", "₹1.2 crore", "₹50,000": how people say amounts in India. */
+export function inrWords(value: number): string {
+  const trim = (n: number) => String(+n.toFixed(2));
+  if (value >= 1e7) return `₹${trim(value / 1e7)} crore`;
+  if (value >= 1e5) return `₹${trim(value / 1e5)} lakh`;
+  return `₹${Math.round(value).toLocaleString("en-IN")}`;
+}

@@ -103,6 +103,7 @@ export async function runAffordabilityWorkflow(
     "orchestrator",
     "plan_created",
     `Task plan ready: ${run.plan.length} steps across ${new Set(run.plan.map((s) => s.agent)).size} agents. AI ${run.mode.ai ? "enabled" : "not configured (deterministic mode)"}; research ${run.mode.research === "live" ? "live" : "illustrative"}.`,
+    { plan: run.plan.map(({ id, agent, title, why }) => ({ id, agent, title, why })) },
   );
   audit(session, "plan_created", "agent:planner", `Created a ${run.plan.length}-step plan`, run.id);
 

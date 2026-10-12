@@ -4,7 +4,7 @@
  */
 import { formatINR } from "@/lib/format";
 
-import type { FieldSource, FinancialProfile, PurchaseRequest, PurchaseType } from "../schemas";
+import { DEMO_PURCHASE, type FieldSource, type FinancialProfile, type PurchaseRequest, type PurchaseType } from "../schemas";
 import { DEFAULT_TENURE } from "./research";
 import type { Assumption, MissingInput, PlanStep, ResolvedInputs } from "./types";
 
@@ -97,12 +97,13 @@ export function resolveInputs(profile: FinancialProfile, request: PurchaseReques
   });
 
   if (request.interestRate !== null) {
+    const demoRate = profile.isDemo && request.interestRate === DEMO_PURCHASE.interestRate;
     assumptions.push({
       id: "in_rate",
       field: "Interest rate",
       value: `${request.interestRate}% p.a.`,
-      basis: profile.isDemo ? "demo" : "user",
-      note: profile.isDemo
+      basis: demoRate ? "demo" : "user",
+      note: demoRate
         ? "Illustrative demo assumption, not a current lender quote."
         : "As entered. Floating rates can change over the loan's life.",
     });

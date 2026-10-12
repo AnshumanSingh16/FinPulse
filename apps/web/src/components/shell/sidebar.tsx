@@ -1,6 +1,5 @@
 "use client";
 
-import type { EntitySummary } from "@finpulse/contracts";
 import { Activity, Briefcase, Menu, Presentation, ServerCog, X } from "lucide-react";
 import Link from "next/link";
 import { useParams, usePathname, useSearchParams } from "next/navigation";
@@ -9,6 +8,7 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 import { SECTIONS, currentSection, sectionHref } from "./nav";
+import { PERSONAL_SECTIONS } from "./personal-nav";
 
 function Brand() {
   return (
@@ -16,13 +16,13 @@ function Brand() {
       href="/"
       className="flex items-center gap-2.5 font-semibold tracking-tight text-sidebar-foreground"
     >
-      <span className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-sm">
+      <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
         <Activity className="size-4" aria-hidden />
       </span>
       <span className="flex flex-col leading-none">
         <span>FinPulse</span>
         <span className="mt-1 text-[10px] font-medium tracking-[0.12em] text-sidebar-muted uppercase">
-          Risk intelligence
+          On autopilot
         </span>
       </span>
     </Link>
@@ -34,11 +34,13 @@ function NavLink({
   active,
   icon: Icon,
   children,
+  highlight,
 }: {
   href: string;
   active: boolean;
   icon: typeof Activity;
   children: React.ReactNode;
+  highlight?: boolean;
 }) {
   return (
     <Link
@@ -48,7 +50,9 @@ function NavLink({
         "flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm transition-colors",
         active
           ? "bg-sidebar-accent font-medium text-sidebar-foreground"
-          : "text-sidebar-muted hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
+          : highlight
+            ? "text-primary hover:bg-sidebar-accent/60"
+            : "text-sidebar-muted hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
       )}
     >
       <Icon className="size-4 shrink-0" aria-hidden />
@@ -57,64 +61,69 @@ function NavLink({
   );
 }
 
-function SidebarBody({ entities }: { entities: EntitySummary[] }) {
+function SidebarBody() {
   const pathname = usePathname();
   const params = useParams<{ entityId?: string }>();
   const asOf = useSearchParams().get("asOf");
   const entityId = params.entityId;
-  const entity = entities.find((e) => e.id === entityId);
   const section = currentSection(pathname);
+  const inBusiness = pathname.startsWith("/business") || pathname.startsWith("/entities") || pathname === "/demo";
 
   return (
-    <div className="flex h-full flex-col gap-6 p-4">
+    <div className="flex h-full flex-col gap-6 overflow-y-auto p-4">
       <Brand />
       <nav aria-label="Main" className="flex flex-col gap-0.5">
-        <NavLink href="/" active={pathname === "/"} icon={Briefcase}>
-          Portfolio
-        </NavLink>
-        <NavLink href="/demo" active={pathname === "/demo"} icon={Presentation}>
-          Demo walkthrough
-        </NavLink>
+        {PERSONAL_SECTIONS.map((s) => (
+          <NavLink
+            key={s.href}
+            href={s.href}
+            active={s.href === "/" ? pathname === "/" : pathname.startsWith(s.href)}
+            icon={s.icon}
+            highlight={s.primary}
+          >
+            {s.label}
+          </NavLink>
+        ))}
       </nav>
-      {entityId ? (
-        <nav aria-label="Entity" className="flex flex-col gap-0.5">
-          <div className="mb-1.5 px-2.5">
-            <div className="text-[10px] font-semibold tracking-[0.12em] text-sidebar-muted uppercase">
-              Entity
-            </div>
-            <div
-              className="truncate text-sm font-medium text-sidebar-foreground"
-              title={entity?.display_name}
-            >
-              {entity?.display_name ?? "Unknown entity"}
-            </div>
-          </div>
-          {SECTIONS.map((s) => (
-            <NavLink
-              key={s.slug}
-              href={sectionHref(entityId, s.slug, asOf)}
-              active={section === s.slug}
-              icon={s.icon}
-            >
-              {s.label}
-            </NavLink>
-          ))}
-        </nav>
-      ) : null}
+      <nav aria-label="Business module" className="flex flex-col gap-0.5">
+        <div className="mb-1 px-2.5 text-[10px] font-semibold tracking-[0.12em] text-sidebar-muted uppercase">
+          Business module
+        </div>
+        <NavLink href="/business" active={pathname === "/business"} icon={Briefcase}>
+          Business risk portfolio
+        </NavLink>
+        {inBusiness ? (
+          <NavLink href="/demo" active={pathname === "/demo"} icon={Presentation}>
+            Business demo walkthrough
+          </NavLink>
+        ) : null}
+        {entityId
+          ? SECTIONS.map((s) => (
+              <NavLink
+                key={s.slug}
+                href={sectionHref(entityId, s.slug, asOf)}
+                active={section === s.slug}
+                icon={s.icon}
+              >
+                {s.label}
+              </NavLink>
+            ))
+          : null}
+      </nav>
       <div className="mt-auto flex flex-col gap-3">
         <NavLink href="/system" active={pathname === "/system"} icon={ServerCog}>
           System status
         </NavLink>
         <p className="px-2.5 text-[11px] leading-relaxed text-sidebar-muted">
-          Prototype on synthetic data. Scores are not credit scores and are not for lending
-          decisions.
+          Decision support, not financial advice. Demo data is fictional. FinPulse never submits
+          applications or moves money.
         </p>
       </div>
     </div>
   );
 }
 
-export function Sidebar({ entities }: { entities: EntitySummary[] }) {
+export function Sidebar() {
   const pathname = usePathname();
   // The menu belongs to the page it was opened on: navigating closes it.
   const [openOn, setOpenOn] = useState<string | null>(null);
@@ -124,7 +133,7 @@ export function Sidebar({ entities }: { entities: EntitySummary[] }) {
   return (
     <>
       <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 bg-sidebar lg:block">
-        <SidebarBody entities={entities} />
+        <SidebarBody />
       </aside>
       <header className="sticky top-0 z-30 flex h-14 items-center justify-between bg-sidebar px-4 lg:hidden">
         <Brand />
@@ -154,7 +163,7 @@ export function Sidebar({ entities }: { entities: EntitySummary[] }) {
             >
               <X className="size-5" />
             </button>
-            <SidebarBody entities={entities} />
+            <SidebarBody />
           </div>
         </div>
       ) : null}

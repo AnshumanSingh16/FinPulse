@@ -5,7 +5,7 @@ export default function NotFound() {
     <div className="flex max-w-lg flex-col gap-3">
       <h1 className="text-xl font-semibold">Page not found</h1>
       <p className="text-sm text-muted-foreground">
-        This page doesn&apos;t exist yet — most of FinPulse is still being built.
+        This page doesn&apos;t exist.
       </p>
       <Link
         href="/"

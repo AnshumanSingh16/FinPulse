@@ -1,7 +1,6 @@
 import "server-only";
 
 import { cookies } from "next/headers";
-import { NextResponse } from "next/server";
 
 import { loadSession, type SessionState } from "./store";
 
@@ -23,21 +22,4 @@ export async function getSession(): Promise<SessionState> {
     });
   }
   return loadSession(id);
-}
-
-export function jsonError(status: number, message: string, details?: unknown) {
-  return NextResponse.json({ error: message, ...(details ? { details } : {}) }, { status });
-}
-
-/** Read a JSON body with a size cap. Returns undefined when it is missing, too big or invalid. */
-export async function readJson(request: Request, maxBytes = 64_000): Promise<unknown> {
-  const length = Number(request.headers.get("content-length") ?? "0");
-  if (length > maxBytes) return undefined;
-  const text = await request.text();
-  if (text.length > maxBytes) return undefined;
-  try {
-    return JSON.parse(text);
-  } catch {
-    return undefined;
-  }
 }

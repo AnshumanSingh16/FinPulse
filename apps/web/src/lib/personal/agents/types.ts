@@ -78,6 +78,8 @@ export type AgentEvent = {
   stepId?: string;
   toolCallId?: string;
   level?: "info" | "warning" | "error";
+  /** On plan_created: the plan's steps, so the UI can show the plan before it runs. */
+  plan?: { id: string; agent: AgentName; title: string; why: string }[];
 };
 
 export type Source = {
