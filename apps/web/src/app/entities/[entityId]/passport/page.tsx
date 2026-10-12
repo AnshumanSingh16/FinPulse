@@ -8,7 +8,7 @@ import { BandBadge } from "@/components/fp/badges";
 import { Disclaimer, PageHeader, Panel } from "@/components/fp/layout";
 import { BandScale, ScoreBar, type BandRange } from "@/components/fp/meter";
 import { Sparkline } from "@/components/fp/sparkline";
-import { ApiErrorPanel } from "@/components/fp/states";
+import { ApiErrorPanel, toErrorInfo } from "@/components/fp/states";
 import { getPassport, getPassportHistory, getPassportModel } from "@/lib/api/finpulse";
 import { evidenceHref } from "@/lib/evidence-link";
 import { formatDate, formatMetric, formatNumber, formatPercent, toNumber } from "@/lib/format";
@@ -47,7 +47,7 @@ export default async function PassportPage(props: EntityPageProps) {
     ]);
     data = { passport, history, model };
   } catch (error) {
-    return <ApiErrorPanel error={error} what="the Financial Passport" />;
+    return <ApiErrorPanel error={toErrorInfo(error)} what="the Financial Passport" />;
   }
   const { passport, history, model } = data;
   const fh = passport.financial_health;

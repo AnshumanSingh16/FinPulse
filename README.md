@@ -14,8 +14,10 @@ call tested, deterministic financial tools; you see every step and approve every
 It runs inside the Next.js app with **no database or Python needed**:
 
 ```bash
-npm install && npm run dev:web     # http://localhost:3000 → "Try Demo"
+npm start     # installs on first run, then open http://localhost:3000
 ```
+
+New to this? Step-by-step for Windows, macOS and Linux: **[RUN_LOCALLY.md](RUN_LOCALLY.md)**.
 
 Architecture, demo script and tests: **[docs/PERSONAL.md](docs/PERSONAL.md)**. An
 `ANTHROPIC_API_KEY` in `.env` enables live research and the AI copilot; without it everything

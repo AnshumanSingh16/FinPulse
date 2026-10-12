@@ -6,7 +6,7 @@ import { Fragment } from "react";
 import { DivergingBars, TimeSeriesChart, type Reference } from "@/components/charts/time-series";
 import { BreakdownBars } from "@/components/fp/breakdown";
 import { PageHeader, Panel } from "@/components/fp/layout";
-import { ApiErrorPanel } from "@/components/fp/states";
+import { ApiErrorPanel, toErrorInfo } from "@/components/fp/states";
 import { getMetricHistory, getMetrics } from "@/lib/api/finpulse";
 import { evidenceHref } from "@/lib/evidence-link";
 import { formatDate, formatMetric, formatPercent, toNumber } from "@/lib/format";
@@ -44,7 +44,7 @@ export default async function HealthPage(props: EntityPageProps) {
       getMetricHistory(entityId, asOf, HISTORY_CODES, 12),
     ]);
   } catch (error) {
-    return <ApiErrorPanel error={error} what="financial metrics" />;
+    return <ApiErrorPanel error={toErrorInfo(error)} what="financial metrics" />;
   }
   const m = (code: string) => report.metrics.find((x) => x.code === code);
   const series = (code: string) => report.series.find((s) => s.code === code)?.points ?? [];

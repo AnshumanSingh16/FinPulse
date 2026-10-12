@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { Suspense } from "react";
 
 import { SyntheticBadge } from "@/components/fp/badges";
+import { ApiErrorPanel, toErrorInfo } from "@/components/fp/states";
 import { AsOfSelect, EntitySwitcher } from "@/components/shell/entity-controls";
 import { ApiError } from "@/lib/api/errors";
 import { getEntities, getMetrics } from "@/lib/api/finpulse";
@@ -17,7 +18,12 @@ export default async function EntityLayout({
   params: Promise<{ entityId: string }>;
 }) {
   const { entityId } = await params;
-  const entities = await getEntities();
+  let entities;
+  try {
+    entities = await getEntities();
+  } catch (error) {
+    return <ApiErrorPanel error={toErrorInfo(error)} what="this entity" />;
+  }
   const entity = entities.find((e) => e.id === entityId);
   if (!entity) notFound();
   let coverage = null;

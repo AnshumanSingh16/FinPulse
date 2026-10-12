@@ -7,7 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { TimeSeriesChart } from "@/components/charts/time-series";
 import { StressRiskBadge, ToneBadge } from "@/components/fp/badges";
 import { Disclaimer, Panel } from "@/components/fp/layout";
-import { ApiErrorPanel } from "@/components/fp/states";
+import { ApiErrorPanel, toErrorInfo } from "@/components/fp/states";
 import { getBrowserApiClient } from "@/lib/api/browser";
 import { unwrap } from "@/lib/api/client";
 import { formatDate, formatMetric, toNumber } from "@/lib/format";
@@ -267,7 +267,7 @@ export function StressLab({
           running && result && "opacity-60",
         )}
       >
-        {error ? <ApiErrorPanel error={error} what="the stress test" /> : null}
+        {error ? <ApiErrorPanel error={toErrorInfo(error)} what="the stress test" /> : null}
         {result ? <Results r={result} /> : running ? <ResultsLoading /> : null}
       </div>
     </div>

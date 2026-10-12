@@ -12,7 +12,7 @@ import {
   ToneBadge,
 } from "@/components/fp/badges";
 import { Disclaimer, PageHeader, Panel } from "@/components/fp/layout";
-import { ApiErrorPanel } from "@/components/fp/states";
+import { ApiErrorPanel, toErrorInfo } from "@/components/fp/states";
 import { sectionHref } from "@/components/shell/nav";
 import {
   getDemo,
@@ -49,7 +49,7 @@ export default async function DemoPage() {
   try {
     demo = await getDemo();
   } catch (error) {
-    return <ApiErrorPanel error={error} what="the demo" />;
+    return <ApiErrorPanel error={toErrorInfo(error)} what="the demo" />;
   }
   const id = demo.entity_id;
   let data;
@@ -70,7 +70,7 @@ export default async function DemoPage() {
   } catch (error) {
     return (
       <div className="flex flex-col gap-4">
-        <ApiErrorPanel error={error} what="the demo entity" />
+        <ApiErrorPanel error={toErrorInfo(error)} what="the demo entity" />
         <DemoResetButton />
       </div>
     );

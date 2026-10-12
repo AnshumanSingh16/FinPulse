@@ -21,8 +21,33 @@ export function EmptyState({
   );
 }
 
-export function ApiErrorPanel({ error, what }: { error: unknown; what: string }) {
-  const e = error instanceof ApiError ? error : null;
+/** Plain, serialisable description of a failure (never pass Error objects as props: in dev,
+ * React serialises props for debugging and some low-level network errors break that). */
+export type ErrorInfo = {
+  message: string;
+  code: string | null;
+  status: number | null;
+  requestId: string | null;
+};
+
+export function toErrorInfo(error: unknown): ErrorInfo {
+  if (error instanceof ApiError)
+    return {
+      message: error.detail ?? error.title,
+      code: error.code,
+      status: error.status || null,
+      requestId: error.requestId,
+    };
+  return {
+    message: error instanceof Error ? error.message : "Unknown error.",
+    code: null,
+    status: null,
+    requestId: null,
+  };
+}
+
+export function ApiErrorPanel({ error, what }: { error: ErrorInfo; what: string }) {
+  const unreachable = error.code === "network_error" || error.code === "timeout";
   return (
     <div
       role="alert"
@@ -32,13 +57,15 @@ export function ApiErrorPanel({ error, what }: { error: unknown; what: string })
       <div className="flex min-w-0 flex-col gap-1">
         <p className="font-medium">Could not load {what}.</p>
         <p className="text-muted-foreground">
-          {e ? (e.detail ?? e.title) : error instanceof Error ? error.message : "Unknown error."}
+          {unreachable
+            ? "The business-risk module needs its Python API, which isn't running. Start everything with `npm run demo` (needs uv and Docker or PostgreSQL). The personal-finance product works without it."
+            : error.message}
         </p>
-        {e ? (
+        {error.code ? (
           <p className="text-xs text-muted-foreground">
-            {e.code}
-            {e.status ? ` · HTTP ${e.status}` : ""}
-            {e.requestId ? ` · request ${e.requestId}` : ""}
+            {error.code}
+            {error.status ? ` · HTTP ${error.status}` : ""}
+            {error.requestId ? ` · request ${error.requestId}` : ""}
           </p>
         ) : null}
       </div>

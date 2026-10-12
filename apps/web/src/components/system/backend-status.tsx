@@ -14,7 +14,9 @@ import { ConfigError } from "@/lib/env";
 import { DetailList } from "./detail-list";
 import { StatusBadge } from "./status-badge";
 
-function ErrorDetail({ error }: { error: ApiError }) {
+// Renders plain strings, not the ApiError itself: in dev, React serialises component props, and
+// errors wrapping low-level network failures break that serialisation.
+function errorDetail(error: ApiError) {
   return (
     <DetailList
       items={[
@@ -80,7 +82,7 @@ export async function BackendStatus() {
               ]}
             />
           ) : (
-            <ErrorDetail error={health.error} />
+            errorDetail(health.error)
           )}
         </CardContent>
       </Card>
@@ -101,7 +103,7 @@ export async function BackendStatus() {
         </CardHeader>
         <CardContent>
           {!readiness.ok ? (
-            <ErrorDetail error={readiness.error} />
+            errorDetail(readiness.error)
           ) : database ? (
             <DetailList
               items={[

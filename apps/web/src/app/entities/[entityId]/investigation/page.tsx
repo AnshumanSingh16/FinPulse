@@ -10,7 +10,7 @@ import Link from "next/link";
 
 import { RiskBadge } from "@/components/fp/badges";
 import { PageHeader, Panel } from "@/components/fp/layout";
-import { ApiErrorPanel, EmptyState } from "@/components/fp/states";
+import { ApiErrorPanel, EmptyState, toErrorInfo } from "@/components/fp/states";
 import { InvestigationReport } from "@/components/investigation/report";
 import { DemoNotice, InvestigationRunner } from "@/components/investigation/runner";
 import { TimelineView } from "@/components/investigation/timeline";
@@ -43,7 +43,7 @@ export default async function InvestigationPage(props: EntityPageProps) {
     demoAvailable = Boolean(demo?.enabled && demo.entity_id === entityId);
     entityName = entities.find((e) => e.id === entityId)?.display_name ?? entityName;
   } catch (error) {
-    return <ApiErrorPanel error={error} what="investigations" />;
+    return <ApiErrorPanel error={toErrorInfo(error)} what="investigations" />;
   }
   const sorted = [...list].sort((a, b) => b.started_at.localeCompare(a.started_at));
   const selectedId = one(search.investigation) ?? sorted[0]?.investigation_id;
@@ -83,7 +83,7 @@ export default async function InvestigationPage(props: EntityPageProps) {
         demoAvailable={demoAvailable}
       />
 
-      {loadError ? <ApiErrorPanel error={loadError} what="the investigation" /> : null}
+      {loadError ? <ApiErrorPanel error={toErrorInfo(loadError)} what="the investigation" /> : null}
 
       {inv ? (
         <>

@@ -8,9 +8,10 @@ FastAPI + PostgreSQL) still lives under **Business risk portfolio** in the sideb
 ## Run it
 
 ```bash
-npm install
-npm run dev:web          # http://localhost:3000
+npm start                # installs on first run; http://localhost:3000
 ```
+
+Step-by-step setup (Windows, macOS, Linux): [RUN_LOCALLY.md](../RUN_LOCALLY.md).
 
 Optional: put `ANTHROPIC_API_KEY=…` in the repository-root `.env` to enable the AI parts (live
 web research, AI explanations, the AI copilot, PDF reading). Without it every other part works

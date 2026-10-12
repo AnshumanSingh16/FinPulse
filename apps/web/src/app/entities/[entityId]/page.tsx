@@ -7,7 +7,7 @@ import { Disclaimer, PageHeader, Panel } from "@/components/fp/layout";
 import { RiskTimeline } from "@/components/fp/risk-timeline";
 import { Sparkline } from "@/components/fp/sparkline";
 import { StatTile } from "@/components/fp/stat";
-import { ApiErrorPanel, EmptyState } from "@/components/fp/states";
+import { ApiErrorPanel, EmptyState, toErrorInfo } from "@/components/fp/states";
 import { sectionHref } from "@/components/shell/nav";
 import {
   getMetricHistory,
@@ -37,7 +37,7 @@ export default async function OverviewPage(props: EntityPageProps) {
     ]);
     data = { passport, history, risk, warnings, metrics, metricHistory };
   } catch (error) {
-    return <ApiErrorPanel error={error} what="the overview" />;
+    return <ApiErrorPanel error={toErrorInfo(error)} what="the overview" />;
   }
   const { passport, history, risk, warnings, metrics, metricHistory } = data;
   const fh = passport.financial_health;

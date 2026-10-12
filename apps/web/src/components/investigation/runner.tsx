@@ -5,7 +5,7 @@ import { AlertCircle, CheckCircle2, FileCode2, Loader2, Play, Radio } from "luci
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { ApiErrorPanel } from "@/components/fp/states";
+import { ApiErrorPanel, toErrorInfo } from "@/components/fp/states";
 import { getBrowserApiClient } from "@/lib/api/browser";
 import { unwrap } from "@/lib/api/client";
 import { formatDate } from "@/lib/format";
@@ -192,7 +192,7 @@ export function InvestigationRunner({
       ) : null}
 
       <div className="flex flex-col gap-4 p-5 sm:p-6">
-        {error ? <ApiErrorPanel error={error} what="the investigation" /> : null}
+        {error ? <ApiErrorPanel error={toErrorInfo(error)} what="the investigation" /> : null}
         {done && !progress ? (
           <p className="flex items-center gap-2 text-sm">
             <CheckCircle2 className="size-4 text-text-good" aria-hidden />

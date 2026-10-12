@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import { PageHeader } from "@/components/fp/layout";
-import { ApiErrorPanel } from "@/components/fp/states";
+import { ApiErrorPanel, toErrorInfo } from "@/components/fp/states";
 import { StressLab } from "@/components/stress/stress-lab";
 import { getStressCatalogue } from "@/lib/api/finpulse";
 import { entityContext, one, type EntityPageProps } from "@/lib/page";
@@ -15,7 +15,7 @@ export default async function StressPage(props: EntityPageProps) {
   try {
     catalogue = await getStressCatalogue();
   } catch (error) {
-    return <ApiErrorPanel error={error} what="the stress scenarios" />;
+    return <ApiErrorPanel error={toErrorInfo(error)} what="the stress scenarios" />;
   }
   return (
     <div className="flex flex-col gap-6">

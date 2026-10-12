@@ -7,7 +7,7 @@ import { TimeSeriesChart } from "@/components/charts/time-series";
 import { RiskBadge, SeverityBadge, ToneBadge } from "@/components/fp/badges";
 import { Disclaimer, KeyValue, PageHeader, Panel } from "@/components/fp/layout";
 import { RiskTimeline } from "@/components/fp/risk-timeline";
-import { ApiErrorPanel, EmptyState } from "@/components/fp/states";
+import { ApiErrorPanel, EmptyState, toErrorInfo } from "@/components/fp/states";
 import { getRiskSummary, getWarnings } from "@/lib/api/finpulse";
 import { evidenceHref } from "@/lib/evidence-link";
 import { formatDate, formatMetric, formatPercent, titleCase, toNumber } from "@/lib/format";
@@ -28,7 +28,7 @@ export default async function WarningsPage(props: EntityPageProps) {
     ]);
     data = { warnings, risk };
   } catch (error) {
-    return <ApiErrorPanel error={error} what="early warnings" />;
+    return <ApiErrorPanel error={toErrorInfo(error)} what="early warnings" />;
   }
   const { warnings, risk } = data;
   const selectedId = one(search.warning);

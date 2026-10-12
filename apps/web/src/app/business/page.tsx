@@ -4,7 +4,7 @@ import Link from "next/link";
 
 import { BandBadge, RiskBadge, SyntheticBadge } from "@/components/fp/badges";
 import { PageHeader } from "@/components/fp/layout";
-import { ApiErrorPanel, EmptyState } from "@/components/fp/states";
+import { ApiErrorPanel, EmptyState, toErrorInfo } from "@/components/fp/states";
 import { getEntities, getMetrics, getPassport, getRiskSummary } from "@/lib/api/finpulse";
 import { formatMetric, formatNumber, titleCase } from "@/lib/format";
 import { SEVERITY_ORDER } from "@/lib/severity";
@@ -29,7 +29,7 @@ export default async function PortfolioPage() {
     return (
       <div className="flex flex-col gap-6">
         <PageHeader title="Portfolio" />
-        <ApiErrorPanel error={error} what="the entity list" />
+        <ApiErrorPanel error={toErrorInfo(error)} what="the entity list" />
       </div>
     );
   }

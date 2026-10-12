@@ -11,7 +11,7 @@ import Link from "next/link";
 import { EvidenceCard, SOURCE_LABEL } from "@/components/evidence/evidence-card";
 import { RiskBadge, StatementTypeBadge } from "@/components/fp/badges";
 import { PageHeader, Panel } from "@/components/fp/layout";
-import { ApiErrorPanel, EmptyState } from "@/components/fp/states";
+import { ApiErrorPanel, EmptyState, toErrorInfo } from "@/components/fp/states";
 import { ClaimCard, claimRegistry, type ClaimRef } from "@/components/investigation/claims";
 import {
   getEvidencePack,
@@ -59,7 +59,7 @@ export default async function EvidencePage(props: EntityPageProps) {
     pack = p;
     metrics = m.metrics;
   } catch (error) {
-    return <ApiErrorPanel error={error} what="the evidence" />;
+    return <ApiErrorPanel error={toErrorInfo(error)} what="the evidence" />;
   }
 
   const byId = new Map(pack.items.map((i) => [i.id, i]));

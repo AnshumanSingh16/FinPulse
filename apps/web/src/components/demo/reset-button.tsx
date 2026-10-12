@@ -5,7 +5,7 @@ import { CheckCircle2, Loader2, RotateCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { ApiErrorPanel } from "@/components/fp/states";
+import { ApiErrorPanel, toErrorInfo } from "@/components/fp/states";
 import { getBrowserApiClient } from "@/lib/api/browser";
 import { unwrap } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
@@ -63,7 +63,7 @@ export function DemoResetButton({ className }: { className?: string }) {
           {result.investigations_cleared === 1 ? "" : "s"} cleared.
         </p>
       ) : null}
-      {error ? <ApiErrorPanel error={error} what="the demo reset" /> : null}
+      {error ? <ApiErrorPanel error={toErrorInfo(error)} what="the demo reset" /> : null}
     </div>
   );
 }
