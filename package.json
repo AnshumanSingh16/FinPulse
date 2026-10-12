@@ -11,6 +11,7 @@
     "packages/*"
   ],
   "scripts": {
+    "start": "node scripts/start.mjs",
     "demo": "node scripts/demo.mjs",
     "dev": "node scripts/dev.mjs",
     "dev:web": "npm run dev -w @finpulse/web",
