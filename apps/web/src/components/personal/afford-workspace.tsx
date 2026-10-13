@@ -28,12 +28,13 @@ import {
 } from "@/lib/personal/schemas";
 import { cn } from "@/lib/utils";
 
-import { EventFeed, PlanTracker } from "./agent-activity";
+import { AgentTimeline, EventFeed } from "./agent-activity";
 import { Field, MoneyInput, NumberInput } from "./fields";
 import { GoalInput } from "./goal-input";
 import { usePersonal } from "./provider";
 import { RunResults } from "./results";
-import { Disclosure, Loading, ModeStrip, Notice, PageTitle, SourceBadge, StatRows } from "./ui";
+import { AgentGlyph, Chip, Kicker, PulseMark } from "./kit";
+import { Disclosure, Loading, ModeStrip, Notice, SourceBadge } from "./ui";
 
 const TYPES: { id: PurchaseType; label: string; icon: typeof Home; noun: string }[] = [
   { id: "house", label: "House", icon: Home, noun: "house" },
@@ -107,14 +108,6 @@ const noun = (t: PurchaseType) => TYPES.find((x) => x.id === t)!.noun;
 const labelFor = (p: PurchaseRequest) => (p.price ? `${inrWords(p.price)} ${noun(p.type)}` : "");
 
 type Stage = "goal" | "details" | "running" | "result";
-
-const chip = (on: boolean) =>
-  cn(
-    "flex min-h-10 items-center gap-2 rounded-full border px-4 text-sm transition",
-    on
-      ? "border-primary bg-accent font-medium text-accent-foreground"
-      : "text-muted-foreground hover:border-foreground/30",
-  );
 
 export function AffordWorkspace() {
   const { state, setState, refresh } = usePersonal();
@@ -287,268 +280,346 @@ export function AffordWorkspace() {
   );
   const showFinanceInputs = editFinances || !financesComplete;
 
+  const liveTools = events.filter((e) => e.kind === "tool_result").length;
+  const livePlan = events.find((e) => e.kind === "plan_created")?.plan ?? [];
+  const liveDone = events.filter((e) => e.kind === "step_completed").length;
+
   return (
     <div ref={top} className="flex scroll-mt-20 flex-col gap-6">
       {stage === "goal" ? (
-        <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
-          <PageTitle
-            title="Can I afford this?"
-            description="Describe what you want to buy. FinPulse checks your finances, works out the real costs, tests what could go wrong and prepares next steps — you stay in control."
-          />
-          {error ? <Notice tone="error">{error}</Notice> : null}
-          <GoalInput autoFocus onSubmit={applyGoal} />
-          <div className="flex flex-col gap-3 rounded-2xl bg-muted p-4 text-sm sm:flex-row sm:items-center">
-            <Wand2 className="hidden size-5 shrink-0 text-primary sm:block" aria-hidden />
-            <span className="flex-1 text-muted-foreground">
-              New here? See it work on a fictional person buying a ₹75 lakh house.
-            </span>
-            <Button variant="secondary" onClick={useDemo}>
-              Try the demo
-            </Button>
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-10">
+          <div className="flex flex-col gap-6 pt-2">
+            <div className="flex flex-col gap-2">
+              <Kicker>Purchase intelligence</Kicker>
+              <h1 className="text-[30px] leading-[1.1] font-extrabold text-balance sm:text-[40px]">
+                Can I afford this?
+              </h1>
+              <p className="max-w-xl text-[16px] leading-relaxed text-pretty text-ink-500">
+                Describe what you want to buy. FinPulse&apos;s agents check your finances, work out
+                the real costs, test what could go wrong and prepare next steps — you stay in
+                control.
+              </p>
+            </div>
+            {error ? <Notice tone="error">{error}</Notice> : null}
+            <GoalInput autoFocus onSubmit={applyGoal} />
+            <ModeStrip status={state.status} />
           </div>
-          <ModeStrip status={state.status} />
+          <aside className="flex flex-col gap-4 rounded-2xl border border-line bg-surface p-5 shadow-xs">
+            <div className="flex items-center gap-3">
+              <PulseMark size="sm" />
+              <div>
+                <h2 className="text-[15px] font-bold">What happens when you ask</h2>
+                <p className="text-[12px] text-ink-500">
+                  The plan FinPulse&apos;s orchestrator runs
+                </p>
+              </div>
+            </div>
+            <ol className="flex flex-col gap-3">
+              {(
+                [
+                  ["planner", "Understands your goal and checks your profile"],
+                  ["research", "Finds financing options (live or labelled estimates)"],
+                  ["analysis", "Calculates EMI, costs and cash flow"],
+                  ["risk", "Stress-tests six things that could go wrong"],
+                  ["verification", "Challenges assumptions and flags gaps"],
+                  ["action", "Prepares next steps for your approval"],
+                ] as const
+              ).map(([agent, text]) => (
+                <li key={agent} className="flex items-center gap-3 text-[13.5px] text-ink-700">
+                  <AgentGlyph agent={agent} size="sm" />
+                  {text}
+                </li>
+              ))}
+            </ol>
+            <div className="flex flex-col gap-2 rounded-xl bg-surface-sunken p-3.5">
+              <p className="text-[13px] text-ink-700">
+                New here? See it work on a fictional person buying a ₹75 lakh house.
+              </p>
+              <Button variant="outline" size="sm" onClick={useDemo} className="w-fit">
+                <Wand2 /> Try the demo
+              </Button>
+            </div>
+          </aside>
         </div>
       ) : null}
 
       {stage === "details" ? (
-        <div className="mx-auto flex w-full max-w-2xl flex-col gap-5">
-          <button
-            type="button"
-            onClick={() => setStage("goal")}
-            className="flex min-h-10 w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="size-4" /> Change goal
-          </button>
-          <PageTitle
-            eyebrow="Step 1 of 2 · A few details"
-            title={
-              purchase.price
-                ? `Let's check a ${inrWords(purchase.price)} ${noun(purchase.type)}`
-                : "Let's check your goal"
-            }
-            description={
-              goalText ? (
-                <>
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="flex min-w-0 flex-col gap-5">
+            <button
+              type="button"
+              onClick={() => setStage("goal")}
+              className="flex min-h-9 w-fit items-center gap-1 text-[13px] font-medium text-ink-500 hover:text-ink-900"
+            >
+              <ArrowLeft className="size-4" /> Change goal
+            </button>
+            <div className="flex flex-col gap-1.5">
+              <Kicker>Step 1 of 2 · Confirm the details</Kicker>
+              <h1 className="text-[26px] leading-tight font-extrabold text-balance sm:text-[32px]">
+                {purchase.price
+                  ? `Let's check a ${inrWords(purchase.price)} ${noun(purchase.type)}`
+                  : "Let's check your goal"}
+              </h1>
+              {goalText ? (
+                <p className="text-[14px] text-pretty text-ink-500">
                   You said “{goalText}”
                   {understood.length
-                    ? ` — we understood ${understood.join(", ").toLowerCase()}.`
+                    ? ` — understood ${understood.join(", ").toLowerCase()}.`
                     : "."}
-                </>
-              ) : undefined
-            }
-          />
-
-          {run?.status === "needs_input" ? (
-            <Notice tone="warning" title="We need a little more before we can answer reliably">
-              FinPulse doesn&apos;t guess your personal figures. Please answer the highlighted
-              questions below.
-            </Notice>
-          ) : null}
-
-          <section className="flex flex-col gap-4 rounded-2xl border p-5">
-            <h2 className="font-semibold">What do you want to buy?</h2>
-            <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Purchase type">
-              {TYPES.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={purchase.type === t.id}
-                  onClick={() => update({ type: t.id })}
-                  className={chip(purchase.type === t.id)}
-                >
-                  <t.icon className="size-4" /> {t.label}
-                </button>
-              ))}
-            </div>
-            <MoneyInput
-              label="How much does it cost?"
-              required
-              highlight={!purchase.price}
-              value={purchase.price || null}
-              onChange={(p) => update({ price: p ?? 0 })}
-              placeholder="e.g. 75 lakh"
-            />
-          </section>
-
-          <section className="flex flex-col gap-4 rounded-2xl border p-5">
-            <div className="flex items-center justify-between gap-2">
-              <h2 className="font-semibold">Your finances</h2>
-              {!showFinanceInputs ? (
-                <Button variant="ghost" size="sm" onClick={() => setEditFinances(true)}>
-                  <Pencil /> Edit
-                </Button>
+                </p>
               ) : null}
             </div>
-            {showFinanceInputs ? (
-              <>
-                {!financesComplete && !state.profile.updatedAt ? (
-                  <Notice
-                    tone="info"
-                    title="Just exploring?"
-                    action={
-                      <Button variant="secondary" size="sm" onClick={useDemo}>
-                        Use demo
-                      </Button>
-                    }
+
+            {run?.status === "needs_input" ? (
+              <Notice tone="warning" title="A little more is needed for a reliable answer">
+                FinPulse doesn&apos;t guess your personal figures. Please answer the highlighted
+                questions.
+              </Notice>
+            ) : null}
+
+            <section className="flex flex-col gap-4 rounded-2xl border border-line bg-surface p-5 shadow-xs">
+              <h2 className="text-[16px] font-bold">What do you want to buy?</h2>
+              <div className="flex flex-wrap gap-2" role="group" aria-label="Purchase type">
+                {TYPES.map((t) => (
+                  <Chip
+                    key={t.id}
+                    icon={t.icon}
+                    selected={purchase.type === t.id}
+                    onClick={() => update({ type: t.id })}
                   >
-                    Fill in a fictional person&apos;s figures in one click.
-                  </Notice>
+                    {t.label}
+                  </Chip>
+                ))}
+              </div>
+              <MoneyInput
+                label="How much does it cost?"
+                required
+                highlight={!purchase.price}
+                value={purchase.price || null}
+                onChange={(p) => update({ price: p ?? 0 })}
+                placeholder="e.g. 75 lakh"
+              />
+            </section>
+
+            <section className="flex flex-col gap-4 rounded-2xl border border-line bg-surface p-5 shadow-xs">
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="text-[16px] font-bold">Your finances</h2>
+                {!showFinanceInputs ? (
+                  <Button variant="ghost" size="sm" onClick={() => setEditFinances(true)}>
+                    <Pencil /> Edit
+                  </Button>
                 ) : null}
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {HOUSEHOLD_FIELDS.map((f) => (
-                    <MoneyInput
-                      key={f.key}
-                      label={f.question}
-                      required={f.required}
-                      highlight={
-                        missing.has(f.key) ||
-                        (f.required && run?.status === "needs_input" && household[f.key] === null)
+              </div>
+              {showFinanceInputs ? (
+                <>
+                  {!financesComplete && !state.profile.updatedAt ? (
+                    <Notice
+                      tone="info"
+                      title="Just exploring?"
+                      action={
+                        <Button variant="outline" size="sm" onClick={useDemo}>
+                          Use demo
+                        </Button>
                       }
-                      value={household[f.key]}
-                      onChange={(x) => setHousehold({ ...household, [f.key]: x })}
-                      placeholder={f.placeholder}
-                      badge={sources[f.key] ? <SourceBadge kind={sources[f.key]!.kind} /> : null}
-                    />
-                  ))}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Saved to your profile as figures you entered. FinPulse never asks for bank
-                  passwords, PINs or OTPs.
-                </p>
-              </>
-            ) : (
-              <>
-                <p className="text-sm text-muted-foreground">We&apos;ll use your saved figures.</p>
-                <StatRows
-                  rows={HOUSEHOLD_FIELDS.filter((f) => household[f.key] !== null).map((f) => ({
-                    label: (
-                      <span className="inline-flex items-center gap-2">
+                    >
+                      Fill in a fictional person&apos;s figures in one click.
+                    </Notice>
+                  ) : null}
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {HOUSEHOLD_FIELDS.map((f) => (
+                      <MoneyInput
+                        key={f.key}
+                        label={f.question}
+                        required={f.required}
+                        highlight={
+                          missing.has(f.key) ||
+                          (f.required && run?.status === "needs_input" && household[f.key] === null)
+                        }
+                        value={household[f.key]}
+                        onChange={(x) => setHousehold({ ...household, [f.key]: x })}
+                        placeholder={f.placeholder}
+                        badge={sources[f.key] ? <SourceBadge kind={sources[f.key]!.kind} /> : null}
+                      />
+                    ))}
+                  </div>
+                  <p className="text-[12px] text-ink-500">
+                    Saved to your profile as figures you entered. FinPulse never asks for bank
+                    passwords, PINs or OTPs.
+                  </p>
+                </>
+              ) : (
+                <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
+                  {HOUSEHOLD_FIELDS.filter((f) => household[f.key] !== null).map((f) => (
+                    <div key={f.key} className="flex flex-col gap-1">
+                      <dt className="flex flex-wrap items-center gap-1.5 text-[12px] text-ink-500">
                         {f.label}
                         {sources[f.key] ? <SourceBadge kind={sources[f.key]!.kind} /> : null}
-                      </span>
-                    ),
-                    value: formatINR(household[f.key]),
-                  }))}
-                />
-              </>
-            )}
-          </section>
-
-          <Disclosure
-            title="Loan and cost details"
-            hint="Optional — anything left blank uses a clearly labelled estimate"
-          >
-            <div className="flex flex-col gap-5">
-              <Field label="Down payment">
-                <div className="flex flex-wrap gap-2">
-                  {[10, 20, 30, 50].map((d) => (
-                    <button
-                      key={d}
-                      type="button"
-                      aria-pressed={purchase.downPaymentPct === d}
-                      onClick={() => update({ downPaymentPct: d })}
-                      className={chip(purchase.downPaymentPct === d)}
-                    >
-                      {d}%
-                    </button>
+                      </dt>
+                      <dd className="tabular font-display text-[17px] font-bold">
+                        {formatINR(household[f.key])}
+                      </dd>
+                    </div>
                   ))}
-                  <button
-                    type="button"
-                    aria-pressed={purchase.downPaymentPct === null}
-                    onClick={() => update({ downPaymentPct: null })}
-                    className={chip(purchase.downPaymentPct === null)}
-                  >
-                    Not sure
-                  </button>
-                </div>
-              </Field>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <NumberInput
-                  label="Interest rate"
-                  suffix="% a year"
-                  min={0}
-                  max={50}
-                  step={0.05}
-                  value={purchase.interestRate}
-                  onChange={(r) => update({ interestRate: r })}
-                  placeholder="Leave blank to research"
-                  hint="Have a quote? Enter it. Otherwise FinPulse estimates it."
-                />
-                <NumberInput
-                  label="Loan tenure"
-                  suffix="years"
-                  min={1}
-                  max={50}
-                  value={purchase.tenureMonths === null ? null : purchase.tenureMonths / 12}
-                  onChange={(y) =>
-                    update({ tenureMonths: y === null ? null : Math.max(1, Math.round(y * 12)) })
-                  }
-                  placeholder="typical for this loan"
-                />
-                <MoneyInput
-                  label="One-time costs (stamp duty, fees…)"
-                  value={purchase.upfrontCosts}
-                  onChange={(u) => update({ upfrontCosts: u })}
-                  placeholder="blank = labelled estimate"
-                />
-                <MoneyInput
-                  label="Running costs per month"
-                  value={purchase.monthlyOwnershipCost}
-                  onChange={(m) => update({ monthlyOwnershipCost: m })}
-                  placeholder="maintenance, insurance, fuel…"
-                />
-              </div>
-              <label className="flex min-h-10 items-center gap-3 text-sm">
-                <input
-                  type="checkbox"
-                  checked={purchase.financeUpfrontCosts}
-                  onChange={(e) => update({ financeUpfrontCosts: e.target.checked })}
-                  className="size-4 accent-[var(--primary)]"
-                />
-                Add one-time costs to the loan instead of paying them upfront
-              </label>
-              <label className="flex min-h-10 items-center gap-3 text-sm">
-                <input
-                  type="checkbox"
-                  checked={purchase.researchFinancing}
-                  onChange={(e) => update({ researchFinancing: e.target.checked })}
-                  className="size-4 accent-[var(--primary)]"
-                />
-                Compare financing options for me
-              </label>
-            </div>
-          </Disclosure>
+                </dl>
+              )}
+            </section>
 
-          {error ? <Notice tone="error">{error}</Notice> : null}
-          <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-10 flex flex-col gap-2 bg-background/95 py-2 backdrop-blur lg:bottom-4">
+            <Disclosure
+              title="Loan and cost details"
+              hint="Optional — blanks use clearly labelled estimates"
+            >
+              <div className="flex flex-col gap-5">
+                <Field label="Down payment">
+                  <div className="flex flex-wrap gap-2">
+                    {[10, 20, 30, 50].map((d) => (
+                      <Chip
+                        key={d}
+                        selected={purchase.downPaymentPct === d}
+                        onClick={() => update({ downPaymentPct: d })}
+                      >
+                        {d}%
+                      </Chip>
+                    ))}
+                    <Chip
+                      selected={purchase.downPaymentPct === null}
+                      onClick={() => update({ downPaymentPct: null })}
+                    >
+                      Not sure
+                    </Chip>
+                  </div>
+                </Field>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <NumberInput
+                    label="Interest rate"
+                    suffix="% a year"
+                    min={0}
+                    max={50}
+                    step={0.05}
+                    value={purchase.interestRate}
+                    onChange={(r) => update({ interestRate: r })}
+                    placeholder="Leave blank to research"
+                    hint="Have a quote? Enter it. Otherwise FinPulse estimates it."
+                  />
+                  <NumberInput
+                    label="Loan tenure"
+                    suffix="years"
+                    min={1}
+                    max={50}
+                    value={purchase.tenureMonths === null ? null : purchase.tenureMonths / 12}
+                    onChange={(y) =>
+                      update({ tenureMonths: y === null ? null : Math.max(1, Math.round(y * 12)) })
+                    }
+                    placeholder="typical for this loan"
+                  />
+                  <MoneyInput
+                    label="One-time costs (stamp duty, fees…)"
+                    value={purchase.upfrontCosts}
+                    onChange={(u) => update({ upfrontCosts: u })}
+                    placeholder="blank = labelled estimate"
+                  />
+                  <MoneyInput
+                    label="Running costs per month"
+                    value={purchase.monthlyOwnershipCost}
+                    onChange={(m) => update({ monthlyOwnershipCost: m })}
+                    placeholder="maintenance, insurance, fuel…"
+                  />
+                </div>
+                <label className="flex min-h-10 items-center gap-3 text-[14px]">
+                  <input
+                    type="checkbox"
+                    checked={purchase.financeUpfrontCosts}
+                    onChange={(e) => update({ financeUpfrontCosts: e.target.checked })}
+                    className="size-4 accent-[var(--brand-600)]"
+                  />
+                  Add one-time costs to the loan instead of paying them upfront
+                </label>
+                <label className="flex min-h-10 items-center gap-3 text-[14px]">
+                  <input
+                    type="checkbox"
+                    checked={purchase.researchFinancing}
+                    onChange={(e) => update({ researchFinancing: e.target.checked })}
+                    className="size-4 accent-[var(--brand-600)]"
+                  />
+                  Compare financing options for me
+                </label>
+              </div>
+            </Disclosure>
+          </div>
+
+          <aside className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-10 flex flex-col gap-4 rounded-2xl border border-line bg-surface p-4 shadow-md lg:top-6 lg:bottom-auto lg:p-5 lg:shadow-xs">
+            <div className="hidden flex-col gap-3 lg:flex">
+              <h2 className="text-[15px] font-bold">Ready to analyse</h2>
+              <dl className="flex flex-col gap-2 text-[13.5px]">
+                <div className="flex justify-between gap-3">
+                  <dt className="text-ink-500">Goal</dt>
+                  <dd className="text-right font-semibold">{purchase.label || "—"}</dd>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <dt className="text-ink-500">Your finances</dt>
+                  <dd
+                    className={cn(
+                      "font-semibold",
+                      financesComplete ? "text-brand-700" : "text-caution-text",
+                    )}
+                  >
+                    {financesComplete ? "Complete" : "Missing figures"}
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <dt className="text-ink-500">Rate</dt>
+                  <dd className="font-semibold">
+                    {purchase.interestRate !== null
+                      ? `${purchase.interestRate}%`
+                      : "FinPulse researches"}
+                  </dd>
+                </div>
+              </dl>
+              <p className="text-[12px] leading-snug text-ink-500">
+                6 agents will run about a dozen calculation and research tools. You&apos;ll see each
+                step as it happens.
+              </p>
+            </div>
+            {error ? <Notice tone="error">{error}</Notice> : null}
             <Button size="lg" onClick={start} className="w-full">
               Check if I can afford it
             </Button>
-            <p className="text-center text-xs text-muted-foreground">
+            <p className="text-center text-[12px] text-ink-500">
               Takes a few seconds. Nothing is submitted anywhere.
             </p>
-          </div>
+          </aside>
         </div>
       ) : null}
 
       {stage === "running" ? (
-        <div className="mx-auto flex w-full max-w-2xl flex-col gap-5">
-          <PageTitle
-            eyebrow="Step 2 of 2"
-            title={`Checking your ${purchase.label || "purchase"}`}
-            description="FinPulse's agents are working through your question. Each stage is marked done only when it actually finishes."
-          />
-          <section className="rounded-2xl border p-5">
+        <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 pt-2">
+          <div className="flex items-center gap-4">
+            <PulseMark size="lg" active />
+            <div className="flex flex-col gap-0.5">
+              <Kicker>Step 2 of 2 · Agents at work</Kicker>
+              <h1 className="text-[22px] leading-tight font-extrabold text-balance sm:text-[26px]">
+                Checking your {purchase.label || "purchase"}
+              </h1>
+              <p className="tabular text-[13px] text-ink-500" aria-live="polite">
+                {livePlan.length
+                  ? `${liveDone} of ${livePlan.length} stages done · ${liveTools} tool calls so far`
+                  : "Starting the orchestrator…"}
+              </p>
+            </div>
+          </div>
+          <section className="rounded-2xl border border-line bg-surface p-5 shadow-sm">
             {events.length ? (
-              <PlanTracker events={events} running />
+              <AgentTimeline events={events} running />
             ) : (
-              <p className="flex items-center gap-2 text-sm text-muted-foreground">
+              <p className="flex items-center gap-2 text-[14px] text-ink-500">
                 <Loader2 className="size-4 animate-spin" /> Starting…
               </p>
             )}
           </section>
-          <Disclosure title="Technical log" hint="Every tool call as it happens">
+          <p className="text-[12px] text-ink-500">
+            Each stage turns green only when the server reports it finished. Expand a stage to see
+            the tools it called.
+          </p>
+          <Disclosure title="Technical log" hint="Every event as it happens">
             <EventFeed events={events} />
           </Disclosure>
         </div>
@@ -556,20 +627,14 @@ export function AffordWorkspace() {
 
       {stage === "result" ? (
         run?.status === "completed" ? (
-          <RunResults
-            run={run}
-            plan={plan}
-            events={events}
-            onEdit={() => setStage("details")}
-            onNew={startOver}
-          />
+          <RunResults run={run} plan={plan} onEdit={() => setStage("details")} onNew={startOver} />
         ) : run?.status === "failed" ? (
           <div className="mx-auto flex w-full max-w-2xl flex-col gap-5">
             <Notice tone="error" title="We couldn't finish this analysis">
               {run.error} The stages below show exactly what ran.
             </Notice>
-            <section className="rounded-2xl border p-5">
-              <PlanTracker events={events} running={false} />
+            <section className="rounded-2xl border border-line bg-surface p-5 shadow-xs">
+              <AgentTimeline events={events} running={false} />
             </section>
             <Button onClick={() => setStage("details")} className="w-fit">
               Try again

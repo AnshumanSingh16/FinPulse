@@ -100,9 +100,9 @@ function latestCompleted(session: SessionState): WorkflowRun | undefined {
 /** Core household figures from the profile, or which are missing. */
 function household(session: SessionState) {
   const v = session.profile.values;
-  const missing = (["monthlyIncome", "monthlyExpenses", "liquidSavings", "existingEmis"] as const).filter(
-    (k) => v[k] === null,
-  );
+  const missing = (
+    ["monthlyIncome", "monthlyExpenses", "liquidSavings", "existingEmis"] as const
+  ).filter((k) => v[k] === null);
   if (missing.length) return { missing };
   const flow = summariseCashFlow({
     monthlyIncome: v.monthlyIncome!,
@@ -585,8 +585,17 @@ async function ruleTurn(
 
   if (/emergency fund|rainy day|safety net/.test(t)) {
     const { output } = await executeTool("plan_emergency_fund", {}, session, listener, emit);
-    const o = output as { error?: string; target_months: number; target_amount: number; current_cover_months: number | null; gap: number; monthly_saving_needed: number; monthly_surplus_now: number };
-    if (o.error) return `${o.error} Add them on My finances (or load the demo profile) and ask again.`;
+    const o = output as {
+      error?: string;
+      target_months: number;
+      target_amount: number;
+      current_cover_months: number | null;
+      gap: number;
+      monthly_saving_needed: number;
+      monthly_surplus_now: number;
+    };
+    if (o.error)
+      return `${o.error} Add them on My finances (or load the demo profile) and ask again.`;
     if (!o.gap)
       return `You already have ${o.current_cover_months?.toFixed(1)} months of essential spending saved — at or above your ${o.target_months}-month target of ${formatINR(o.target_amount)}. Keep it in a liquid account separate from goal savings.`;
     return `A ${o.target_months}-month emergency fund for you is ${formatINR(o.target_amount)}. You have ${o.current_cover_months?.toFixed(1)} months covered, so the gap is ${formatINR(o.gap)}. Saving ${formatINR(o.monthly_saving_needed)} a month closes it in 12 months — that is ${Math.round((o.monthly_saving_needed / Math.max(1, o.monthly_surplus_now)) * 100)}% of your current monthly surplus.`;
@@ -595,8 +604,15 @@ async function ruleTurn(
   // "Stress-test my finances": today's household, no purchase involved.
   if (/stress.?test (my|our) finances|how safe are my finances/.test(t)) {
     const { output } = await executeTool("stress_test_profile", {}, session, listener, emit);
-    const o = output as { error?: string; monthly_surplus_now: number; months_savings_last_with_no_income: number | null; surplus_if_income_falls_20pct: number; surplus_if_expenses_rise_15pct: number };
-    if (o.error) return `${o.error} Add them on My finances (or load the demo profile) and ask again.`;
+    const o = output as {
+      error?: string;
+      monthly_surplus_now: number;
+      months_savings_last_with_no_income: number | null;
+      surplus_if_income_falls_20pct: number;
+      surplus_if_expenses_rise_15pct: number;
+    };
+    if (o.error)
+      return `${o.error} Add them on My finances (or load the demo profile) and ask again.`;
     return `Stress test of your finances today (hypothetical, not predictions):\n• If your income stopped, savings would cover ${o.months_savings_last_with_no_income?.toFixed(1) ?? "—"} months of essential spending.\n• If income fell 20%, you'd have ${formatINR(o.surplus_if_income_falls_20pct)} left each month (now ${formatINR(o.monthly_surplus_now)}).\n• If living expenses rose 15%, you'd have ${formatINR(o.surplus_if_expenses_rise_15pct)} left each month.\nTo stress-test a specific purchase, run "Can I afford this?" and open its What-if tab.`;
   }
   const amounts = findINRAmounts(message).filter(

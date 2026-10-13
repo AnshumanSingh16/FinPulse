@@ -58,10 +58,10 @@ export const ASSESSMENT: Record<
 };
 
 export const TONE_TEXT: Record<Tone, string> = {
-  good: "text-text-good",
-  warn: "text-text-warning",
-  bad: "text-text-critical",
-  neutral: "text-muted-foreground",
+  good: "text-brand-700",
+  warn: "text-caution-text",
+  bad: "text-danger-text",
+  neutral: "text-ink-500",
 };
 export const TONE_SOFT: Record<Tone, string> = {
   good: "bg-brand-50 text-brand-700",
@@ -121,9 +121,9 @@ const SOURCE: Record<
   user: { t: "You entered", c: "bg-accent text-accent-foreground" },
   demo: { t: "Demo data", c: "bg-[#eaf1fb] text-[#1d5aa6]" },
   document: { t: "From document", c: "bg-[#e9f6f0] text-[#0b6e4c]" },
-  derived: { t: "Calculated", c: "bg-muted text-muted-foreground" },
-  illustrative: { t: "Estimate", c: "bg-status-warning/15 text-text-warning" },
-  default: { t: "Assumed", c: "bg-status-warning/15 text-text-warning" },
+  derived: { t: "Calculated", c: "bg-surface-sunken text-ink-500" },
+  illustrative: { t: "Estimate", c: "bg-caution-50 text-caution-text" },
+  default: { t: "Assumed", c: "bg-caution-50 text-caution-text" },
   research: { t: "Researched", c: "bg-[#e9f6f0] text-[#0b6e4c]" },
 };
 
@@ -194,7 +194,7 @@ export function Notice({
       <Icon className={cn("mt-0.5 size-4 shrink-0", map.ic)} aria-hidden />
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         {title ? <div className="font-medium text-foreground">{title}</div> : null}
-        {children ? <div className="text-pretty text-muted-foreground">{children}</div> : null}
+        {children ? <div className="text-pretty text-ink-500">{children}</div> : null}
       </div>
       {action ? <div className="shrink-0 self-center">{action}</div> : null}
     </div>
@@ -205,9 +205,9 @@ export function Notice({
 export function ModeStrip({ status }: { status: StateView["status"] | undefined }) {
   if (!status) return null;
   return (
-    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-500">
       <span className="inline-flex items-center gap-1">
-        <Sparkles className={cn("size-3.5", status.ai.enabled && "text-primary")} aria-hidden />
+        <Sparkles className={cn("size-3.5", status.ai.enabled && "text-brand-700")} aria-hidden />
         {status.ai.enabled ? "AI assistant on" : "AI off — calculations still work"}
       </span>
       <span aria-hidden>·</span>
@@ -224,11 +224,11 @@ export function Loading({ label = "Loading…" }: { label?: string }) {
   return (
     <div className="flex flex-col gap-3" aria-busy="true" aria-live="polite">
       <span className="sr-only">{label}</span>
-      <div className="h-7 w-56 animate-pulse rounded-md bg-muted" />
-      <div className="h-4 w-80 max-w-full animate-pulse rounded bg-muted" />
+      <div className="h-7 w-56 animate-pulse rounded-md bg-surface-sunken" />
+      <div className="h-4 w-80 max-w-full animate-pulse rounded bg-surface-sunken" />
       <div className="mt-2 grid grid-cols-2 gap-4 md:grid-cols-4">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="h-16 animate-pulse rounded-xl bg-muted" />
+          <div key={i} className="h-16 animate-pulse rounded-xl bg-surface-sunken" />
         ))}
       </div>
     </div>
@@ -248,9 +248,11 @@ export function EmptyState({
 }) {
   return (
     <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-line-strong bg-surface px-6 py-10 text-center">
-      <Icon className="size-6 text-muted-foreground" aria-hidden />
-      <p className="text-sm font-medium">{title}</p>
-      {children ? <div className="max-w-md text-sm text-muted-foreground">{children}</div> : null}
+      <span className="flex size-11 items-center justify-center rounded-xl bg-surface-sunken text-ink-500">
+        <Icon className="size-5" aria-hidden />
+      </span>
+      <p className="text-[15px] font-semibold">{title}</p>
+      {children ? <div className="max-w-md text-sm text-ink-500">{children}</div> : null}
       {action ? <div className="mt-2">{action}</div> : null}
     </div>
   );
@@ -272,10 +274,12 @@ export function PageTitle({
   return (
     <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div className="flex min-w-0 flex-col gap-1">
-        {eyebrow ? <div className="text-xs font-medium text-primary">{eyebrow}</div> : null}
-        <h1 className="text-[26px] leading-tight font-bold text-balance sm:text-[30px]">{title}</h1>
+        {eyebrow ? <div className="text-[13px] font-semibold text-brand-700">{eyebrow}</div> : null}
+        <h1 className="text-[26px] leading-tight font-extrabold tracking-tight text-balance sm:text-[30px]">
+          {title}
+        </h1>
         {description ? (
-          <p className="max-w-2xl text-sm text-pretty text-muted-foreground">{description}</p>
+          <p className="max-w-2xl text-[14.5px] text-pretty text-ink-500">{description}</p>
         ) : null}
       </div>
       {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
@@ -314,9 +318,7 @@ export function Section({
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 flex-col gap-1">
             {title ? <h2 className="text-[17px] font-bold">{title}</h2> : null}
-            {description ? (
-              <p className="text-sm text-pretty text-muted-foreground">{description}</p>
-            ) : null}
+            {description ? <p className="text-sm text-pretty text-ink-500">{description}</p> : null}
           </div>
           {actions ? (
             <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>
@@ -344,7 +346,7 @@ export function Stat({
 }) {
   return (
     <div className="flex min-w-0 flex-col gap-0.5">
-      <span className="text-xs text-muted-foreground">{label}</span>
+      <span className="text-xs text-ink-500">{label}</span>
       <span
         className={cn(
           "tabular truncate font-display font-bold tracking-tight",
@@ -354,7 +356,7 @@ export function Stat({
       >
         {value}
       </span>
-      {sub ? <span className="text-xs text-muted-foreground">{sub}</span> : null}
+      {sub ? <span className="text-xs text-ink-500">{sub}</span> : null}
     </div>
   );
 }
@@ -375,7 +377,7 @@ export function StatRows({
     <dl className="flex flex-col divide-y">
       {rows.map((r, i) => (
         <div key={i} className="flex items-baseline justify-between gap-4 py-2.5">
-          <dt className="min-w-0 text-sm text-muted-foreground">
+          <dt className="min-w-0 text-sm text-ink-500">
             {r.label}
             {r.hint ? <span className="block text-xs">{r.hint}</span> : null}
           </dt>
@@ -413,13 +415,13 @@ export function Disclosure({
       className={cn("group rounded-2xl border border-line bg-surface shadow-xs", className)}
       open={defaultOpen}
     >
-      <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-4 py-3 select-none hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none [&::-webkit-details-marker]:hidden">
+      <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-4 py-3 select-none hover:bg-surface-sunken/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none [&::-webkit-details-marker]:hidden">
         <span className="flex min-w-0 flex-col">
           <span className="text-sm font-medium">{title}</span>
-          {hint ? <span className="text-xs text-muted-foreground">{hint}</span> : null}
+          {hint ? <span className="text-xs text-ink-500">{hint}</span> : null}
         </span>
         <ChevronDown
-          className="size-4 shrink-0 text-muted-foreground transition group-open:rotate-180"
+          className="size-4 shrink-0 text-ink-500 transition group-open:rotate-180"
           aria-hidden
         />
       </summary>
@@ -472,9 +474,7 @@ export function ConfirmDialog({
         <h2 id={titleId} className="text-lg font-semibold">
           {title}
         </h2>
-        {children ? (
-          <div className="text-sm text-pretty text-muted-foreground">{children}</div>
-        ) : null}
+        {children ? <div className="text-sm text-pretty text-ink-500">{children}</div> : null}
         <div className="mt-2 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button variant="outline" onClick={onClose} disabled={busy}>
             {cancelLabel}
@@ -493,4 +493,4 @@ export function ConfirmDialog({
 }
 
 export const inputClass =
-  "h-11 w-full rounded-xl border border-input bg-background px-3.5 text-[15px] tabular outline-none transition placeholder:text-muted-foreground/70 hover:border-foreground/25 focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-primary/15 disabled:opacity-60";
+  "h-11 w-full rounded-xl border border-input bg-background px-3.5 text-[15px] tabular outline-none transition placeholder:text-ink-500/70 hover:border-foreground/25 focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-primary/15 disabled:opacity-60";

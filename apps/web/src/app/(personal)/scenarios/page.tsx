@@ -1,15 +1,12 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 
 import { ScenarioLab } from "@/components/personal/scenario-lab";
-import { Loading } from "@/components/personal/ui";
 
 export const metadata: Metadata = { title: "Scenarios" };
 
+// Rendered per request: these pages read the URL (search params) and per-session data.
+export const dynamic = "force-dynamic";
+
 export default function Page() {
-  return (
-    <Suspense fallback={<Loading />}>
-      <ScenarioLab />
-    </Suspense>
-  );
+  return <ScenarioLab />;
 }

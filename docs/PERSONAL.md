@@ -18,22 +18,32 @@ and the UI says which mode is active. See `.env.example` for `PERSONAL_LLM_EFFOR
 
 ## Design
 
-A light, consumer-fintech interface (inspired by the clarity of apps like Groww, with its own
-identity): white surfaces, dark type, one deep-emerald accent for primary actions and good
-outcomes, amber/red only for real warnings. Mobile-first: a bottom tab bar (Home, Afford, Ask,
-Steps, More) on phones, a quiet sidebar on desktop.
+A light, consumer-fintech interface (Groww was a reference for clarity; FinPulse has its own
+identity): warm-white canvas, charcoal type, FinPulse green as an accent for primary actions and
+good outcomes, amber for caution and red only for serious problems. An ink-teal accent marks
+agent work. Mobile-first: a top bar plus a bottom tab bar (Home, Afford, Ask, Steps, More) with
+safe-area padding on phones; a compact, grouped sidebar (Plan · Assistant · Track · Your data) on
+desktop.
 
-- **Home** leads with one question — "What would you like to afford?" — and a plain-English goal
-  box, then a four-figure snapshot, what needs attention, and recent analyses.
-- **Can I afford this?** is a guided flow: describe the goal → confirm what was understood and
-  answer only the questions that are missing (saved figures are shown, not re-asked) → watch the
-  agents work in plain-language stages → read the result.
-- **Results** follow a fixed order: the answer (one plain sentence + three figures), the numbers,
-  what if things go wrong, why we said this, your options, your next steps. Everything technical
-  — agent steps, sources, tool calls, the event log — sits in an expandable *How we reached this
-  result* section.
-- Reusable pieces live in `src/components/personal/ui.tsx` (stats, label/value rows, disclosure,
-  confirmation dialog, badges, notices, loading and empty states).
+- **Tokens** live in `src/app/globals.css` (`--brand-*`, `--ink-*`, `--line`, `--canvas`,
+  `--surface*`, `--caution-*`, `--danger-*`, `--agent-*`, shadows, easing). Display type is Plus
+  Jakarta Sans, body type Inter. Motion is short and respects `prefers-reduced-motion`.
+- **Home**: greeting, "What do you want to plan today?", the goal box, four starting points
+  (house, car, emergency fund, stress test), a money snapshot, one top insight, recent analyses and
+  the latest agent activity.
+- **Results**: a compact goal header; a verdict panel with the limiting factor, how many inputs are
+  your own figures versus estimates (counted from the inputs' recorded sources), and a savings
+  runway against the safety rules; three headline metrics; tabs for *Numbers*, *What if* (preset
+  situations plus your own scenario, re-run on the server), *Why this result* and *Next steps*. A
+  side rail shows how the agents worked (stages, tool calls, warnings — all from the run's real
+  events), the proposed next action, and a follow-up box that asks the copilot about this run.
+- **Ask FinPulse** can be pointed at a specific analysis; replies show which tools were used and,
+  for full analyses, the live agent timeline.
+- **What-if scenarios**, **Next steps**, **Activity log** and **Documents** share the same page
+  header, filter chips with counts, empty states and cards. The activity log shows each event with
+  its recorded actor (agent icon or you) and links back to the run.
+- Shared pieces: `ui.tsx` (notices, sections, disclosure, dialogs, badges, empty states) and
+  `kit.tsx` (agent identity, pulse mark, tabs, chips, deltas, meters).
 
 ## Five-minute demo
 

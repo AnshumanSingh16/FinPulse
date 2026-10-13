@@ -260,7 +260,7 @@ export function Meter({
 }) {
   const pct = (n: number) => `${Math.max(0, Math.min(100, (n / max) * 100))}%`;
   const zone = zones.find((z) => value <= z.to) ?? zones[zones.length - 1]!;
-  let from = 0;
+  const starts = zones.map((_, i) => (i === 0 ? 0 : zones[i - 1]!.to));
   return (
     <div
       role="meter"
@@ -273,9 +273,8 @@ export function Meter({
     >
       <div className="relative h-2.5 overflow-hidden rounded-full bg-surface-sunken">
         {zones.map((z, i) => {
-          const left = pct(from);
+          const left = pct(starts[i]!);
           const width = `calc(${pct(Math.min(z.to, max))} - ${left})`;
-          from = z.to;
           return (
             <span
               key={i}

@@ -12,7 +12,7 @@ export default function ErrorPage({
   return (
     <div role="alert" className="flex max-w-lg flex-col gap-3">
       <h1 className="text-xl font-semibold">Something went wrong</h1>
-      <p className="text-sm text-muted-foreground">
+      <p className="text-sm text-ink-500">
         This page failed to render. Try again; if it keeps happening, check the web server logs
         {error.digest ? (
           <>

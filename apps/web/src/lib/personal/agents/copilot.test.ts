@@ -110,7 +110,12 @@ describe("copilot rule-based answers for the home prompts", () => {
 
   it("plans an emergency fund from the profile", async () => {
     const s = loadSession("rb");
-    s.profile = { values: { ...DEMO_PROFILE, liquidSavings: 300_000 }, sources: {}, isDemo: true, updatedAt: null };
+    s.profile = {
+      values: { ...DEMO_PROFILE, liquidSavings: 300_000 },
+      sources: {},
+      isDemo: true,
+      updatedAt: null,
+    };
     const items = await ask("Build an emergency fund");
     const tool = items.find((i) => i.type === "tool");
     expect(tool?.type === "tool" && tool.call.tool).toBe("plan_emergency_fund");

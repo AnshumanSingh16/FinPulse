@@ -95,6 +95,26 @@ export function ProfileEditor() {
         imported from documents you confirm.
       </Notice>
 
+      <Section title="About you">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Field
+            label={PROFILE_LABELS.name}
+            htmlFor="name"
+            badge={badge("name")}
+            hint="Optional — only used to greet you on Home"
+          >
+            <input
+              id="name"
+              className={inputClass}
+              maxLength={40}
+              autoComplete="given-name"
+              value={draft.name ?? ""}
+              onChange={(e) => set("name", e.target.value.trim() ? e.target.value : null)}
+            />
+          </Field>
+        </div>
+      </Section>
+
       <Section title="Income and spending">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {(
@@ -200,7 +220,7 @@ export function ProfileEditor() {
           <Save /> {dirty ? "Save profile" : "Saved"}
         </Button>
       </div>
-      <p className="text-[11px] text-muted-foreground">
+      <p className="text-[12px] text-ink-400">
         Money fields accept 2,00,000 · 200000 · 2 lakh · 1.2 crore.
       </p>
     </div>

@@ -1,12 +1,16 @@
 "use client";
 
+import { AlertTriangle, CircleUser, ShieldCheck } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 
+import type { AgentName } from "@/lib/personal/agents/types";
 import type { AuditEvent } from "@/lib/personal/store";
 import { cn } from "@/lib/utils";
 
+import { AGENT_META, AgentGlyph, Chip } from "./kit";
 import { usePersonal } from "./provider";
-import { Loading, Section } from "./ui";
+import { EmptyState, Loading, PageTitle } from "./ui";
 
 const GROUPS: Record<string, { label: string; types: AuditEvent["type"][] }> = {
   all: { label: "All", types: [] },
@@ -45,86 +49,171 @@ const GROUPS: Record<string, { label: string; types: AuditEvent["type"][] }> = {
   },
 };
 
-const TONE: Partial<Record<AuditEvent["type"], string>> = {
-  verification_flag: "bg-status-warning",
-  service_unavailable: "bg-status-critical",
-  missing_information: "bg-status-warning",
-  approval_decision: "bg-primary",
-  approval_requested: "bg-primary",
-  action_completed: "bg-status-good",
-  recommendation_generated: "bg-chart-1",
-};
+const CAUTION: AuditEvent["type"][] = ["verification_flag", "missing_information"];
+const APPROVAL: AuditEvent["type"][] = [
+  "approval_requested",
+  "approval_decision",
+  "action_completed",
+];
+
+function title(type: AuditEvent["type"]) {
+  return type.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
+}
+
+/** The actor recorded by the server ("user", "agent:risk", "system" …), shown with its icon. */
+function Actor({ actor }: { actor: string }) {
+  const agent = actor.startsWith("agent:") ? (actor.slice(6) as AgentName) : null;
+  if (agent && agent in AGENT_META) return <AgentGlyph agent={agent} size="sm" />;
+  return (
+    <span
+      className="inline-flex size-6 shrink-0 items-center justify-center rounded-lg bg-surface-sunken text-ink-500"
+      aria-hidden
+    >
+      <CircleUser className="size-3.5" />
+    </span>
+  );
+}
+
+function actorLabel(actor: string) {
+  if (actor.startsWith("agent:")) {
+    const a = actor.slice(6) as AgentName;
+    return a in AGENT_META ? `${AGENT_META[a].label} agent` : actor;
+  }
+  return actor === "user" ? "You" : actor.replace(/^\w/, (c) => c.toUpperCase());
+}
+
+function dayLabel(iso: string) {
+  const d = new Date(iso);
+  const today = new Date();
+  const y = new Date();
+  y.setDate(today.getDate() - 1);
+  if (d.toDateString() === today.toDateString()) return "Today";
+  if (d.toDateString() === y.toDateString()) return "Yesterday";
+  return d.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" });
+}
 
 export function AuditTrail() {
   const { state } = usePersonal();
   const [group, setGroup] = useState("all");
   if (!state) return <Loading />;
-  const events = state.audit.filter(
-    (e) => group === "all" || GROUPS[group]!.types.includes(e.type),
-  );
+  const match = (k: string, e: AuditEvent) => k === "all" || GROUPS[k]!.types.includes(e.type);
+  const events = state.audit.filter((e) => match(group, e));
+
+  // Group consecutive events (already newest first) by calendar day.
+  const days: { label: string; items: AuditEvent[] }[] = [];
+  for (const e of events) {
+    const label = dayLabel(e.at);
+    const last = days[days.length - 1];
+    if (last?.label === label) last.items.push(e);
+    else days.push({ label, items: [e] });
+  }
+
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-1">
-        <div className="text-xs font-medium text-primary">Everything that happened</div>
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">Activity log</h1>
-        <p className="max-w-2xl text-sm text-muted-foreground">
-          Every goal, agent step, verification flag, approval and data change, recorded by the
-          server as it happened. Newest first.
-        </p>
-      </header>
-      <Section
-        title={`${events.length} event(s)`}
-        actions={
-          <div className="flex flex-wrap gap-1" role="group" aria-label="Filter events">
-            {Object.entries(GROUPS).map(([k, g]) => (
-              <button
-                key={k}
-                type="button"
-                onClick={() => setGroup(k)}
-                aria-pressed={group === k}
-                className={cn(
-                  "rounded-md border px-2.5 py-1 text-xs",
-                  group === k
-                    ? "border-primary/50 bg-primary/10 text-primary"
-                    : "text-muted-foreground",
-                )}
+      <PageTitle
+        eyebrow="Everything that happened"
+        title="Activity log"
+        description="Every goal, agent step, verification flag, approval and data change — recorded by the server as it happened, not reconstructed afterwards. Newest first."
+      />
+
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Filter events">
+        {Object.entries(GROUPS).map(([k, g]) => {
+          const n = state.audit.filter((e) => match(k, e)).length;
+          return (
+            <Chip key={k} selected={group === k} onClick={() => setGroup(k)}>
+              {g.label}
+              <span className="tabular text-[12px] text-ink-400">{n}</span>
+            </Chip>
+          );
+        })}
+      </div>
+
+      {events.length === 0 ? (
+        <EmptyState
+          title={state.audit.length ? "Nothing in this filter" : "No activity yet"}
+          action={
+            state.audit.length ? undefined : (
+              <Link
+                href="/afford"
+                className="text-[14px] font-semibold text-brand-700 hover:underline"
               >
-                {g.label}
-              </button>
-            ))}
-          </div>
-        }
-      >
-        {events.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No events.</p>
-        ) : (
-          <ol className="relative flex flex-col gap-3 border-l pl-5">
-            {events.map((e) => (
-              <li key={e.id} className="relative">
-                <span
-                  className={cn(
-                    "absolute top-1.5 -left-[25px] size-2.5 rounded-full ring-4 ring-card",
-                    TONE[e.type] ?? "bg-muted-foreground",
-                  )}
-                />
-                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
-                  <span className="text-sm font-medium">
-                    {e.type.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase())}
-                  </span>
-                  <span className="text-xs text-primary">{e.actor}</span>
-                  <span className="tabular text-xs text-muted-foreground">
-                    {new Date(e.at).toLocaleString("en-IN", { hour12: false })}
-                  </span>
-                  {e.runId ? (
-                    <span className="font-mono text-[10px] text-muted-foreground">{e.runId}</span>
-                  ) : null}
-                </div>
-                <p className="text-sm text-pretty text-muted-foreground">{e.summary}</p>
-              </li>
-            ))}
-          </ol>
-        )}
-      </Section>
+                Start an analysis →
+              </Link>
+            )
+          }
+        >
+          {state.audit.length
+            ? "Try another filter to see the rest of the log."
+            : "Load the demo or run an analysis and every step will be recorded here."}
+        </EmptyState>
+      ) : (
+        days.map((d) => (
+          <section key={d.label} className="flex flex-col gap-2" aria-label={d.label}>
+            <h2 className="text-[12px] font-semibold tracking-wide text-ink-400 uppercase">
+              {d.label}
+            </h2>
+            <ol className="overflow-hidden rounded-2xl border border-line bg-surface shadow-xs">
+              {d.items.map((e) => {
+                const caution = CAUTION.includes(e.type);
+                const failed = e.type === "service_unavailable";
+                return (
+                  <li
+                    key={e.id}
+                    className={cn(
+                      "flex gap-3 border-b border-line px-4 py-3 last:border-0 sm:px-5",
+                      caution && "bg-caution-50/50",
+                      failed && "bg-danger-50/50",
+                    )}
+                  >
+                    <Actor actor={e.actor} />
+                    <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                        <span className="text-[14px] font-semibold text-ink-900">
+                          {title(e.type)}
+                        </span>
+                        {caution ? (
+                          <AlertTriangle
+                            className="size-3.5 text-caution-text"
+                            aria-label="Needs attention"
+                          />
+                        ) : null}
+                        {failed ? (
+                          <AlertTriangle
+                            className="size-3.5 text-danger-text"
+                            aria-label="Service unavailable"
+                          />
+                        ) : null}
+                        {APPROVAL.includes(e.type) ? (
+                          <ShieldCheck className="size-3.5 text-brand-600" aria-label="Approval" />
+                        ) : null}
+                      </div>
+                      <p className="text-[13.5px] text-pretty text-ink-700">{e.summary}</p>
+                      <p className="flex flex-wrap items-center gap-x-2 text-[12px] text-ink-400">
+                        <span>{actorLabel(e.actor)}</span>
+                        <span aria-hidden>·</span>
+                        <time className="tabular" dateTime={e.at}>
+                          {new Date(e.at).toLocaleTimeString("en-IN", { hour12: false })}
+                        </time>
+                        {e.runId ? (
+                          <>
+                            <span aria-hidden>·</span>
+                            <Link
+                              href={`/afford?run=${e.runId}`}
+                              className="font-mono text-[11px] text-ink-500 hover:text-brand-700 hover:underline"
+                            >
+                              {e.runId}
+                            </Link>
+                          </>
+                        ) : null}
+                      </p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          </section>
+        ))
+      )}
     </div>
   );
 }

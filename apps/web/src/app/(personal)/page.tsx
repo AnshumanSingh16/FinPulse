@@ -1,15 +1,12 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 
 import { Overview } from "@/components/personal/overview";
-import { Loading } from "@/components/personal/ui";
 
 export const metadata: Metadata = { title: "Overview" };
 
+// Rendered per request: these pages read the URL (search params) and per-session data.
+export const dynamic = "force-dynamic";
+
 export default function Page() {
-  return (
-    <Suspense fallback={<Loading />}>
-      <Overview />
-    </Suspense>
-  );
+  return <Overview />;
 }

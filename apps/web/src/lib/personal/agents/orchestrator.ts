@@ -376,7 +376,7 @@ export async function runAffordabilityWorkflow(
       session,
       "recommendation_generated",
       "agent:planner",
-      `${run.recommendation.headline} (${analysis.label})`,
+      run.recommendation.headline,
       run.id,
     );
     finish(

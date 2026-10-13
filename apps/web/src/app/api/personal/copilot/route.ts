@@ -24,5 +24,7 @@ export async function POST(request: NextRequest) {
   const session = await getSession();
   if (!consumeRateLimit(session))
     return jsonError(429, "Too many requests. Wait a minute and try again.");
-  return ndjsonStream((send) => copilotTurn(session, parsed.data.message, send, { runId: parsed.data.runId }));
+  return ndjsonStream((send) =>
+    copilotTurn(session, parsed.data.message, send, { runId: parsed.data.runId }),
+  );
 }

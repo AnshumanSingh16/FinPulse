@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, FileText, Lock, PlugZap } from "lucide-react";
+import { Check, Download, FileText, Lock, PiggyBank, PlugZap } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -70,39 +70,70 @@ export function ActionPlanCard({ plan, compact = false }: { plan: ActionPlan; co
   const canTick = plan.status === "approved";
   const openItems = plan.items.filter((i) => !i.done && !i.requiresIntegration).length;
 
+  const trackable = plan.items.filter((i) => !i.requiresIntegration);
+  const done = trackable.filter((i) => i.done).length;
+
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <ApprovalBadge status={plan.status} />
-        <span className="text-xs text-muted-foreground">
-          Prepared by the Action Agent · {new Date(plan.createdAt).toLocaleString("en-IN")}
+        <span className="text-[12.5px] text-ink-500">
+          Prepared by the Action Agent ·{" "}
+          {new Date(plan.createdAt).toLocaleString("en-IN", {
+            day: "numeric",
+            month: "short",
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
         </span>
+        {trackable.length ? (
+          <span className="ml-auto flex items-center gap-2 text-[12.5px] text-ink-500">
+            <span
+              className="h-1.5 w-24 overflow-hidden rounded-full bg-surface-sunken"
+              role="progressbar"
+              aria-label="Steps done"
+              aria-valuemin={0}
+              aria-valuemax={trackable.length}
+              aria-valuenow={done}
+            >
+              <span
+                className="block h-full rounded-full bg-brand-600 transition-[width] duration-300"
+                style={{ width: `${(done / trackable.length) * 100}%` }}
+              />
+            </span>
+            <span className="tabular">
+              {done}/{trackable.length} done
+            </span>
+          </span>
+        ) : null}
       </div>
 
       {plan.savingsPlan ? (
-        <div className="rounded-xl bg-accent/60 p-4 text-sm">
-          <div className="font-medium">Savings plan</div>
-          <div className="text-muted-foreground">
-            Save{" "}
-            <span className="tabular font-medium text-foreground">
-              {formatINR(plan.savingsPlan.monthlySaving)}
-            </span>{" "}
-            a month for{" "}
-            <span className="tabular font-medium text-foreground">
-              {plan.savingsPlan.months} months
-            </span>{" "}
-            to add{" "}
-            <span className="tabular font-medium text-foreground">
-              {formatINR(plan.savingsPlan.targetAmount)}
-            </span>
-            . {plan.savingsPlan.rationale}
+        <div className="flex flex-col gap-3 rounded-xl border border-line bg-surface-sunken/60 p-4">
+          <div className="flex items-center gap-2 text-[13px] font-semibold text-ink-900">
+            <PiggyBank className="size-4 text-brand-600" aria-hidden /> Savings plan
           </div>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              ["Each month", formatINR(plan.savingsPlan.monthlySaving)],
+              ["For", `${plan.savingsPlan.months} months`],
+              ["Adds", formatINR(plan.savingsPlan.targetAmount)],
+            ].map(([k, v]) => (
+              <div key={k} className="flex flex-col">
+                <span className="text-[12px] text-ink-500">{k}</span>
+                <span className="tabular font-display text-[16px] font-bold whitespace-nowrap sm:text-[18px]">
+                  {v}
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="text-[13px] text-pretty text-ink-500">{plan.savingsPlan.rationale}</p>
         </div>
       ) : null}
 
-      <ul className="flex flex-col divide-y">
+      <ul className="flex flex-col">
         {plan.items.map((item) => (
-          <li key={item.id} className="flex gap-3 py-3">
+          <li key={item.id} className="flex gap-3 border-b border-line py-3 last:border-0">
             <button
               type="button"
               disabled={!canTick || item.requiresIntegration || busy !== null}
@@ -110,39 +141,46 @@ export function ActionPlanCard({ plan, compact = false }: { plan: ActionPlan; co
               aria-label={
                 item.done ? `Mark "${item.title}" as not done` : `Mark "${item.title}" as done`
               }
+              title={
+                !canTick && !item.requiresIntegration
+                  ? "Approve the plan to tick steps off"
+                  : undefined
+              }
               className={cn(
-                "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded border transition disabled:cursor-not-allowed",
-                item.done ? "border-primary bg-primary text-primary-foreground" : "bg-background",
+                "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-md border transition-colors disabled:cursor-not-allowed",
+                item.done
+                  ? "border-brand-600 bg-brand-600 text-white"
+                  : "border-line-strong bg-surface hover:border-brand-600",
                 !canTick && "opacity-50",
               )}
             >
               {item.requiresIntegration ? (
-                <Lock className="size-3 text-muted-foreground" />
+                <Lock className="size-3 text-ink-400" />
               ) : item.done ? (
                 <Check className="size-3.5" />
               ) : null}
             </button>
-            <div className="flex min-w-0 flex-col gap-0.5">
+            <div className="flex min-w-0 flex-col gap-1">
               <div className="flex flex-wrap items-center gap-2">
                 <span
                   className={cn(
-                    "text-sm font-medium",
-                    item.done && "text-muted-foreground line-through",
+                    "text-[14px] font-medium text-ink-900",
+                    item.done && "text-ink-400 line-through",
                   )}
                 >
                   {item.title}
                 </span>
-                <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground uppercase">
+                <span className="rounded-md bg-surface-sunken px-1.5 py-0.5 text-[11px] font-medium text-ink-500">
                   {CATEGORY[item.category]}
                 </span>
                 {item.requiresIntegration ? (
-                  <span className="inline-flex items-center gap-1 rounded bg-status-warning/10 px-1.5 py-0.5 text-[10px] text-text-warning">
-                    <PlugZap className="size-3" /> Do this with the provider
+                  <span className="inline-flex items-center gap-1 rounded-md bg-caution-50 px-1.5 py-0.5 text-[11px] font-medium text-caution-text">
+                    <PlugZap className="size-3" aria-hidden /> Do this with the provider
                   </span>
                 ) : null}
               </div>
               {item.detail ? (
-                <span className="text-xs text-pretty text-muted-foreground">{item.detail}</span>
+                <span className="text-[13px] text-pretty text-ink-500">{item.detail}</span>
               ) : null}
             </div>
           </li>
@@ -150,12 +188,12 @@ export function ActionPlanCard({ plan, compact = false }: { plan: ActionPlan; co
       </ul>
 
       {!compact && plan.documentsNeeded.length ? (
-        <div className="flex flex-col gap-1.5">
-          <div className="text-sm font-medium">Documents lenders typically ask for</div>
-          <ul className="grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
+        <div className="flex flex-col gap-2">
+          <h4 className="text-[14px] font-semibold">Documents lenders typically ask for</h4>
+          <ul className="grid gap-1.5 text-[13px] text-ink-700 sm:grid-cols-2">
             {plan.documentsNeeded.map((d) => (
-              <li key={d} className="flex gap-1.5">
-                <FileText className="mt-0.5 size-3 shrink-0" /> {d}
+              <li key={d} className="flex gap-2">
+                <FileText className="mt-0.5 size-3.5 shrink-0 text-ink-400" aria-hidden /> {d}
               </li>
             ))}
           </ul>
@@ -163,18 +201,21 @@ export function ActionPlanCard({ plan, compact = false }: { plan: ActionPlan; co
       ) : null}
 
       {!compact && plan.draftAnswers.length ? (
-        <div className="flex flex-col gap-1.5">
-          <div className="text-sm font-medium">Draft application answers</div>
-          <p className="text-xs text-muted-foreground">
+        <div className="flex flex-col gap-2">
+          <h4 className="text-[14px] font-semibold">Draft application answers</h4>
+          <p className="text-[13px] text-ink-500">
             Drafted from your profile for you to copy into a lender&apos;s form. FinPulse does not
             submit anything.
           </p>
-          <dl className="grid gap-x-4 gap-y-1 rounded-lg border p-3 text-xs sm:grid-cols-[auto_1fr_auto]">
+          <dl className="overflow-hidden rounded-xl border border-line text-[13px]">
             {plan.draftAnswers.map((d) => (
-              <div key={d.question} className="contents">
-                <dt className="text-muted-foreground">{d.question}</dt>
-                <dd className="tabular font-medium">{d.answer}</dd>
-                <dd className="text-muted-foreground">{d.source}</dd>
+              <div
+                key={d.question}
+                className="grid gap-x-4 gap-y-0.5 border-b border-line px-3 py-2 last:border-0 sm:grid-cols-[1fr_auto_auto]"
+              >
+                <dt className="text-ink-500">{d.question}</dt>
+                <dd className="tabular font-semibold text-ink-900">{d.answer}</dd>
+                <dd className="text-[12px] text-ink-400">{d.source}</dd>
               </div>
             ))}
           </dl>
@@ -183,27 +224,26 @@ export function ActionPlanCard({ plan, compact = false }: { plan: ActionPlan; co
 
       {error ? <Notice tone="error">{error}</Notice> : null}
 
-      <div className="flex flex-col gap-2 border-t pt-3">
+      <div className="flex flex-col gap-3 border-t border-line pt-4">
         {plan.status === "awaiting_review" ? (
-          <>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Button size="lg" onClick={() => setConfirm("approve")} disabled={busy !== null}>
-                Approve these steps
+          <div className="flex flex-col gap-3 rounded-xl bg-caution-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-[13px] text-pretty text-ink-700">
+              <span className="font-semibold text-ink-900">Waiting for you.</span> Approving lets
+              you track these steps here. It does not contact any lender or move money.
+            </p>
+            <div className="flex shrink-0 gap-2">
+              <Button onClick={() => setConfirm("approve")} disabled={busy !== null}>
+                Approve steps
               </Button>
               <Button
                 variant="outline"
-                size="lg"
                 onClick={() => setConfirm("reject")}
                 disabled={busy !== null}
               >
                 Not now
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Approving lets you track these steps here. It does not contact any lender or move
-              money.
-            </p>
-          </>
+          </div>
         ) : null}
         {plan.status === "approved" ? (
           <div className="flex flex-wrap items-center gap-3">
@@ -213,7 +253,7 @@ export function ActionPlanCard({ plan, compact = false }: { plan: ActionPlan; co
             >
               Mark all done
             </Button>
-            <span className="text-xs text-muted-foreground">
+            <span className="text-[13px] text-ink-500">
               {openItems
                 ? `${openItems} step(s) still to tick off`
                 : "Every trackable step is done"}
@@ -231,7 +271,7 @@ export function ActionPlanCard({ plan, compact = false }: { plan: ActionPlan; co
           </Button>
         ) : null}
         <Button variant="ghost" size="sm" className="w-fit" onClick={download}>
-          Download checklist (.md)
+          <Download /> Download checklist (.md)
         </Button>
       </div>
       <ConfirmDialog
@@ -260,7 +300,7 @@ export function ActionPlanCard({ plan, compact = false }: { plan: ActionPlan; co
         }}
       >
         <span className="mb-3 block">You can reopen them later from Next steps.</span>
-        <label className="flex flex-col gap-1.5 text-foreground">
+        <label className="flex flex-col gap-1.5 text-ink-900">
           <span className="text-sm font-medium">Why? (optional)</span>
           <input
             value={note}

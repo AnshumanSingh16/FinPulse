@@ -1,15 +1,12 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 
 import { AffordWorkspace } from "@/components/personal/afford-workspace";
-import { Loading } from "@/components/personal/ui";
 
 export const metadata: Metadata = { title: "Can I Afford This?" };
 
+// Rendered per request: these pages read the URL (search params) and per-session data.
+export const dynamic = "force-dynamic";
+
 export default function Page() {
-  return (
-    <Suspense fallback={<Loading />}>
-      <AffordWorkspace />
-    </Suspense>
-  );
+  return <AffordWorkspace />;
 }

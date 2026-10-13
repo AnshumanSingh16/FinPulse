@@ -43,9 +43,9 @@ export function Field({
       </div>
       {children}
       {error ? (
-        <span className="text-xs text-text-critical">{error}</span>
+        <span className="text-xs text-danger-text">{error}</span>
       ) : hint ? (
-        <span className="text-xs text-muted-foreground">{hint}</span>
+        <span className="text-xs text-ink-500">{hint}</span>
       ) : null}
     </div>
   );
@@ -165,7 +165,7 @@ export function NumberInput({
           className={cn(inputClass, suffix && "pr-14")}
         />
         {suffix ? (
-          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-muted-foreground">
+          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-ink-500">
             {suffix}
           </span>
         ) : null}
