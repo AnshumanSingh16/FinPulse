@@ -85,6 +85,7 @@ const CATEGORY: Record<Finding["category"], string> = {
   inconsistent: "Inconsistencies",
   document: "Document mismatches",
   assumption: "Assumptions",
+  plan: "Your other goals",
 };
 
 export function WhyPanel({ run, onEdit }: { run: WorkflowRun; onEdit?: () => void }) {

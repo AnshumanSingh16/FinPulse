@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
+import { currentMonth } from "../finance/plan";
+import { demoGoals } from "../plan-model";
 import { DEMO_PROFILE, DEMO_PURCHASE } from "../schemas";
 import { loadSession, resetSession, transitionActionPlan, TransitionError } from "../store";
 import { runAffordabilityWorkflow } from "./orchestrator";
@@ -26,6 +28,36 @@ describe("affordability workflow (no AI key)", () => {
     ]);
     expect(run.analysis).toBeNull();
     expect(run.plan.filter((s) => s.status === "skipped").length).toBeGreaterThan(0);
+  });
+
+  it("checks the purchase against the saved goal plan", async () => {
+    const session = loadSession("test");
+    session.profile = { values: { ...DEMO_PROFILE }, sources: {}, isDemo: true, updatedAt: null };
+    session.goals = demoGoals(currentMonth());
+    const run = await runAffordabilityWorkflow(session, "House", DEMO_PURCHASE);
+    expect(run.status).toBe("completed");
+    const step = run.plan.find((s) => s.id === "plan");
+    expect(step?.status).toBe("done");
+    expect(run.toolCalls.some((c) => c.tool === "check_plan_impact" && c.status === "ok")).toBe(
+      true,
+    );
+    expect(run.planImpact).not.toBeNull();
+    // The ₹20 lakh+ of upfront cash comes out of the savings earmarked for the other goals.
+    expect(run.planImpact!.affected.length).toBeGreaterThan(0);
+    expect(run.findings.filter((f) => f.category === "plan")).toHaveLength(
+      run.planImpact!.affected.length,
+    );
+    const plan = session.actionPlans.find((p) => p.runId === run.id)!;
+    expect(plan.items[0]!.title).toBe("Re-plan the goals this purchase moves");
+    expect(session.audit.some((a) => a.type === "plan_impact")).toBe(true);
+  });
+
+  it("skips the plan step when no goals are saved", async () => {
+    const session = loadSession("test");
+    session.profile = { values: { ...DEMO_PROFILE }, sources: {}, isDemo: true, updatedAt: null };
+    const run = await runAffordabilityWorkflow(session, "House", DEMO_PURCHASE);
+    expect(run.plan.some((s) => s.id === "plan")).toBe(false);
+    expect(run.planImpact).toBeNull();
   });
 
   it("runs every step on the demo profile and requests approval", async () => {

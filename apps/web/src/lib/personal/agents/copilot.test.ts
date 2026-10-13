@@ -21,6 +21,8 @@ vi.mock("./llm", async (orig) => {
   };
 });
 
+import { currentMonth } from "../finance/plan";
+import { demoGoals } from "../plan-model";
 import { DEMO_PROFILE } from "../schemas";
 import { loadSession, resetSession } from "../store";
 import { copilotTurn, type CopilotStreamItem } from "./copilot";
@@ -139,5 +141,39 @@ describe("copilot rule-based answers for the home prompts", () => {
     const items = await ask("Build an emergency fund");
     const msg = items.find((i) => i.type === "message");
     expect(msg?.type === "message" && msg.text).toMatch(/missing/);
+  });
+
+  it("reviews the saved goal plan", async () => {
+    const s = loadSession("rb");
+    s.profile = { values: { ...DEMO_PROFILE }, sources: {}, isDemo: true, updatedAt: null };
+    s.goals = demoGoals(currentMonth());
+    const items = await ask("Am I on track for my goals?");
+    const tool = items.find((i) => i.type === "tool");
+    expect(tool?.type === "tool" && tool.call.tool).toBe("review_goal_plan");
+    const msg = items.find((i) => i.type === "message");
+    expect(msg?.type === "message" && msg.text).toContain("Family trip to Japan");
+    expect(msg?.type === "message" && msg.text).toMatch(/spare each month/);
+  });
+
+  it("compares renting with buying from the figures in the question", async () => {
+    const items = await ask("Rent or buy: ₹75 lakh flat, rent ₹25,000");
+    const tool = items.find((i) => i.type === "tool");
+    expect(tool?.type === "tool" && tool.call.tool).toBe("compare_rent_vs_buy");
+    const msg = items.find((i) => i.type === "message");
+    expect(msg?.type === "message" && msg.text).toMatch(/after 15 years/);
+    expect(msg?.type === "message" && msg.text).toMatch(/faster than [\d.]+% a year/);
+  });
+
+  it("compares prepaying with investing, and asks when figures are missing", async () => {
+    const items = await ask(
+      "Should I prepay or invest? ₹40 lakh loan at 8.5% with 15 years left, ₹5 lakh bonus",
+    );
+    const tool = items.find((i) => i.type === "tool");
+    expect(tool?.type === "tool" && tool.call.status).toBe("ok");
+    const msg = items.find((i) => i.type === "message");
+    expect(msg?.type === "message" && msg.text).toMatch(/saves ₹[\d,]+ of interest/);
+    const missing = await ask("Should I prepay my loan?");
+    const m2 = missing.find((i) => i.type === "message");
+    expect(m2?.type === "message" && m2.text).toMatch(/I need four things/);
   });
 });

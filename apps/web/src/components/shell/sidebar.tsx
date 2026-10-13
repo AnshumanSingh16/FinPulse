@@ -204,8 +204,16 @@ export function Sidebar() {
             moreActive ? "font-semibold text-brand-700" : "text-ink-500",
           )}
           aria-haspopup="dialog"
+          aria-label={reviews ? `More (${reviews} awaiting review)` : "More"}
         >
-          <Ellipsis className="size-[22px]" aria-hidden />
+          <span className="relative">
+            <Ellipsis className="size-[22px]" aria-hidden />
+            {reviews ? (
+              <span className="absolute -top-1 -right-2 flex size-4 items-center justify-center rounded-full bg-caution-500 text-[10px] font-bold text-white">
+                {reviews}
+              </span>
+            ) : null}
+          </span>
           More
         </button>
       </nav>

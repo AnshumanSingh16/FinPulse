@@ -212,7 +212,12 @@ export function resolveInputs(
 }
 
 /** The task plan for an affordability question. Steps run in order; each names its agent. */
-export function buildPlan(opts: { research: boolean; liveResearch: boolean }): PlanStep[] {
+export function buildPlan(opts: {
+  research: boolean;
+  liveResearch: boolean;
+  /** Number of goals saved in the person's plan; 0 skips the plan-impact step. */
+  goals?: number;
+}): PlanStep[] {
   const step = (id: string, agent: PlanStep["agent"], title: string, why: string): PlanStep => ({
     id,
     agent,
@@ -258,6 +263,16 @@ export function buildPlan(opts: { research: boolean; liveResearch: boolean }): P
       "Stress-testing your finances",
       "What happens if income falls, costs or rates rise, or a shock hits.",
     ),
+    ...(opts.goals
+      ? [
+          step(
+            "plan",
+            "analysis",
+            "Checking your other goals",
+            `Projecting all ${opts.goals} saved goal(s) with and without this purchase, month by month.`,
+          ),
+        ]
+      : []),
     step(
       "verify",
       "verification",

@@ -15,3 +15,4 @@ coverage/
 .idea/
 .vscode/*
 !.vscode/extensions.json
+.finpulse-data/

@@ -23,6 +23,7 @@ import { emergencyFundCoverageMonths, summariseCashFlow } from "@/lib/personal/f
 import { cn } from "@/lib/utils";
 
 import { stepsFromEvents } from "./agent-activity";
+import { fmtMonth, GOAL_ICON, PlanStatusBadge } from "./plan-workspace";
 import { GoalInput } from "./goal-input";
 import { AgentGlyph, Meter, PulseMark } from "./kit";
 import { usePersonal } from "./provider";
@@ -85,6 +86,9 @@ export function Overview() {
   const latest = state.latestRun;
   const awaiting = state.actionPlans.find((p) => p.status === "awaiting_review");
   const pendingDocs = state.documents.filter((d) => d.review === "pending");
+  const plan = state.plan.projection;
+  const pulse = state.plan.pulse;
+  const late = plan?.goals.filter((g) => g.status !== "on_track") ?? [];
 
   // The single most important thing, from real state, in priority order.
   const insight: {
@@ -110,23 +114,56 @@ export function Overview() {
             href: "/actions",
             cta: "Review",
           }
-        : cover !== null && cover < target
+        : late.length
           ? {
-              tone: "warn",
-              title: "Your safety buffer is below your goal",
-              body: `Savings cover ${cover.toFixed(1)} months of spending; your goal is ${target}.`,
-              href: "/copilot?q=Build%20an%20emergency%20fund",
-              cta: "Plan it",
+              tone: late.some((g) => g.status === "not_reached") ? "bad" : "warn",
+              title: `${late.length} of your goals ${late.length === 1 ? "is" : "are"} running late`,
+              body: late
+                .slice(0, 2)
+                .map((g) =>
+                  g.status === "not_reached"
+                    ? `${g.name} is out of reach`
+                    : `${g.name} lands ${fmtMonth(g.achievedMonth)}, ${g.delayMonths} months late`,
+                )
+                .join("; "),
+              href: "/plan",
+              cta: "Re-plan",
             }
-          : pendingDocs.length
+          : pulse.trend === "behind"
             ? {
-                tone: "info",
-                title: "Confirm figures from your documents",
-                body: `${pendingDocs.length} document${pendingDocs.length === 1 ? "" : "s"} waiting for your review.`,
-                href: "/documents",
-                cta: "Review",
+                tone: "warn",
+                title: `You're saving ${formatINR(Math.abs(pulse.averageGap ?? 0))} a month less than planned`,
+                body: pulse.ifContinues.length
+                  ? `If it continues: ${pulse.ifContinues.map((c) => `${c.name} moves to ${c.after.achievedMonth ? fmtMonth(c.after.achievedMonth) : "out of reach"}`).join("; ")}.`
+                  : `Your goals still hold, but spare money after goals falls to ${formatINR(pulse.freeMonthly?.ifContinues ?? 0)} a month.`,
+                href: "/plan#pulse",
+                cta: "See check-ins",
               }
-            : null;
+            : cover !== null && cover < target
+              ? {
+                  tone: "warn",
+                  title: "Your safety buffer is below your goal",
+                  body: `Savings cover ${cover.toFixed(1)} months of spending; your goal is ${target}.`,
+                  href: "/copilot?q=Build%20an%20emergency%20fund",
+                  cta: "Plan it",
+                }
+              : pendingDocs.length
+                ? {
+                    tone: "info",
+                    title: "Confirm figures from your documents",
+                    body: `${pendingDocs.length} document${pendingDocs.length === 1 ? "" : "s"} waiting for your review.`,
+                    href: "/documents",
+                    cta: "Review",
+                  }
+                : plan && pulse.due
+                  ? {
+                      tone: "info",
+                      title: "Time for your monthly check-in",
+                      body: "Record last month's take-home and spending to see whether your plan is holding.",
+                      href: "/plan#pulse",
+                      cta: "Check in",
+                    }
+                  : null;
 
   const latestSteps = latest ? stepsFromEvents(latest.events, false) : [];
 
@@ -328,6 +365,75 @@ export function Overview() {
             <ArrowRight className="size-4 transition group-hover:translate-x-0.5" aria-hidden />
           </span>
         </Link>
+      ) : null}
+
+      {plan ? (
+        <section
+          className="flex flex-col gap-4 rounded-2xl border border-line bg-surface p-4 shadow-xs sm:p-5"
+          aria-labelledby="plan-h"
+        >
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 id="plan-h" className="text-[16px] font-bold">
+              Your plan
+            </h2>
+            <PlanStatusBadge status={plan.summary.status} />
+            <Link
+              href="/plan"
+              className="ml-auto flex items-center gap-0.5 text-[13px] font-semibold text-brand-700 hover:underline"
+            >
+              {plan.goals.length ? "Open plan" : "Add goals"}{" "}
+              <ChevronRight className="size-4" aria-hidden />
+            </Link>
+          </div>
+          {plan.goals.length ? (
+            <>
+              <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                {plan.goals.map((g) => {
+                  const Icon = GOAL_ICON[g.kind];
+                  return (
+                    <li
+                      key={g.id}
+                      className="flex items-center gap-3 rounded-xl bg-surface-sunken/70 px-3 py-2.5"
+                    >
+                      <Icon className="size-4 shrink-0 text-ink-500" aria-hidden />
+                      <span className="flex min-w-0 flex-col">
+                        <span className="truncate text-[13.5px] font-semibold">{g.name}</span>
+                        <span
+                          className={cn(
+                            "text-[12px]",
+                            g.status === "on_track"
+                              ? "text-brand-700"
+                              : g.status === "delayed"
+                                ? "text-caution-text"
+                                : "text-danger-text",
+                          )}
+                        >
+                          {g.status === "on_track"
+                            ? `On track · ${fmtMonth(g.achievedMonth)}`
+                            : g.status === "delayed"
+                              ? `${g.delayMonths} mo late · ${fmtMonth(g.achievedMonth)}`
+                              : "Out of reach"}
+                        </span>
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+              <p className="text-[13px] text-ink-500">
+                Goals need {formatINR(plan.summary.requiredMonthlyTotal)} a month ·{" "}
+                <span className="font-semibold text-ink-900">
+                  {formatINR(plan.summary.freeMonthlyNow)}
+                </span>{" "}
+                spare after them. Every new analysis is checked against these.
+              </p>
+            </>
+          ) : (
+            <p className="text-[13.5px] text-ink-700">
+              Add what you&apos;re saving for — a car, a home, education, travel. FinPulse projects
+              them together and checks every purchase against all of them.
+            </p>
+          )}
+        </section>
       ) : null}
 
       <div className="grid gap-5 lg:grid-cols-2">

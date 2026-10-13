@@ -14,6 +14,9 @@ import "server-only";
 
 import { formatINR } from "@/lib/format";
 
+import { currentMonth } from "../finance/plan";
+import { effectiveAssumptions, goalFromPurchase } from "../plan-model";
+
 import type { ProfileValues, PurchaseRequest } from "../schemas";
 import {
   audit,
@@ -24,6 +27,7 @@ import {
   type SessionState,
 } from "../store";
 import { aiStatus, liveResearchEnabled } from "./llm";
+import { planImpactTool } from "./plan-tools";
 import { buildPlan } from "./planner";
 import { LimitExceededError, RunContext } from "./runtime";
 import { aiNarrative, buildAlternatives, buildRecommendation, buildSummary } from "./synthesis";
@@ -39,7 +43,7 @@ import {
   scenariosTool,
   verifyTool,
 } from "./tools";
-import type { AgentEvent, PlanStep, ResearchResult, WorkflowRun } from "./types";
+import type { AgentEvent, Finding, PlanStep, ResearchResult, WorkflowRun } from "./types";
 import { riskFindings, type DocumentFact } from "./verification";
 
 export type WorkflowListener = (event: AgentEvent) => void;
@@ -49,6 +53,7 @@ function newRun(
   request: PurchaseRequest,
   profile: ProfileValues,
   research: boolean,
+  goals: number,
 ): WorkflowRun {
   const ai = aiStatus().enabled;
   const live = liveResearchEnabled();
@@ -61,7 +66,7 @@ function newRun(
     mode: { ai, research: live ? "live" : "illustrative" },
     request,
     profileSnapshot: { ...profile },
-    plan: buildPlan({ research, liveResearch: live }),
+    plan: buildPlan({ research, liveResearch: live, goals }),
     events: [],
     toolCalls: [],
     missing: [],
@@ -70,6 +75,7 @@ function newRun(
     research: null,
     analysis: null,
     scenarios: null,
+    planImpact: null,
     findings: [],
     checks: [],
     recommendation: null,
@@ -101,7 +107,7 @@ export async function runAffordabilityWorkflow(
   listener: WorkflowListener = () => {},
 ): Promise<WorkflowRun> {
   const needsResearch = request.researchFinancing || request.interestRate === null;
-  const run = newRun(goal, request, session.profile.values, needsResearch);
+  const run = newRun(goal, request, session.profile.values, needsResearch, session.goals.length);
   saveRun(session, run);
   const ctx = new RunContext(run, listener);
   const step = (id: string) => run.plan.find((s) => s.id === id)!;
@@ -305,7 +311,59 @@ export async function runAffordabilityWorkflow(
       `${scenarios.length - 1} scenarios run; ${scenarios.filter((s) => !s.isBaseline && s.label === "high_strain").length} breach a safety rule.`,
     );
 
-    // 5. Verification --------------------------------------------------------------------------
+    // 5. Plan impact: what does this purchase do to everything else the person is saving for? --
+    const planFindings: Finding[] = [];
+    if (session.goals.length) {
+      current = step("plan");
+      start(current);
+      const month = currentMonth();
+      const { impact } = await ctx.callTool(
+        planImpactTool,
+        {
+          household: { ...inputs.household, investments: session.profile.values.investments ?? 0 },
+          goals: session.goals,
+          assumptions: effectiveAssumptions(session.profile.values, session.planAssumptions),
+          startMonth: month,
+          newGoal: goalFromPurchase(request, inputs.purchase, month),
+        },
+        current.id,
+      );
+      run.planImpact = impact;
+      for (const a of impact.affected) {
+        const message =
+          a.extraDelayMonths === null
+            ? `Buying this now puts "${a.name}" out of reach within the plan's horizon.`
+            : a.extraDelayMonths > 0
+              ? `Buying this now pushes "${a.name}" back by ${a.extraDelayMonths} month(s), to ${a.after.achievedMonth}.`
+              : `"${a.name}" moves to ${a.after.achievedMonth}.`;
+        planFindings.push({
+          id: `plan_${a.id}`,
+          agent: "analysis",
+          severity: a.extraDelayMonths === null ? "critical" : "warning",
+          category: "plan",
+          message,
+          suggestion: "Open your plan to change priorities or dates.",
+        });
+        ctx.emit("analysis", "finding", message, { stepId: current.id, level: "warning" });
+      }
+      audit(
+        session,
+        "plan_impact",
+        "agent:analysis",
+        impact.affected.length
+          ? `Impact on your plan: ${impact.affected.length} goal(s) move`
+          : `Fits alongside all ${session.goals.length} saved goal(s)`,
+        run.id,
+      );
+      finish(
+        current,
+        impact.affected.length
+          ? `${impact.affected.length} of your ${session.goals.length} goal(s) move if you buy this now.`
+          : `All ${session.goals.length} saved goal(s) stay on schedule.`,
+      );
+    }
+
+    // 6. Verification --------------------------------------------------------------------------
     current = step("verify");
     start(current);
     const findings = await ctx.callTool(
@@ -321,7 +379,7 @@ export async function runAffordabilityWorkflow(
       },
       current.id,
     );
-    run.findings = [...findings, ...risks];
+    run.findings = [...findings, ...risks, ...planFindings];
     for (const f of findings.filter((x) => x.severity !== "info")) {
       ctx.emit("verification", "finding", f.message, {
         stepId: current.id,
@@ -334,7 +392,7 @@ export async function runAffordabilityWorkflow(
       `${findings.length} finding(s): ${findings.filter((f) => f.severity === "critical").length} critical, ${findings.filter((f) => f.severity === "warning").length} warnings.`,
     );
 
-    // 6. Synthesis -----------------------------------------------------------------------------
+    // 7. Synthesis -----------------------------------------------------------------------------
     current = step("synthesise");
     start(current);
     const alternatives = await buildAlternatives(
@@ -384,7 +442,7 @@ export async function runAffordabilityWorkflow(
       `${run.recommendation.headline}. ${alternatives.length} alternative(s) computed.`,
     );
 
-    // 7. Action plan ---------------------------------------------------------------------------
+    // 8. Action plan ---------------------------------------------------------------------------
     current = step("act");
     start(current);
     const draft = await ctx.callTool(
@@ -400,6 +458,16 @@ export async function runAffordabilityWorkflow(
       },
       current.id,
     );
+    if (run.planImpact?.affected.length) {
+      draft.items.unshift({
+        id: `item_${draft.items.length + 1}`,
+        category: "savings",
+        title: "Re-plan the goals this purchase moves",
+        detail: `${run.planImpact.affected.map((a) => a.name).join(", ")} would move. Decide which comes first in your plan before committing.`,
+        done: false,
+        requiresIntegration: false,
+      });
+    }
     const now = new Date().toISOString();
     const plan: ActionPlan = {
       ...draft,

@@ -1,12 +1,16 @@
 # FinPulse
 
-**Your Financial Life. On Autopilot.**
+**Every money decision, checked against your whole plan.**
 
-FinPulse is an agentic AI financial copilot for people in India. Ask *"Can I afford a ₹75 lakh
-house?"* and an orchestrator plans the question, then hands it to specialised agents that research
-financing, calculate the loan and cash flow, stress-test the plan, verify the inputs, recommend,
-and prepare next steps — which you review and approve. Every number comes from tested,
-deterministic financial code; the AI never invents figures.
+Most "can I afford it?" tools check one purchase in isolation. Real life doesn't work that way: the
+house, the car upgrade, your child's education and next year's holiday all draw on the same salary
+and the same savings. FinPulse keeps **one plan** for a household in India — every goal, projected
+month by month with inflation, income growth and loan EMIs — and checks every new decision
+against all of it: *"Buying this flat now pushes the Japan trip back 24 months."*
+
+Specialised agents (Planner, Research, Analysis, Risk, Verification, Action) do the work through
+tested, deterministic financial tools; the AI never invents a figure. Nothing is submitted or moved
+without your approval, enforced on the server.
 
 ## Run it
 
@@ -24,16 +28,25 @@ mode.
 
 ## What it does
 
-- **Can I afford this?** — describe a purchase in plain English (house, car, education, business,
-  anything). FinPulse asks only for what's missing, then shows the answer, the numbers, what
-  happens if things go wrong, why, your alternatives, and a next-step checklist.
-- **Agents you can watch** — Planner, Research, Analysis, Risk, Verification and Action agents
-  run a real, recorded workflow; each stage is marked done only when it actually finishes.
-- **Trust and control** — every assumption is labelled, every tool call and source is inspectable,
-  and nothing happens without your approval (enforced on the server). FinPulse never submits
-  applications or moves money.
-- **Also**: what-if scenarios, a financial profile with the source of every value, document checks
-  (salary slips, bank statements, loan quotes), an AI copilot, and a full activity log.
+- **My plan** — your goals in priority order (home, car, education, wedding, travel, business…).
+  FinPulse projects them together: when each one is reached, what it needs each month, what's
+  spare after them, and whether your emergency reserve holds. Change a date, a price or the order
+  and the projection updates instantly.
+- **Can I afford this?** — describe a purchase in plain English. The agents research financing,
+  calculate the loan and cash flow, stress-test it, verify the inputs, and **check what it does to
+  every other goal in your plan**. Then one click adds it to the plan.
+- **Monthly check-in** — record what actually came in and went out. FinPulse compares it with the
+  plan and tells you what happens if the trend continues ("spare money after goals falls from
+  ₹41,635 to ₹22,752 a month").
+- **Decide** — rent or buy a home, and prepay a loan or invest a lump sum: month-by-month
+  simulations with the tipping point ("buying wins only if prices grow faster than 6.9% a year";
+  "investing wins only above 9.4% after tax").
+- **Ask FinPulse** — a copilot that answers with the same tools ("Am I on track for my goals?").
+- **Trust and control** — every assumption labelled, every tool call and source inspectable, an
+  activity log recorded by the server, documents treated as untrusted data, and approvals
+  enforced on the backend. FinPulse never submits applications or moves money.
+- **Your data stays** — saved on the server per browser session (a private file each), so your
+  plan is still there tomorrow.
 
 ## How it's built
 
@@ -41,7 +54,8 @@ Next.js + TypeScript + Tailwind + Recharts, in `apps/web`:
 
 ```
 src/lib/personal/finance/   deterministic financial engine (EMI, amortization, affordability rules,
-                            stress scenarios) — unit-tested against independent calculations
+                            stress scenarios, the multi-goal plan projection, rent-vs-buy,
+                            prepay-vs-invest) — unit-tested against hand-checkable cases
 src/lib/personal/agents/    orchestrator, agents, typed tool registry, AI provider (optional)
 src/lib/personal/documents/ document extraction (rule-based; AI for PDFs when configured)
 src/app/api/personal/       API routes (validated, same-origin, rate-limited)

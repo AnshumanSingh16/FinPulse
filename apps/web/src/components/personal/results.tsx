@@ -12,6 +12,7 @@ import { Tabs } from "./kit";
 import { MetricTrio } from "./results/metrics";
 import { NextStepsPanel } from "./results/next";
 import { NumbersPanel } from "./results/numbers";
+import { PlanImpactCard } from "./results/plan-impact";
 import { AgentRail } from "./results/rail";
 import { VerdictPanel } from "./results/verdict";
 import { WhatIfPanel } from "./results/whatif";
@@ -127,6 +128,7 @@ export function RunResults({
         <div className="flex min-w-0 flex-col gap-4">
           <VerdictPanel run={run} onEvidence={() => go("why")} />
           <MetricTrio run={run} />
+          <PlanImpactCard run={run} />
 
           <div
             ref={tabsRef}

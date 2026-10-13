@@ -6,6 +6,8 @@ import {
   FlaskConical,
   History,
   House,
+  Route,
+  Scale,
   UserRound,
   type LucideIcon,
 } from "lucide-react";
@@ -23,6 +25,7 @@ export type PersonalSection = {
 /** Navigation, grouped by what people come to do. */
 export const PERSONAL_SECTIONS: PersonalSection[] = [
   { href: "/", label: "Home", short: "Home", icon: House, group: "Plan", tab: true },
+  { href: "/plan", label: "My plan", short: "Plan", icon: Route, group: "Plan", tab: true },
   {
     href: "/afford",
     label: "Can I afford this?",
@@ -31,6 +34,7 @@ export const PERSONAL_SECTIONS: PersonalSection[] = [
     group: "Plan",
     tab: true,
   },
+  { href: "/decide", label: "Rent, buy or prepay?", short: "Decide", icon: Scale, group: "Plan" },
   {
     href: "/scenarios",
     label: "What-if scenarios",
@@ -52,7 +56,6 @@ export const PERSONAL_SECTIONS: PersonalSection[] = [
     short: "Steps",
     icon: ClipboardCheck,
     group: "Track",
-    tab: true,
   },
   { href: "/audit", label: "Activity log", short: "Activity", icon: History, group: "Track" },
   {

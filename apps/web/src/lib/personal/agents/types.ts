@@ -4,6 +4,7 @@
  */
 import type { AffordabilityLabel, PurchaseAnalysis, RuleCheck } from "../finance/affordability";
 import type { ScenarioResult } from "../finance/scenarios";
+import type { PlanImpact } from "../finance/plan";
 import type { ProfileValues, PurchaseRequest } from "../schemas";
 
 export type AgentName =
@@ -125,9 +126,9 @@ export type Assumption = {
 
 export type Finding = {
   id: string;
-  agent: "verification" | "risk";
+  agent: "verification" | "risk" | "analysis";
   severity: "info" | "warning" | "critical";
-  category: "missing" | "inconsistent" | "assumption" | "risk" | "document";
+  category: "missing" | "inconsistent" | "assumption" | "risk" | "document" | "plan";
   message: string;
   field?: string;
   suggestion?: string;
@@ -189,6 +190,8 @@ export type WorkflowRun = {
   research: ResearchResult | null;
   analysis: PurchaseAnalysis | null;
   scenarios: ScenarioResult[] | null;
+  /** What this purchase does to the person's other saved goals (null when none are saved). */
+  planImpact: PlanImpact | null;
   findings: Finding[];
   checks: RuleCheck[];
   recommendation: Recommendation | null;

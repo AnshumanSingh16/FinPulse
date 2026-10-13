@@ -1,7 +1,28 @@
-# FinPulse — "Can I afford this, and what should I do next?"
+# FinPulse — every money decision, checked against your whole plan
 
-An agentic financial copilot for individuals in India. It runs entirely inside one Next.js app
+An agentic financial planner for households in India. It runs entirely inside one Next.js app
 (`apps/web`) — **no Python, database or API key needed**.
+
+## The idea
+
+A single-purchase affordability check answers the wrong question. "Can I afford a ₹75 lakh flat?"
+depends on what else the same salary and savings must pay for: the car due in 18 months, a child's
+education in 12 years, next year's trip. FinPulse is built around **one plan per household**:
+
+1. **The plan** (`finance/plan.ts`) — every goal with its price in today's money, target month,
+   priority, inflation and funding (cash or loan). A month-by-month projection grows income and
+   costs, earns returns on balances, keeps an emergency reserve first, funds goals in priority
+   order with the contribution each needs to land on time, buys them when funded, starts their
+   EMIs, and reports which land on time, which are late (and by how much) and which are out of
+   reach.
+2. **Decisions are checked against the plan.** The affordability workflow's Analysis agent runs
+   `check_plan_impact`: the plan with and without the purchase. "Buying this now pushes *Family
+   trip to Japan* from Aug 2027 to Aug 2029." Those become verification findings and the first
+   item of the action checklist; one click adds the purchase to the plan.
+3. **The plan is kept honest monthly.** Check-ins record actual take-home and spending; the pulse
+   compares them with the plan and re-projects with the recent trend ("if this continues…").
+4. **The recurring decisions** — rent vs buy, prepay vs invest — are simulations with explicit
+   assumptions and a tipping point, not rules of thumb.
 
 ## Run it
 
@@ -47,25 +68,33 @@ desktop.
 
 ## Five-minute demo
 
-1. Open **Home** → **Try the demo profile**. A fictional profile loads (₹2,00,000 take-home,
-   ₹25 lakh savings, ₹70,000 expenses, ₹15,000 EMIs, one dependent).
-2. Type **"I want to buy a ₹75 lakh house"** in the goal box → the details screen shows what was
-   understood and uses the saved figures → **Check if I can afford it**.
-3. Watch the stages ("Understanding your goal" … "Preparing your next steps") tick off as the
-   server finishes each one.
-4. Results: EMI **₹52,069**, ₹4,50,000 of illustrative stamp duty/registration, **₹5,50,000** left
-   in savings (4.0 months of cover) → *Potentially manageable, but with limited buffer*. The
-   *Income stops for 6 months* scenario runs out of savings in month 5.
-5. Show **Alternatives** (comfortable price ≈ ₹65.9 lakh, save ~5 months first, 25-year tenure)
-   and the **Evidence** panel (every assumption with its source, every tool call with input and
-   output).
-6. **Approve these steps** (a confirmation dialog explains what approval does and doesn't do) — then show the server refusing shortcuts: items can't be ticked before
-   approval, "Submit the loan application" can never be executed (no integration).
-7. **Copilot**: "What if my income drops by 20%?", "Compare a ₹15 lakh car with a ₹20 lakh car."
-8. **Documents**: upload `salary-slip-demo.txt` (download link on the page). Net pay ₹1,85,000
-   differs from the profile's ₹2,00,000 and the slip hides an "ignore previous instructions" line:
-   both are flagged; the next analysis's Verification Agent raises the mismatch.
-9. **Audit Trail**: every goal, step, flag and approval, as recorded by the server.
+1. **Home → Try the demo.** A fictional household loads: Riya, ₹2,00,000 take-home, ₹25 lakh
+   savings, ₹70,000 expenses, ₹15,000 EMIs (30 left), one dependent — plus three goals (daughter's
+   education in 12 years, a ₹14 lakh car in 18 months on a loan, a ₹4.5 lakh trip in 10 months)
+   and three monthly check-ins.
+2. **Home** shows the plan (3 of 3 goals on track) and the top insight from the check-ins: saving
+   ₹17,667 a month less than planned — the goals still hold, but spare money after goals falls to
+   ₹22,752 a month.
+3. **My plan**: the health strip (goals need ₹73,365 a month, 63.8% of what's left), the year-by-
+   year chart, each goal's monthly need, cash needed on its date (after inflation), the loan EMI
+   once bought. Move the car above education, or edit a date — everything re-projects instantly;
+   **Save plan**.
+4. **Can I afford this?** → "I want to buy a ₹75 lakh house" → **Check if I can afford it**. Nine
+   stages run, including **Checking your other goals**. Results: EMI ₹52,069, ₹5,50,000 left in
+   savings → *limited buffer* — and **Your other goals: buying this now pushes the Japan trip back
+   24 months**; spare money after goals drops from ₹59,594 to ₹21,003. **Add to my plan**.
+5. **Next steps**: the first checklist item is "Re-plan the goals this purchase moves". Approve —
+   the server refuses shortcuts (no ticking before approval; "Submit the loan application" can
+   never be executed).
+6. **Rent, buy or prepay?** Rent vs buy for ₹75 lakh against ₹25,000 rent: renting and investing
+   is ahead by ₹46.8 lakh after 15 years unless prices grow faster than 6.93% a year. Prepay vs
+   invest ₹5 lakh on a ₹40 lakh loan at 8.5%: prepaying saves ₹10.5 lakh of interest; investing
+   wins only above 9.41% a year after tax.
+7. **Ask FinPulse**: "Am I on track for my goals?", "Rent or buy: ₹75 lakh flat, rent ₹25,000".
+8. **Documents**: upload `salary-slip-demo.txt` — the ₹1,85,000 net pay mismatch and the hidden
+   "ignore previous instructions" line are both flagged.
+9. **Activity log**: every goal, agent step, plan change, check-in and approval, as recorded.
+10. Restart the server: the plan, analyses and check-ins are still there.
 
 To rehearse without AI even when a key is configured: set `FINPULSE_AI=off` in `.env` and restart.
 
@@ -79,10 +108,15 @@ src/lib/personal/
     health.ts       cash flow, debt-to-income, emergency cover, savings targets
     affordability.ts  rules (configurable thresholds) → comfortable / limited buffer / high strain
     scenarios.ts    month-by-month stress simulation, baseline comparison
+    plan.ts         the multi-goal plan: month-by-month projection across every goal,
+                    priority funding, inflation, returns, goal loans; plan impact of a new goal
+    decisions.ts    rent vs buy and prepay vs invest simulations with break-even solving
     parse-inr.ts    "₹75 lakh", "1.2 crore", "15,00,000"
   agents/
-    orchestrator.ts the workflow: plan → collect → research → analyse → stress → verify
-                    → synthesise → act → request approval → audit
+    orchestrator.ts the workflow: plan → collect → research → analyse → stress → plan impact
+                    → verify → synthesise → act → request approval → audit
+    plan-tools.ts   project_goal_plan, check_plan_impact, compare_rent_vs_buy,
+                    compare_prepay_vs_invest
     runtime.ts      RunContext: validates every tool call (Zod), enforces limits
                     (40 tool calls, 120 s, 3 model calls per run), records calls and events
     tools.ts        the typed tool registry
@@ -94,9 +128,11 @@ src/lib/personal/
     copilot.ts      AI tool-use loop (max 6 turns) with a rule-based fallback
     llm.ts          the AI provider behind a small abstraction
   documents/      rule-based text/CSV extraction; AI PDF extraction when configured
-  store.ts        per-session server memory; the approval state machine
+  plan-model.ts   profile + goals + check-ins → the engine's inputs; the monthly pulse
+                  (shared by the server and the plan page, so both compute the same thing)
+  store.ts        per-session store (memory + one JSON file per session); approval state machine
 src/app/api/personal/*   route handlers (validated, same-origin only, rate-limited)
-src/app/(personal)/*     the eight sections
+src/app/(personal)/*     the ten sections
 src/components/personal/ the UI
 ```
 
@@ -133,9 +169,10 @@ findings.
   everywhere they appear.
 - Mutating routes require same-origin requests; bodies are size-capped and validated; uploads are
   limited to .txt/.csv/.pdf ≤ 2 MB; each session is rate-limited (30 expensive calls/min).
-- Storage is server memory per browser session (httpOnly cookie). It resets on restart and is
-  not shared between serverless instances — fine for a demo; swap `store.ts` for a database to
-  persist.
+- Storage: each browser session (httpOnly cookie, 180 days) is kept in memory and written to
+  its own JSON file under `FINPULSE_DATA_DIR` (default `.finpulse-data`, git-ignored; directory
+  0700, files 0600), debounced and atomic (temp file + rename). Visits that change nothing write
+  nothing. `FINPULSE_STORAGE=memory` keeps everything in memory only (tests use this).
 
 ## Tests
 
@@ -150,6 +187,13 @@ findings.
   the model, invalid tool input is rejected, invented figures are flagged, provider failure falls
   back to rules.
 - `documents/extract.test.ts` — the sample documents, prompt-injection flagging.
+- `finance/plan.test.ts` — the plan projection on hand-checkable cases (no growth or returns):
+  level contributions, delays and their length, inflation and one-time costs, earmarking savings
+  by priority, the reserve before goals, goal loans starting EMIs, deficits and shortfalls, plan
+  impact of a new goal.
+- `finance/decisions.test.ts` — prepay vs invest (0% return → prepay; break-even ≈ loan rate when
+  untaxed; tax raises it) and rent vs buy (extremes, break-even appreciation levels the two).
+- `plan-model.test.ts` — the monthly pulse (gaps, streaks, trend, "if this continues").
 
 ## Limits and honest caveats
 
@@ -159,4 +203,12 @@ findings.
   their reasoning; they are not lender criteria.
 - A rate rise is modelled by recalculating the EMI for the same tenure; many Indian lenders extend
   the tenure instead.
+- The plan's growth, inflation and return figures (6% income growth, 6% inflation, 6.5% / 10%
+  returns, 10% education inflation, 7% stamp duty and registration on homes) are round,
+  editable assumptions — not forecasts or product rates. The plan does not model taxes on
+  returns, salary jumps or one-off windfalls; check-ins are how it stays honest.
+- Rent vs buy ignores home-loan tax benefits and selling costs; prepay vs invest ignores lost tax
+  deductions and prepayment charges. Both say so on the page.
+- File storage assumes a single server process. For several instances, replace `store.ts` with a
+  database-backed store.
 - FinPulse is decision support, not financial advice, and cannot guarantee loan approval.

@@ -27,6 +27,9 @@ import { aiStatus, describeAiError, effort, getClient, modelId, UNTRUSTED_DATA_R
 import { runAffordabilityWorkflow, type WorkflowListener } from "./orchestrator";
 import { illustrativeRate, DEFAULT_TENURE } from "./research";
 import { verifyFigures } from "./synthesis";
+import { currentMonth } from "../finance/plan";
+import { GOAL_KIND_LABEL, projectFor, pulse } from "../plan-model";
+import { prepayVsInvestTool, rentVsBuyTool } from "./plan-tools";
 import { calculateEmiTool, savingsPlanTool } from "./tools";
 import type { AgentEvent, WorkflowRun } from "./types";
 
@@ -181,6 +184,132 @@ function purchaseFromArgs(a: z.infer<typeof AffordArgs>): PurchaseRequest {
 }
 
 const TOOLS: Record<string, ToolImpl> = {
+  review_goal_plan: {
+    description:
+      "The person's saved goal plan projected month by month: each goal's status (on track / late / out of reach), when it is reached, what it needs each month, the spare money left after goals, and the monthly check-in trend.",
+    schema: Empty,
+    run: async (_args, session) => {
+      const month = currentMonth();
+      const input = {
+        profile: session.profile.values,
+        goals: session.goals,
+        assumptions: session.planAssumptions,
+        startMonth: month,
+      };
+      const p = projectFor(input);
+      if (!p.projection) return { error: `The profile is missing: ${p.missing.join(", ")}.` };
+      const pl = pulse({ ...input, checkIns: session.checkIns });
+      return {
+        goals: p.projection.goals.map((g) => ({
+          name: g.name,
+          type: GOAL_KIND_LABEL[g.kind],
+          priority: g.priority,
+          wanted_by: g.targetMonth,
+          status: g.status,
+          reached_in: g.achievedMonth,
+          months_late: g.delayMonths,
+          monthly_needed: g.requiredMonthly,
+          monthly_funded: g.allocatedMonthly,
+          cash_needed_on_date: g.cashNeededAtTarget,
+        })),
+        monthly_surplus_now: p.projection.summary.surplusNow,
+        spare_monthly_after_goals: p.projection.summary.freeMonthlyNow,
+        emergency_reserve_target: p.projection.summary.reserveTarget,
+        plan_status: p.projection.summary.status,
+        check_in_trend: pl.trend,
+        average_monthly_gap_vs_plan: pl.averageGap,
+        goals_moved_if_trend_continues: pl.ifContinues.map((c) => ({
+          name: c.name,
+          moves_to: c.after.achievedMonth,
+          extra_months: c.extraDelayMonths,
+        })),
+      };
+    },
+    summarize: (o) => {
+      const r = o as { error?: string; goals?: { status: string }[]; plan_status?: string };
+      if (r.error) return "profile incomplete";
+      return `${r.goals!.length} goal(s), ${r.goals!.filter((g) => g.status === "on_track").length} on track`;
+    },
+  },
+  compare_rent_vs_buy: {
+    description:
+      "Rent vs buy for a home: buying (EMI, maintenance, appreciation) against renting a similar home and investing the difference, year by year. Unspecified rates use disclosed defaults.",
+    schema: z.object({
+      price: z.number().min(100_000),
+      monthly_rent: z.number().min(0),
+      years: z.number().int().min(1).max(30).optional(),
+      appreciation_pct: z.number().min(0).max(20).optional(),
+      loan_rate_pct: z.number().min(0).max(30).optional(),
+    }),
+    run: async (a: {
+      price: number;
+      monthly_rent: number;
+      years?: number;
+      appreciation_pct?: number;
+      loan_rate_pct?: number;
+    }) => {
+      const input = rentVsBuyTool.input.parse({
+        price: a.price,
+        monthlyRent: a.monthly_rent,
+        ...(a.years ? { years: a.years } : {}),
+        ...(a.appreciation_pct !== undefined ? { appreciationPct: a.appreciation_pct } : {}),
+        ...(a.loan_rate_pct !== undefined ? { loanRatePct: a.loan_rate_pct } : {}),
+      });
+      const r = await rentVsBuyTool.run(input, new AbortController().signal);
+      const last = r.years[r.years.length - 1]!;
+      return {
+        assumptions: input,
+        emi: r.emi,
+        cash_needed_to_buy: r.upfrontCash,
+        winner: r.winner,
+        buyer_wealth_at_horizon: last.buyerWealth,
+        renter_wealth_at_horizon: last.renterWealth,
+        difference: r.difference,
+        buying_ahead_from_year: r.breakevenYear,
+        appreciation_needed_to_break_even_pct: r.breakevenAppreciationPct,
+      };
+    },
+    summarize: (o) => `${(o as { winner: string }).winner} ahead at the horizon`,
+  },
+  compare_prepay_vs_invest: {
+    description:
+      "Prepaying a loan (EMI kept, loan ends sooner) vs investing the same lump sum, compared on the loan's original end date after tax on gains. Also returns the break-even investment return.",
+    schema: z.object({
+      outstanding: z.number().min(1000),
+      loan_rate_pct: z.number().min(0).max(30),
+      remaining_months: z.number().int().min(1).max(360),
+      lump_sum: z.number().min(1000),
+      invest_return_pct: z.number().min(0).max(20).optional(),
+    }),
+    run: async (a: {
+      outstanding: number;
+      loan_rate_pct: number;
+      remaining_months: number;
+      lump_sum: number;
+      invest_return_pct?: number;
+    }) => {
+      const input = prepayVsInvestTool.input.parse({
+        outstanding: a.outstanding,
+        loanRatePct: a.loan_rate_pct,
+        remainingMonths: a.remaining_months,
+        lumpSum: a.lump_sum,
+        ...(a.invest_return_pct !== undefined ? { investReturnPct: a.invest_return_pct } : {}),
+      });
+      const r = await prepayVsInvestTool.run(input, new AbortController().signal);
+      return {
+        assumptions: input,
+        emi: r.emi,
+        interest_saved_by_prepaying: r.prepay.interestSaved,
+        months_saved: r.prepay.monthsSaved,
+        prepay_corpus_at_loan_end: r.prepay.corpusAtOriginalEnd,
+        invest_corpus_at_loan_end: r.invest.corpusAtOriginalEnd,
+        winner: r.winner,
+        difference: r.difference,
+        breakeven_return_pct: r.breakevenReturnPct,
+      };
+    },
+    summarize: (o) => `${(o as { winner: string }).winner} ahead`,
+  },
   plan_emergency_fund: {
     description:
       "Emergency-fund plan from the saved profile: target (months of essential spending), current cover, gap, and the monthly saving needed to close it in N months (default 12).",
@@ -466,11 +595,11 @@ function collectNumbers(value: unknown, out: number[] = []): number[] {
 
 // ---------------------------------------------------------------- AI mode
 
-const SYSTEM = `You are the FinPulse Copilot, an agentic financial assistant for individuals in India. You help people decide "Can I afford this, and what should I do next?".
+const SYSTEM = `You are the FinPulse Copilot, an agentic financial assistant for individuals in India. Every person has a goal plan (house, car, education, travel…) that competes for the same income and savings; you help them decide "Can I afford this — alongside everything else I am planning — and what should I do next?".
 
 How you work:
 - Always use the tools for facts and figures. Never calculate or invent financial numbers yourself, never invent interest rates, lender offers or approvals. Quote figures exactly as tools return them, in Indian formatting (₹52,069, ₹60 lakh).
-- For "can I afford X" questions call analyse_affordability (it runs the full multi-agent workflow). For what-ifs on an existing analysis use run_stress_scenario; for comparisons use compare_purchases; to explain risks use get_latest_analysis.
+- For "can I afford X" questions call analyse_affordability (it runs the full multi-agent workflow, including the impact on the person's saved goals). For "am I on track", "my goals" or "my plan" use review_goal_plan. For rent-or-buy and prepay-or-invest questions use compare_rent_vs_buy and compare_prepay_vs_invest; ask for any figure they need that the person hasn't given. For what-ifs on an existing analysis use run_stress_scenario; for comparisons use compare_purchases; to explain risks use get_latest_analysis.
 - If information is missing, say exactly what is needed rather than guessing.
 - Distinguish hypothetical scenarios from predictions, and illustrative assumptions from sourced facts.
 - You provide decision support, not regulated financial advice; never promise loan approval. You cannot submit applications, move money or contact lenders.
@@ -582,6 +711,111 @@ async function ruleTurn(
   emit: Emit,
 ): Promise<string> {
   const t = message.toLowerCase();
+
+  // The saved goal plan: are my goals on track?
+  if (/\b(my|our) (plan|goals)\b|on track|which goal/.test(t)) {
+    const { output } = await executeTool("review_goal_plan", {}, session, listener, emit);
+    const o = output as {
+      error?: string;
+      goals: {
+        name: string;
+        status: string;
+        wanted_by: string;
+        reached_in: string | null;
+        months_late: number | null;
+        monthly_needed: number;
+      }[];
+      spare_monthly_after_goals: number;
+      check_in_trend: string;
+      average_monthly_gap_vs_plan: number | null;
+      goals_moved_if_trend_continues: {
+        name: string;
+        moves_to: string | null;
+        extra_months: number | null;
+      }[];
+    };
+    if (o.error) return `${o.error} Add them on My finances (or load the demo) and ask again.`;
+    if (!o.goals.length)
+      return "You haven't saved any goals yet. Add them on the Plan page — FinPulse then checks every purchase against all of them.";
+    const lines = o.goals.map((g) =>
+      g.status === "on_track"
+        ? `• ${g.name}: on track for ${g.wanted_by} (${formatINR(g.monthly_needed)}/month).`
+        : g.status === "delayed"
+          ? `• ${g.name}: ${g.months_late} month(s) late — reached ${g.reached_in} instead of ${g.wanted_by}.`
+          : `• ${g.name}: out of reach within the plan's horizon.`,
+    );
+    const pulseLine =
+      o.check_in_trend === "behind" && o.average_monthly_gap_vs_plan !== null
+        ? `\nYour recent check-ins show ${formatINR(Math.abs(o.average_monthly_gap_vs_plan))} a month less saved than planned${o.goals_moved_if_trend_continues.length ? `; if that continues, ${o.goals_moved_if_trend_continues.map((g) => `${g.name} moves to ${g.moves_to ?? "out of reach"}`).join(", ")}` : ", which your spare money still absorbs"}.`
+        : "";
+    return `${lines.join("\n")}\nAfter funding these you have ${formatINR(o.spare_monthly_after_goals)} spare each month.${pulseLine}`;
+  }
+
+  // Rent or buy a home.
+  if (/rent (or|vs\.?|versus) buy|buy (or|vs\.?|versus) rent|renting|rent instead/.test(t)) {
+    const nums = findINRAmounts(message)
+      .map((a) => a.value)
+      .sort((a, b) => b - a);
+    if (nums.length < 2)
+      return 'Tell me the home\'s price and the rent for a similar home, e.g. "Rent or buy: ₹75 lakh flat, rent ₹25,000". Or open Decide → Rent vs buy.';
+    const { output } = await executeTool(
+      "compare_rent_vs_buy",
+      { price: nums[0], monthly_rent: nums[nums.length - 1] },
+      session,
+      listener,
+      emit,
+    );
+    const o = output as {
+      error?: string;
+      assumptions: { years: number; appreciationPct: number; investReturnPct: number };
+      winner: string;
+      difference: number;
+      cash_needed_to_buy: number;
+      emi: number;
+      appreciation_needed_to_break_even_pct: number | null;
+    };
+    if (o.error) return o.error;
+    const who =
+      o.winner === "even"
+        ? "Buying and renting come out about level"
+        : `${o.winner === "buy" ? "Buying" : "Renting and investing the difference"} comes out ahead by ${formatINR(Math.abs(o.difference))}`;
+    return `${who} after ${o.assumptions.years} years, assuming ${o.assumptions.appreciationPct}% yearly price growth and ${o.assumptions.investReturnPct}% investment returns (assumptions, not forecasts). Buying needs ${formatINR(o.cash_needed_to_buy)} upfront and an EMI of ${formatINR(o.emi)}.${o.appreciation_needed_to_break_even_pct !== null ? ` Buying wins only if prices grow faster than ${o.appreciation_needed_to_break_even_pct}% a year.` : ""}`;
+  }
+
+  // Prepay a loan or invest.
+  if (/prepay|pre-pay|part.?pay|foreclose/.test(t)) {
+    const nums = findINRAmounts(message)
+      .filter((a) => a.hasCurrency || a.hasUnit)
+      .map((a) => a.value)
+      .sort((a, b) => b - a);
+    const rate = /(\d+(?:\.\d+)?)\s*%/.exec(message);
+    const years = /(\d+(?:\.\d+)?)\s*(?:years?|yrs?)/.exec(t);
+    if (nums.length < 2 || !rate || !years)
+      return 'I need four things: the loan outstanding, its interest rate, the years left and the lump sum — e.g. "Prepay or invest: ₹40 lakh loan at 8.5% with 15 years left, ₹5 lakh bonus". Or open Decide → Prepay vs invest.';
+    const { output } = await executeTool(
+      "compare_prepay_vs_invest",
+      {
+        outstanding: nums[0],
+        lump_sum: nums[nums.length - 1],
+        loan_rate_pct: Number(rate[1]),
+        remaining_months: Math.round(Number(years[1]) * 12),
+      },
+      session,
+      listener,
+      emit,
+    );
+    const o = output as {
+      error?: string;
+      assumptions: { investReturnPct: number; taxOnGainsPct: number };
+      interest_saved_by_prepaying: number;
+      months_saved: number;
+      winner: string;
+      difference: number;
+      breakeven_return_pct: number | null;
+    };
+    if (o.error) return o.error;
+    return `Prepaying saves ${formatINR(o.interest_saved_by_prepaying)} of interest and ends the loan ${o.months_saved} months early. At an assumed ${o.assumptions.investReturnPct}% return (${o.assumptions.taxOnGainsPct}% tax on gains), ${o.winner === "even" ? "the two come out about level" : `${o.winner === "prepay" ? "prepaying" : "investing"} is ahead by ${formatINR(Math.abs(o.difference))} on the loan's original end date`}.${o.breakeven_return_pct !== null ? ` Investing wins only if you reliably earn more than ${o.breakeven_return_pct}% a year.` : ""}`;
+  }
 
   if (/emergency fund|rainy day|safety net/.test(t)) {
     const { output } = await executeTool("plan_emergency_fund", {}, session, listener, emit);
@@ -719,7 +953,7 @@ async function ruleTurn(
     return `${o.purchase}: ${o.assessment.toLowerCase()}. The main concerns:\n${issues.map((i) => `• ${i}`).join("\n")}`;
   }
 
-  return 'I can run tools for: "Can I afford a ₹75 lakh house?", "What if my income drops by 20%?", "Compare a ₹15 lakh car with a ₹20 lakh car", "How much should I save before buying?" or "Explain why this option is risky".';
+  return 'I can run tools for: "Am I on track for my goals?", "Rent or buy: ₹75 lakh flat, rent ₹25,000", "Prepay or invest: ₹40 lakh loan at 8.5% with 15 years left, ₹5 lakh bonus", "Can I afford a ₹75 lakh house?", "What if my income drops by 20%?", "Compare a ₹15 lakh car with a ₹20 lakh car", "How much should I save before buying?" or "Explain why this option is risky".';
 }
 
 // ---------------------------------------------------------------- entry point

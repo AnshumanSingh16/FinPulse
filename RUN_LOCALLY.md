@@ -31,8 +31,9 @@ Press **Ctrl+C** in the terminal to stop it. Next time, just run `npm start` aga
 
 ## 4. Try the demo
 
-On the home page click **Try the demo profile**, type *"I want to buy a ₹75 lakh house"* and
-click **Check**. The full walkthrough is in [docs/PERSONAL.md](docs/PERSONAL.md#five-minute-demo).
+On the home page click **Try the demo** (a fictional household with three goals), open
+**My plan** to see them projected together, then type *"I want to buy a ₹75 lakh house"* and click
+**Analyse** — the result shows which of the other goals the house would push back. The full walkthrough is in [docs/PERSONAL.md](docs/PERSONAL.md#five-minute-demo).
 
 ## Optional: turn on the AI features
 
@@ -53,7 +54,7 @@ Restart `npm start`. Never commit this file — it is already git-ignored.
 | "FinPulse needs Node.js 22" | Install the current LTS from nodejs.org (or `nvm install 22 && nvm use 22`). |
 | Port 3000 is already in use | Next.js picks the next free port automatically — use the address it prints (e.g. http://localhost:3001). |
 | `npm install` fails | Check your internet connection. On a college/company network you may need its proxy: `npm config set proxy http://proxy:port`. |
-| Your data disappeared | Data is kept in the server's memory for the demo; stopping the server clears it. Click **Try the demo profile** again. |
+| Your data disappeared | Data is saved per browser in `.finpulse-data/` and survives restarts — but a different browser, a private window or cleared cookies start a new session. Click **Try the demo** to reload the demo household. |
 
 ## For developers
 

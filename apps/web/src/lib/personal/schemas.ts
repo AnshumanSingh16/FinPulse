@@ -133,3 +133,59 @@ export const DEMO_PURCHASE: PurchaseRequest = {
   monthlyOwnershipCost: null,
   researchFinancing: true,
 };
+
+// ---------------------------------------------------------------- goal plan
+
+const month = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Use YYYY-MM");
+
+export const GoalKindSchema = z.enum([
+  "house",
+  "car",
+  "education",
+  "wedding",
+  "travel",
+  "business",
+  "custom",
+]);
+
+export const PlanGoalSchema = z.object({
+  id: z.string().regex(/^goal_[a-z0-9]{6,20}$/),
+  kind: GoalKindSchema,
+  name: z.string().trim().min(1).max(60),
+  targetAmount: money.min(1000, "Amount must be at least ₹1,000"),
+  targetMonth: month,
+  priority: z.number().int().min(1).max(20),
+  inflationPct: z.number().min(0).max(25),
+  upfrontCostPct: z.number().min(0).max(30),
+  funding: z.enum(["cash", "loan"]),
+  downPaymentPct: z.number().min(0).max(100),
+  loanRatePct: z.number().min(0).max(30),
+  loanTenureMonths: z.number().int().min(6).max(360),
+  /** The analysis this goal was created from, if any. */
+  fromRunId: z.string().max(40).optional(),
+});
+export type PlanGoalValues = z.infer<typeof PlanGoalSchema>;
+
+export const PlanAssumptionsSchema = z.object({
+  incomeGrowthPct: z.number().min(-10).max(30),
+  expenseInflationPct: z.number().min(0).max(25),
+  safeReturnPct: z.number().min(0).max(15),
+  growthReturnPct: z.number().min(0).max(20),
+  emergencyMonths: z.number().min(0).max(36),
+  existingEmiMonthsLeft: z.number().int().min(0).max(360).nullable(),
+});
+
+export const PlanBodySchema = z.object({
+  goals: z.array(PlanGoalSchema).max(12),
+  assumptions: PlanAssumptionsSchema.partial(),
+});
+
+export const CheckInSchema = z.object({
+  month,
+  /** Take-home income actually received that month. */
+  income: money,
+  /** Everything spent that month, including EMIs and fixed obligations. */
+  spending: money,
+  note: z.string().trim().max(200).optional(),
+});
+export type CheckInValues = z.infer<typeof CheckInSchema>;

@@ -319,7 +319,10 @@ export function AffordWorkspace() {
                 [
                   ["planner", "Understands your goal and checks your profile"],
                   ["research", "Finds financing options (live or labelled estimates)"],
-                  ["analysis", "Calculates EMI, costs and cash flow"],
+                  [
+                    "analysis",
+                    "Calculates EMI, costs, cash flow — and what it does to your other goals",
+                  ],
                   ["risk", "Stress-tests six things that could go wrong"],
                   ["verification", "Challenges assumptions and flags gaps"],
                   ["action", "Prepares next steps for your approval"],

@@ -30,19 +30,20 @@ type Assistant = {
 type Turn = { role: "user"; text: string; about?: string } | Assistant;
 
 const SUGGESTIONS = [
+  "Am I on track for my goals?",
   "Can I afford a ₹75 lakh house?",
+  "Rent or buy: ₹75 lakh flat, rent ₹25,000",
+  "Prepay or invest: ₹40 lakh loan at 8.5% with 15 years left, ₹5 lakh bonus",
   "Build an emergency fund",
   "Stress-test my finances",
-  "Compare a ₹15 lakh car with a ₹20 lakh car.",
-  "What if my income drops by 20%?",
-  "Explain why this option is risky.",
 ];
 
 /** What the copilot can actually do: these are the tools it is given. */
 const CAPABILITIES = [
   { agent: "orchestrator", text: "Run the full multi-agent affordability analysis" },
+  { agent: "planner", text: "Review your goal plan and monthly check-ins" },
   { agent: "risk", text: "Stress-test a purchase or your finances today" },
-  { agent: "analysis", text: "Compare purchases, calculate EMIs, plan savings" },
+  { agent: "analysis", text: "Rent vs buy, prepay vs invest, EMIs and savings" },
   { agent: "verification", text: "Explain the risks and rules behind a result" },
 ] as const;
 

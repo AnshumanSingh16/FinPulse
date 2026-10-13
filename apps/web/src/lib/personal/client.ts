@@ -6,7 +6,9 @@ import type { CopilotStreamItem } from "./agents/copilot";
 import type { AgentEvent, WorkflowRun } from "./agents/types";
 import type { ScenarioParams, ScenarioResult } from "./finance/scenarios";
 import type { StateView } from "./http";
-import type { ProfileValues, PurchaseRequest } from "./schemas";
+import type { PrepayVsInvestResult, RentVsBuyResult } from "./finance/decisions";
+import type { PlanAssumptions } from "./finance/plan";
+import type { CheckInValues, PlanGoalValues, ProfileValues, PurchaseRequest } from "./schemas";
 import type { DocumentRecord } from "./store";
 
 export type { StateView };
@@ -61,6 +63,24 @@ export const api = {
     request<StateView>(`/api/personal/actions/${encodeURIComponent(planId)}`, json("POST", body)),
   documentAction: (docId: string, body: Record<string, unknown>) =>
     request<StateView>(`/api/personal/documents/${encodeURIComponent(docId)}`, json("POST", body)),
+  savePlan: (goals: PlanGoalValues[], assumptions: Partial<PlanAssumptions>) =>
+    request<StateView>("/api/personal/plan", json("PUT", { goals, assumptions })),
+  addGoalFromRun: (runId: string) =>
+    request<StateView>("/api/personal/plan/from-run", json("POST", { runId })),
+  checkIn: (values: CheckInValues) =>
+    request<StateView>("/api/personal/checkins", json("POST", values)),
+  removeCheckIn: (month: string) =>
+    request<StateView>(`/api/personal/checkins?month=${encodeURIComponent(month)}`, json("DELETE")),
+  rentVsBuy: (input: Record<string, number>) =>
+    request<{ result: RentVsBuyResult }>(
+      "/api/personal/decide",
+      json("POST", { kind: "rent_vs_buy", input }),
+    ),
+  prepayVsInvest: (input: Record<string, number>) =>
+    request<{ result: PrepayVsInvestResult }>(
+      "/api/personal/decide",
+      json("POST", { kind: "prepay_vs_invest", input }),
+    ),
   upload: (file: File) => {
     const form = new FormData();
     form.append("file", file);

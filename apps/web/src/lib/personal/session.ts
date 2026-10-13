@@ -18,7 +18,7 @@ export async function getSession(): Promise<SessionState> {
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
       path: "/",
-      maxAge: 60 * 60 * 24 * 7,
+      maxAge: 60 * 60 * 24 * 180,
     });
   }
   return loadSession(id);

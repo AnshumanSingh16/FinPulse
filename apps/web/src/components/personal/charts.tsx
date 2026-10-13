@@ -16,6 +16,8 @@ import {
 } from "recharts";
 
 import { formatINR } from "@/lib/format";
+import type { RentVsBuyYear } from "@/lib/personal/finance/decisions";
+import type { PlanYear } from "@/lib/personal/finance/plan";
 import type { YearlyAmortization } from "@/lib/personal/finance/loan";
 import type { ScenarioResult } from "@/lib/personal/finance/scenarios";
 import { cn } from "@/lib/utils";
@@ -372,5 +374,145 @@ export function IncomeAllocation({
         );
       })}
     </ul>
+  );
+}
+
+/** The goal plan year by year: money set aside vs loans owed, with the goals bought each year. */
+export function PlanTimelineChart({ years }: { years: PlanYear[] }) {
+  const data = years.map((y) => ({
+    year: y.month.slice(0, 4),
+    saved: y.reserve + y.freeSavings + y.goalFunds,
+    loans: y.loanOutstanding,
+    bought: y.goalsBought,
+  }));
+  const series: Series[] = [
+    { key: "saved", label: "Savings set aside", color: "var(--chart-1)" },
+    { key: "loans", label: "Loans for goals", color: "var(--chart-2)" },
+  ];
+  const marks = data.filter((d) => d.bought.length);
+  return (
+    <ChartFrame
+      height={260}
+      legend={<Legend series={series} />}
+      table={
+        <Table
+          head={["End of", "Savings set aside", "Loans for goals", "Goals reached"]}
+          rows={data.map((d) => [
+            d.year,
+            formatINR(d.saved),
+            formatINR(d.loans),
+            d.bought.join(", ") || "—",
+          ])}
+        />
+      }
+    >
+      <LineChart data={data} margin={{ top: 18, right: 12, bottom: 0, left: 0 }}>
+        <CartesianGrid vertical={false} stroke="var(--chart-grid)" />
+        <XAxis dataKey="year" {...axis} minTickGap={16} />
+        <YAxis {...axis} width={56} tickFormatter={compact} axisLine={false} />
+        <ReferenceLine y={0} stroke="var(--chart-axis)" />
+        {marks.map((m) => (
+          <ReferenceLine
+            key={m.year}
+            x={m.year}
+            stroke="var(--chart-ink-muted)"
+            strokeDasharray="3 3"
+            label={{
+              value: "●",
+              position: "top",
+              fill: "var(--chart-ink-muted)",
+              fontSize: 10,
+            }}
+          />
+        ))}
+        <Tooltip
+          cursor={{ stroke: "var(--chart-axis)" }}
+          content={({ active, payload, label }) => {
+            if (!active || !payload?.length) return null;
+            const row = data.find((d) => d.year === label);
+            return (
+              <TooltipBox
+                title={`End of ${label}${row?.bought.length ? ` · reached: ${row.bought.join(", ")}` : ""}`}
+                rows={series.map((s) => ({
+                  label: s.label,
+                  value: formatINR(Number(payload.find((p) => p.dataKey === s.key)?.value ?? 0)),
+                  color: s.color,
+                }))}
+              />
+            );
+          }}
+        />
+        {series.map((s) => (
+          <Line
+            key={s.key}
+            type="monotone"
+            dataKey={s.key}
+            stroke={s.color}
+            strokeWidth={2}
+            dot={false}
+            activeDot={{ r: 4, stroke: "var(--chart-surface)", strokeWidth: 2 }}
+          />
+        ))}
+      </LineChart>
+    </ChartFrame>
+  );
+}
+
+/** Rent vs buy: what each path is worth at the end of every year. */
+export function RentBuyChart({ years }: { years: RentVsBuyYear[] }) {
+  const series: Series[] = [
+    { key: "buyerWealth", label: "Buy: home equity + investments", color: "var(--chart-1)" },
+    { key: "renterWealth", label: "Rent: investments", color: "var(--chart-2)" },
+  ];
+  return (
+    <ChartFrame
+      height={260}
+      legend={<Legend series={series} />}
+      table={
+        <Table
+          head={["Year", "Buy", "Rent", "Home value", "Loan left", "Rent / month"]}
+          rows={years.map((y) => [
+            y.year,
+            formatINR(y.buyerWealth),
+            formatINR(y.renterWealth),
+            formatINR(y.homeValue),
+            formatINR(y.loanBalance),
+            formatINR(y.rent),
+          ])}
+        />
+      }
+    >
+      <LineChart data={years} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
+        <CartesianGrid vertical={false} stroke="var(--chart-grid)" />
+        <XAxis dataKey="year" {...axis} tickFormatter={(v) => `Y${v}`} />
+        <YAxis {...axis} width={56} tickFormatter={compact} axisLine={false} />
+        <Tooltip
+          cursor={{ stroke: "var(--chart-axis)" }}
+          content={({ active, payload, label }) =>
+            active && payload?.length ? (
+              <TooltipBox
+                title={`After ${label} year(s)`}
+                rows={series.map((s) => ({
+                  label: s.label,
+                  value: formatINR(Number(payload.find((p) => p.dataKey === s.key)?.value ?? 0)),
+                  color: s.color,
+                }))}
+              />
+            ) : null
+          }
+        />
+        {series.map((s) => (
+          <Line
+            key={s.key}
+            type="monotone"
+            dataKey={s.key}
+            stroke={s.color}
+            strokeWidth={2}
+            dot={false}
+            activeDot={{ r: 4, stroke: "var(--chart-surface)", strokeWidth: 2 }}
+          />
+        ))}
+      </LineChart>
+    </ChartFrame>
   );
 }

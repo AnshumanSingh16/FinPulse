@@ -4,7 +4,9 @@ import { type NextRequest, NextResponse } from "next/server";
 
 import { aiStatus, liveResearchEnabled } from "./agents/llm";
 import type { WorkflowRun } from "./agents/types";
-import type { SessionState } from "./store";
+import { currentMonth } from "./finance/plan";
+import { projectFor, pulse } from "./plan-model";
+import { storageLabel, type SessionState } from "./store";
 
 export function jsonError(status: number, message: string, details?: unknown) {
   return NextResponse.json(
@@ -87,7 +89,7 @@ export function systemStatus() {
     research: liveResearchEnabled()
       ? { mode: "live" as const, provider: "Anthropic web search" }
       : { mode: "illustrative" as const, provider: "Illustrative assumptions" },
-    storage: "Server memory (per browser session; cleared on server restart)",
+    storage: storageLabel(),
   };
 }
 
@@ -104,8 +106,31 @@ export function runListItem(run: WorkflowRun) {
   };
 }
 
+/** The goal plan, projected from today, plus the monthly pulse. */
+export function planView(session: SessionState) {
+  const startMonth = currentMonth();
+  const input = {
+    profile: session.profile.values,
+    goals: session.goals,
+    assumptions: session.planAssumptions,
+    startMonth,
+  };
+  const projected = projectFor(input);
+  return {
+    startMonth,
+    goals: session.goals,
+    assumptions: session.planAssumptions,
+    projection: projected.projection,
+    missing: projected.missing,
+    checkIns: session.checkIns,
+    pulse: pulse({ ...input, checkIns: session.checkIns }),
+  };
+}
+export type PlanView = ReturnType<typeof planView>;
+
 export function stateView(session: SessionState) {
   return {
+    plan: planView(session),
     status: systemStatus(),
     profile: session.profile,
     runs: session.runs.map(runListItem),
