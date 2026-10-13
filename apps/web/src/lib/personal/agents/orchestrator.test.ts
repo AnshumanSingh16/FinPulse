@@ -44,9 +44,22 @@ describe("affordability workflow (no AI key)", () => {
     expect(run.planImpact).not.toBeNull();
     // The ₹20 lakh+ of upfront cash comes out of the savings earmarked for the other goals.
     expect(run.planImpact!.affected.length).toBeGreaterThan(0);
+    // One finding per moved goal, plus one because the odds fall sharply.
     expect(run.findings.filter((f) => f.category === "plan")).toHaveLength(
-      run.planImpact!.affected.length,
+      run.planImpact!.affected.length + 1,
     );
+    expect(run.findings.find((f) => f.id === "plan_odds")?.message).toMatch(
+      /drops from \d+% to \d+%/,
+    );
+    // The same question across possible futures, and the Strategist's way to fit it in.
+    expect(run.planOdds!.after.allOnTime).toBeLessThan(run.planOdds!.before.allOnTime);
+    expect(run.plan.find((s) => s.id === "fit")?.status).toBe("done");
+    expect(run.toolCalls.filter((c) => c.tool === "simulate_plan")).toHaveLength(2);
+    expect(run.toolCalls.some((c) => c.tool === "search_better_plan" && c.status === "ok")).toBe(
+      true,
+    );
+    expect(run.planOdds!.bestFit).not.toBeNull();
+    expect(run.planOdds!.bestFit!.after.allOnTime).toBeGreaterThan(run.planOdds!.after.allOnTime);
     const plan = session.actionPlans.find((p) => p.runId === run.id)!;
     expect(plan.items[0]!.title).toBe("Re-plan the goals this purchase moves");
     expect(session.audit.some((a) => a.type === "plan_impact")).toBe(true);
@@ -56,7 +69,8 @@ describe("affordability workflow (no AI key)", () => {
     const session = loadSession("test");
     session.profile = { values: { ...DEMO_PROFILE }, sources: {}, isDemo: true, updatedAt: null };
     const run = await runAffordabilityWorkflow(session, "House", DEMO_PURCHASE);
-    expect(run.plan.some((s) => s.id === "plan")).toBe(false);
+    expect(run.plan.some((s) => s.id === "plan" || s.id === "fit")).toBe(false);
+    expect(run.planOdds).toBeNull();
     expect(run.planImpact).toBeNull();
   });
 

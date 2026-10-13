@@ -3,7 +3,8 @@
  * cookie identifies the user's data on the server.
  */
 import type { CopilotStreamItem } from "./agents/copilot";
-import type { AgentEvent, WorkflowRun } from "./agents/types";
+import type { AgentEvent, OddsSummary, StrategyRun, WorkflowRun } from "./agents/types";
+import type { PlanOdds, RiskDriver, SpendRoom } from "./finance/montecarlo";
 import type { ScenarioParams, ScenarioResult } from "./finance/scenarios";
 import type { StateView } from "./http";
 import type { PrepayVsInvestResult, RentVsBuyResult } from "./finance/decisions";
@@ -67,6 +68,18 @@ export const api = {
     request<StateView>("/api/personal/plan", json("PUT", { goals, assumptions })),
   addGoalFromRun: (runId: string) =>
     request<StateView>("/api/personal/plan/from-run", json("POST", { runId })),
+  simulateDraft: (goals: PlanGoalValues[], assumptions: Partial<PlanAssumptions>) =>
+    request<(OddsSummary & { fan: PlanOdds["fan"] }) | null>(
+      "/api/personal/plan/simulate",
+      json("POST", { goals, assumptions }),
+    ),
+  insights: () =>
+    request<{ drivers: RiskDriver[]; room: SpendRoom } | null>("/api/personal/plan/insights"),
+  decideStrategy: (id: string, action: "apply" | "dismiss") =>
+    request<StateView>(
+      `/api/personal/plan/strategy/${encodeURIComponent(id)}`,
+      json("POST", { action }),
+    ),
   checkIn: (values: CheckInValues) =>
     request<StateView>("/api/personal/checkins", json("POST", values)),
   removeCheckIn: (month: string) =>
@@ -138,4 +151,13 @@ export function copilot(
   runId?: string,
 ) {
   return stream("/api/personal/copilot", { message, runId }, onItem);
+}
+
+export type StrategyItem =
+  | { type: "event"; event: AgentEvent }
+  | { type: "strategy"; run: StrategyRun }
+  | { type: "error"; message: string };
+
+export function findBetterPlan(onItem: (item: StrategyItem) => void) {
+  return stream<StrategyItem>("/api/personal/plan/strategy", {}, onItem);
 }

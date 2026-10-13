@@ -269,7 +269,13 @@ export function buildPlan(opts: {
             "plan",
             "analysis",
             "Checking your other goals",
-            `Projecting all ${opts.goals} saved goal(s) with and without this purchase, month by month.`,
+            `All ${opts.goals} saved goal(s), with and without this purchase, across 400 possible futures.`,
+          ),
+          step(
+            "fit",
+            "strategist",
+            "Finding the best way to fit it in",
+            "If it hurts your other goals: the smallest changes to dates, budgets, loans or spending that help most.",
           ),
         ]
       : []),

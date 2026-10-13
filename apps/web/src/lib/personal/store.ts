@@ -14,7 +14,7 @@ import "server-only";
 import fs from "node:fs";
 import path from "node:path";
 
-import type { WorkflowRun } from "./agents/types";
+import type { StrategyRun, WorkflowRun } from "./agents/types";
 import type { PlanAssumptions } from "./finance/plan";
 import type { CheckIn } from "./plan-model";
 import { EMPTY_PROFILE, type FinancialProfile, type PlanGoalValues } from "./schemas";
@@ -77,7 +77,9 @@ export type AuditEvent = {
     | "plan_updated"
     | "plan_impact"
     | "check_in"
-    | "decision_compared";
+    | "decision_compared"
+    | "strategy_proposed"
+    | "strategy_decision";
   summary: string;
   runId?: string;
 };
@@ -125,6 +127,8 @@ export type SessionState = {
   planAssumptions: Partial<PlanAssumptions>;
   /** Monthly check-ins: what actually came in and went out. */
   checkIns: CheckIn[];
+  /** Strategist runs, newest first. */
+  strategies: StrategyRun[];
   /** The analysis the copilot's follow-up questions are about. */
   focusRunId?: string;
   rate: { windowStart: number; count: number };
@@ -230,6 +234,7 @@ function freshSession(id: string): SessionState {
     goals: [],
     planAssumptions: {},
     checkIns: [],
+    strategies: [],
     rate: { windowStart: Date.now(), count: 0 },
   };
 }

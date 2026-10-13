@@ -20,7 +20,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { formatINR } from "@/lib/format";
@@ -45,7 +45,10 @@ import {
 import type { PlanGoalValues } from "@/lib/personal/schemas";
 import { cn } from "@/lib/utils";
 
-import { PlanTimelineChart } from "./charts";
+import type { OddsSummary } from "@/lib/personal/agents/types";
+
+import { FanChart, PlanTimelineChart } from "./charts";
+import { ChanceBar, OddsHeadline, RiskInsights, StrategistPanel } from "./plan-odds";
 import { Field, MoneyInput, NumberInput } from "./fields";
 import { Chip } from "./kit";
 import { usePersonal } from "./provider";
@@ -74,9 +77,10 @@ const STATUS = {
   no_goals: { label: "No goals yet", cls: "bg-surface-sunken text-ink-500" },
 } as const;
 
+// Status in the expected future (everything as assumed); the chance bar covers the rest.
 const GOAL_STATUS = {
-  on_track: { label: "On track", cls: "bg-brand-50 text-brand-700" },
-  delayed: { label: "Late", cls: "bg-caution-50 text-caution-text" },
+  on_track: { label: "On time as assumed", cls: "bg-brand-50 text-brand-700" },
+  delayed: { label: "Late as assumed", cls: "bg-caution-50 text-caution-text" },
   not_reached: { label: "Out of reach", cls: "bg-danger-50 text-danger-text" },
 } as const;
 
@@ -124,10 +128,37 @@ export function PlanWorkspace() {
     [state, draft],
   );
 
+  // While editing, re-simulate the draft on the server (debounced). Saved plans use cached odds.
+  const draftKey = draft ? JSON.stringify({ g: draft.goals, a: draft.assumptions }) : null;
+  const isDirty = draftKey !== null && draftKey !== saved;
+  const [draftOdds, setDraftOdds] = useState<{
+    key: string;
+    odds:
+      (OddsSummary & { fan: { month: string; p10: number; p50: number; p90: number }[] }) | null;
+  } | null>(null);
+  useEffect(() => {
+    if (!isDirty || !draft || !draftKey) return;
+    let live = true;
+    const t = setTimeout(() => {
+      api
+        .simulateDraft(draft.goals, draft.assumptions)
+        .then((odds) => live && setDraftOdds({ key: draftKey, odds }))
+        .catch(() => live && setDraftOdds({ key: draftKey, odds: null }));
+    }, 450);
+    return () => {
+      live = false;
+      clearTimeout(t);
+    };
+  }, [isDirty, draftKey, draft]);
+
   if (!state || !draft || !projected) return <Loading label="Loading your plan…" />;
   const start = state.plan.startMonth;
   const dirty = JSON.stringify({ g: draft.goals, a: draft.assumptions }) !== saved;
   const p = projected.projection;
+  const draftReady = draftOdds?.key === draftKey ? draftOdds.odds : null;
+  const odds = dirty ? (draftReady ?? state.plan.odds) : state.plan.odds;
+  const oddsUpdating = dirty && !draftReady;
+  const oddsFor = (id: string) => odds?.goals.find((x) => x.id === id) ?? null;
 
   const setGoals = (goals: PlanGoalValues[]) =>
     setDraft({ ...draft, goals: goals.map((g, i) => ({ ...g, priority: i + 1 })) });
@@ -189,18 +220,25 @@ export function PlanWorkspace() {
         </EmptyState>
       ) : (
         <>
-          <PlanHealth projection={p} />
+          <PlanHealth projection={p} odds={odds} oddsUpdating={oddsUpdating} />
 
-          {p.goals.length ? (
+          {p.goals.length && odds && "fan" in odds ? (
             <section className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-4 shadow-xs sm:p-6">
               <div className="flex flex-col gap-1">
-                <h2 className="text-[16px] font-bold">How your money moves</h2>
+                <h2 className="text-[16px] font-bold">The range of outcomes</h2>
                 <p className="text-[13px] text-ink-500">
-                  Savings set aside (emergency reserve, goal funds and spare savings) and loans
-                  taken for goals, at the end of each year. Dots mark the years goals are reached.
+                  Savings set aside (emergency reserve, goal funds and spare savings) at the end of
+                  each year: the typical future, and the band 80% of futures fall in. Drops are
+                  goals being bought.
                 </p>
               </div>
-              <PlanTimelineChart years={p.years} />
+              <FanChart fan={odds.fan} />
+              <Disclosure
+                title="The expected path, year by year"
+                hint="One future where everything happens exactly as assumed — with loans taken for goals"
+              >
+                <PlanTimelineChart years={p.years} />
+              </Disclosure>
             </section>
           ) : null}
 
@@ -222,6 +260,7 @@ export function PlanWorkspace() {
                   key={g.id}
                   goal={g}
                   projection={proj}
+                  chance={oddsFor(g.id)}
                   rank={i + 1}
                   count={ordered.length}
                   editing={editing === g.id}
@@ -265,6 +304,18 @@ export function PlanWorkspace() {
             />
           </Disclosure>
 
+          {!dirty && p.goals.length ? (
+            <>
+              <RiskInsights planKey={saved ?? ""} />
+              <StrategistPanel latest={state.plan.strategy} />
+            </>
+          ) : p.goals.length ? (
+            <StrategistPanel
+              latest={state.plan.strategy}
+              disabled="Save your changes first — the Strategist works on the saved plan."
+            />
+          ) : null}
+
           {message ? <Notice tone={message.tone}>{message.text}</Notice> : null}
           {dirty ? (
             <div className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-10 flex flex-wrap items-center gap-3 rounded-2xl border border-line-strong bg-surface p-3 shadow-md lg:bottom-4">
@@ -302,7 +353,15 @@ export function PlanWorkspace() {
 
 // ---------------------------------------------------------------- plan health
 
-function PlanHealth({ projection: p }: { projection: PlanProjection }) {
+function PlanHealth({
+  projection: p,
+  odds,
+  oddsUpdating,
+}: {
+  projection: PlanProjection;
+  odds: OddsSummary | null;
+  oddsUpdating: boolean;
+}) {
   const s = p.summary;
   const stats = [
     {
@@ -336,14 +395,18 @@ function PlanHealth({ projection: p }: { projection: PlanProjection }) {
       className="flex flex-col gap-4 rounded-2xl border border-line bg-surface p-4 shadow-xs sm:p-6"
       aria-labelledby="health-h"
     >
-      <div className="flex flex-wrap items-center gap-3">
-        <h2 id="health-h" className="text-[18px] font-bold">
-          {s.status === "no_goals"
-            ? "Add a goal to see your plan"
-            : `${s.onTrack} of ${p.goals.length} goal${p.goals.length === 1 ? "" : "s"} on track`}
-        </h2>
-        <PlanStatusBadge status={s.status} />
-      </div>
+      {odds && p.goals.length ? (
+        <OddsHeadline odds={odds} updating={oddsUpdating} goals={p.goals.length} />
+      ) : (
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 id="health-h" className="text-[18px] font-bold">
+            {s.status === "no_goals"
+              ? "Add a goal to see your plan"
+              : `${s.onTrack} of ${p.goals.length} goal${p.goals.length === 1 ? "" : "s"} on track`}
+          </h2>
+          <PlanStatusBadge status={s.status} />
+        </div>
+      )}
       {s.shortfallMonths > 0 ? (
         <Notice tone="error">
           In {s.shortfallMonths} month(s) of the projection, spending and EMIs exceed income and
@@ -380,6 +443,7 @@ function PlanHealth({ projection: p }: { projection: PlanProjection }) {
 function GoalCard({
   goal,
   projection: g,
+  chance,
   rank,
   count,
   editing,
@@ -391,6 +455,7 @@ function GoalCard({
 }: {
   goal: PlanGoalValues;
   projection: GoalProjection;
+  chance: OddsSummary["goals"][number] | null;
   rank: number;
   count: number;
   editing: boolean;
@@ -500,27 +565,15 @@ function GoalCard({
           <Fig label="Set aside today" value={formatINR(g.startingAllocation)} />
         )}
       </div>
-      {g.dueIndex > 0 ? (
-        <div className="flex items-center gap-3">
-          <div
-            className="h-2 flex-1 overflow-hidden rounded-full bg-surface-sunken"
-            role="progressbar"
-            aria-label={`${goal.name}: funded on the target date`}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={g.fundedPctAtTarget}
-          >
-            <div
-              className={cn(
-                "h-full rounded-full",
-                g.fundedPctAtTarget >= 100 ? "bg-brand-600" : "bg-caution-500",
-              )}
-              style={{ width: `${g.fundedPctAtTarget}%` }}
-            />
-          </div>
-          <span className="tabular text-[12px] whitespace-nowrap text-ink-500">
-            {g.fundedPctAtTarget}% funded by {fmtMonth(goal.targetMonth)}
-          </span>
+      {chance ? (
+        <div className="flex flex-col gap-1">
+          <ChanceBar onTime={chance.onTime} withinYear={chance.withinYear} name={goal.name} />
+          {g.dueIndex > 0 ? (
+            <span className="text-[12px] text-ink-400">
+              As assumed: {g.fundedPctAtTarget}% funded by {fmtMonth(goal.targetMonth)}
+              {chance.medianDelay ? ` · typical delay ${chance.medianDelay} months` : ""}
+            </span>
+          ) : null}
         </div>
       ) : null}
 

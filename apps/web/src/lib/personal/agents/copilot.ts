@@ -29,7 +29,9 @@ import { illustrativeRate, DEFAULT_TENURE } from "./research";
 import { verifyFigures } from "./synthesis";
 import { currentMonth } from "../finance/plan";
 import { GOAL_KIND_LABEL, projectFor, pulse } from "../plan-model";
+import { cachedOdds } from "../odds-cache";
 import { prepayVsInvestTool, rentVsBuyTool } from "./plan-tools";
+import { runStrategist } from "./strategist";
 import { calculateEmiTool, savingsPlanTool } from "./tools";
 import type { AgentEvent, WorkflowRun } from "./types";
 
@@ -199,8 +201,14 @@ const TOOLS: Record<string, ToolImpl> = {
       const p = projectFor(input);
       if (!p.projection) return { error: `The profile is missing: ${p.missing.join(", ")}.` };
       const pl = pulse({ ...input, checkIns: session.checkIns });
+      const odds = cachedOdds(input);
+      const chance = (id: string) => odds?.goals.find((g) => g.id === id)?.onTime ?? null;
       return {
+        chance_every_goal_on_time: odds?.allOnTime ?? null,
+        chance_money_never_runs_out: odds?.neverShort ?? null,
+        futures_simulated: odds?.paths ?? 0,
         goals: p.projection.goals.map((g) => ({
+          chance_on_time: chance(g.id),
           name: g.name,
           type: GOAL_KIND_LABEL[g.kind],
           priority: g.priority,
@@ -229,6 +237,31 @@ const TOOLS: Record<string, ToolImpl> = {
       const r = o as { error?: string; goals?: { status: string }[]; plan_status?: string };
       if (r.error) return "profile incomplete";
       return `${r.goals!.length} goal(s), ${r.goals!.filter((g) => g.status === "on_track").length} on track`;
+    },
+  },
+  find_better_plan: {
+    description:
+      "Run the Strategist agent on the saved plan: measure its odds across 1,000 futures, find the biggest risk, and search for the smallest changes (dates, budgets, loans, priorities, spending) that most improve them. The proposal waits for the person to apply it on the Plan page.",
+    schema: Empty,
+    run: async (_args, session, listener) => {
+      const r = await runStrategist(session, listener);
+      if (r.status === "failed") return { error: r.error };
+      return {
+        biggest_risk: (r.drivers[0]?.scoreCost ?? 0) >= 0.02 ? r.drivers[0]!.label : null,
+        proposal: r.proposal
+          ? {
+              changes: r.proposal.changes.map((c) => c.text),
+              chance_every_goal_on_time_before: r.proposal.before.allOnTime,
+              chance_every_goal_on_time_after: r.proposal.after.allOnTime,
+              simulations: r.proposal.evaluations,
+            }
+          : null,
+      };
+    },
+    summarize: (o) => {
+      const r = o as { error?: string; proposal?: { changes: string[] } | null };
+      if (r.error) return "could not search";
+      return r.proposal ? `${r.proposal.changes.length} change(s) proposed` : "no change proposed";
     },
   },
   compare_rent_vs_buy: {
@@ -599,6 +632,7 @@ const SYSTEM = `You are the FinPulse Copilot, an agentic financial assistant for
 
 How you work:
 - Always use the tools for facts and figures. Never calculate or invent financial numbers yourself, never invent interest rates, lender offers or approvals. Quote figures exactly as tools return them, in Indian formatting (₹52,069, ₹60 lakh).
+- Plans are judged by probability: simulate_plan-style odds across many futures, not one projection. To improve a plan, call find_better_plan (the Strategist agent); never apply changes yourself — the person applies proposals.
 - For "can I afford X" questions call analyse_affordability (it runs the full multi-agent workflow, including the impact on the person's saved goals). For "am I on track", "my goals" or "my plan" use review_goal_plan. For rent-or-buy and prepay-or-invest questions use compare_rent_vs_buy and compare_prepay_vs_invest; ask for any figure they need that the person hasn't given. For what-ifs on an existing analysis use run_stress_scenario; for comparisons use compare_purchases; to explain risks use get_latest_analysis.
 - If information is missing, say exactly what is needed rather than guessing.
 - Distinguish hypothetical scenarios from predictions, and illustrative assumptions from sourced facts.
@@ -712,12 +746,39 @@ async function ruleTurn(
 ): Promise<string> {
   const t = message.toLowerCase();
 
+  // Ask the Strategist for a better plan.
+  if (
+    /better plan|improve (my|our|the) plan|make (my|our|the) plan work|optimi[sz]e|fix (my|our) plan/.test(
+      t,
+    )
+  ) {
+    const { output } = await executeTool("find_better_plan", {}, session, listener, emit);
+    const o = output as {
+      error?: string;
+      biggest_risk: string | null;
+      proposal: {
+        changes: string[];
+        chance_every_goal_on_time_before: number;
+        chance_every_goal_on_time_after: number;
+        simulations: number;
+      } | null;
+    };
+    if (o.error) return `${o.error}.`;
+    const pc = (x: number) => `${Math.round(x * 100)}%`;
+    if (!o.proposal)
+      return `I searched dates, budgets, loans, priorities and spending, and no change was worth making — your plan is already about as likely to work as small changes can make it.${o.biggest_risk ? ` The biggest risk to it is ${o.biggest_risk.toLowerCase()}.` : ""}`;
+    return `After ${o.proposal.simulations} simulations, the smallest changes that help most:\n${o.proposal.changes.map((c) => `• ${c}`).join("\n")}\nChance every goal lands on time: ${pc(o.proposal.chance_every_goal_on_time_before)} → ${pc(o.proposal.chance_every_goal_on_time_after)} (checked on fresh futures). Nothing has changed yet — apply it on the Plan page if you agree.`;
+  }
+
   // The saved goal plan: are my goals on track?
   if (/\b(my|our) (plan|goals)\b|on track|which goal/.test(t)) {
     const { output } = await executeTool("review_goal_plan", {}, session, listener, emit);
     const o = output as {
       error?: string;
+      chance_every_goal_on_time: number | null;
+      futures_simulated: number;
       goals: {
+        chance_on_time: number | null;
         name: string;
         status: string;
         wanted_by: string;
@@ -737,18 +798,24 @@ async function ruleTurn(
     if (o.error) return `${o.error} Add them on My finances (or load the demo) and ask again.`;
     if (!o.goals.length)
       return "You haven't saved any goals yet. Add them on the Plan page — FinPulse then checks every purchase against all of them.";
+    const chance = (x: number | null) =>
+      x === null ? "" : ` — ${Math.round(x * 100)}% chance on time`;
     const lines = o.goals.map((g) =>
       g.status === "on_track"
-        ? `• ${g.name}: on track for ${g.wanted_by} (${formatINR(g.monthly_needed)}/month).`
+        ? `• ${g.name}: on track for ${g.wanted_by} (${formatINR(g.monthly_needed)}/month)${chance(g.chance_on_time)}.`
         : g.status === "delayed"
-          ? `• ${g.name}: ${g.months_late} month(s) late — reached ${g.reached_in} instead of ${g.wanted_by}.`
+          ? `• ${g.name}: ${g.months_late} month(s) late — reached ${g.reached_in} instead of ${g.wanted_by}${chance(g.chance_on_time)}.`
           : `• ${g.name}: out of reach within the plan's horizon.`,
     );
+    const headline =
+      o.chance_every_goal_on_time !== null
+        ? `Across ${o.futures_simulated.toLocaleString("en-IN")} possible futures, every goal lands on time in ${Math.round(o.chance_every_goal_on_time * 100)}% of them.\n`
+        : "";
     const pulseLine =
       o.check_in_trend === "behind" && o.average_monthly_gap_vs_plan !== null
         ? `\nYour recent check-ins show ${formatINR(Math.abs(o.average_monthly_gap_vs_plan))} a month less saved than planned${o.goals_moved_if_trend_continues.length ? `; if that continues, ${o.goals_moved_if_trend_continues.map((g) => `${g.name} moves to ${g.moves_to ?? "out of reach"}`).join(", ")}` : ", which your spare money still absorbs"}.`
         : "";
-    return `${lines.join("\n")}\nAfter funding these you have ${formatINR(o.spare_monthly_after_goals)} spare each month.${pulseLine}`;
+    return `${headline}${lines.join("\n")}\nAfter funding these you have ${formatINR(o.spare_monthly_after_goals)} spare each month.${pulseLine}`;
   }
 
   // Rent or buy a home.
@@ -953,7 +1020,7 @@ async function ruleTurn(
     return `${o.purchase}: ${o.assessment.toLowerCase()}. The main concerns:\n${issues.map((i) => `• ${i}`).join("\n")}`;
   }
 
-  return 'I can run tools for: "Am I on track for my goals?", "Rent or buy: ₹75 lakh flat, rent ₹25,000", "Prepay or invest: ₹40 lakh loan at 8.5% with 15 years left, ₹5 lakh bonus", "Can I afford a ₹75 lakh house?", "What if my income drops by 20%?", "Compare a ₹15 lakh car with a ₹20 lakh car", "How much should I save before buying?" or "Explain why this option is risky".';
+  return 'I can run tools for: "Am I on track for my goals?", "Find me a better plan", "Rent or buy: ₹75 lakh flat, rent ₹25,000", "Prepay or invest: ₹40 lakh loan at 8.5% with 15 years left, ₹5 lakh bonus", "Can I afford a ₹75 lakh house?", "What if my income drops by 20%?", "Compare a ₹15 lakh car with a ₹20 lakh car", "How much should I save before buying?" or "Explain why this option is risky".';
 }
 
 // ---------------------------------------------------------------- entry point

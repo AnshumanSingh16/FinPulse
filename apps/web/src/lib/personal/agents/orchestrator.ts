@@ -15,7 +15,7 @@ import "server-only";
 import { formatINR } from "@/lib/format";
 
 import { currentMonth } from "../finance/plan";
-import { effectiveAssumptions, goalFromPurchase } from "../plan-model";
+import { effectiveAssumptions, goalFromPurchase, summarizeOdds } from "../plan-model";
 
 import type { ProfileValues, PurchaseRequest } from "../schemas";
 import {
@@ -27,7 +27,7 @@ import {
   type SessionState,
 } from "../store";
 import { aiStatus, liveResearchEnabled } from "./llm";
-import { planImpactTool } from "./plan-tools";
+import { planImpactTool, searchPlanTool, simulatePlanTool } from "./plan-tools";
 import { buildPlan } from "./planner";
 import { LimitExceededError, RunContext } from "./runtime";
 import { aiNarrative, buildAlternatives, buildRecommendation, buildSummary } from "./synthesis";
@@ -76,6 +76,7 @@ function newRun(
     analysis: null,
     scenarios: null,
     planImpact: null,
+    planOdds: null,
     findings: [],
     checks: [],
     recommendation: null,
@@ -317,17 +318,14 @@ export async function runAffordabilityWorkflow(
       current = step("plan");
       start(current);
       const month = currentMonth();
-      const { impact } = await ctx.callTool(
-        planImpactTool,
-        {
-          household: { ...inputs.household, investments: session.profile.values.investments ?? 0 },
-          goals: session.goals,
-          assumptions: effectiveAssumptions(session.profile.values, session.planAssumptions),
-          startMonth: month,
-          newGoal: goalFromPurchase(request, inputs.purchase, month),
-        },
-        current.id,
-      );
+      const planInput = {
+        household: { ...inputs.household, investments: session.profile.values.investments ?? 0 },
+        goals: session.goals,
+        assumptions: effectiveAssumptions(session.profile.values, session.planAssumptions),
+        startMonth: month,
+      };
+      const newGoal = goalFromPurchase(request, inputs.purchase, month);
+      const { impact } = await ctx.callTool(planImpactTool, { ...planInput, newGoal }, current.id);
       run.planImpact = impact;
       for (const a of impact.affected) {
         const message =
@@ -355,12 +353,74 @@ export async function runAffordabilityWorkflow(
           : `Fits alongside all ${session.goals.length} saved goal(s)`,
         run.id,
       );
+      // The same question across possible futures, not just the expected one.
+      const variability = session.profile.values.incomeVariability;
+      const withPurchase = { ...planInput, goals: [...planInput.goals, newGoal] };
+      const before = await ctx.callTool(
+        simulatePlanTool,
+        { ...planInput, paths: 400, incomeVariability: variability },
+        current.id,
+      );
+      const after = await ctx.callTool(
+        simulatePlanTool,
+        { ...withPurchase, paths: 400, incomeVariability: variability },
+        current.id,
+      );
+      run.planOdds = { before: summarizeOdds(before), after: summarizeOdds(after), bestFit: null };
+      const pctOf = (x: number) => `${Math.round(x * 100)}%`;
+      if (before.allOnTime - after.allOnTime >= 0.1) {
+        const message = `The chance every goal lands on time drops from ${pctOf(before.allOnTime)} to ${pctOf(after.allOnTime)} if you buy this now.`;
+        planFindings.push({
+          id: "plan_odds",
+          agent: "analysis",
+          severity: after.allOnTime < 0.5 ? "critical" : "warning",
+          category: "plan",
+          message,
+          suggestion: "See the best way to fit it in, below the verdict.",
+        });
+        ctx.emit("analysis", "finding", message, { stepId: current.id, level: "warning" });
+      }
       finish(
         current,
-        impact.affected.length
-          ? `${impact.affected.length} of your ${session.goals.length} goal(s) move if you buy this now.`
-          : `All ${session.goals.length} saved goal(s) stay on schedule.`,
+        `${impact.affected.length ? `${impact.affected.length} of your ${session.goals.length} goal(s) move in the expected future. ` : ""}Every goal on time: ${pctOf(before.allOnTime)} today, ${pctOf(after.allOnTime)} with this purchase.`,
       );
+
+      // 5b. Strategist: the smallest changes that make room for it -------------------------
+      current = step("fit");
+      start(current);
+      if (before.allOnTime - after.allOnTime < 0.05) {
+        finish(current, "No search needed: buying this barely changes your odds.");
+      } else {
+        const fitStep = current;
+        const proposal = await ctx.callTool(
+          searchPlanTool((r) => {
+            ctx.emit(
+              "strategist",
+              "finding",
+              r.accepted
+                ? `Round ${r.round}: tried ${r.tried} changes. Best: ${r.accepted.text}.`
+                : `Round ${r.round}: tried ${r.tried} changes; none beat its disruption.`,
+              { stepId: fitStep.id },
+            );
+          }, "quick"),
+          { ...withPurchase, incomeVariability: variability },
+          current.id,
+        );
+        const fresh = summarizeOdds(proposal.after);
+        if (proposal.changes.length && proposal.after.score > proposal.before.score) {
+          run.planOdds.bestFit = {
+            changes: proposal.changes,
+            after: fresh,
+            evaluations: proposal.evaluations,
+          };
+          finish(
+            current,
+            `${proposal.changes.map((c) => c.text).join("; ")} → every goal on time in ${pctOf(fresh.allOnTime)} of fresh futures.`,
+          );
+        } else {
+          finish(current, "No small change makes enough room; the trade-off is real.");
+        }
+      }
     }
 
     // 6. Verification --------------------------------------------------------------------------

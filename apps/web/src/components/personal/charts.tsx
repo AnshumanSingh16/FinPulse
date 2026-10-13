@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import {
+  Area,
+  ComposedChart,
   Bar,
   BarChart,
   CartesianGrid,
@@ -513,6 +515,82 @@ export function RentBuyChart({ years }: { years: RentVsBuyYear[] }) {
           />
         ))}
       </LineChart>
+    </ChartFrame>
+  );
+}
+
+/** The range of outcomes across simulated futures: the middle 80% as a band, the median as a line. */
+export function FanChart({
+  fan,
+}: {
+  fan: { month: string; p10: number; p50: number; p90: number }[];
+}) {
+  const data = fan.map((f) => ({
+    year: f.month.slice(0, 4),
+    band: [f.p10, f.p90],
+    p50: f.p50,
+    p10: f.p10,
+    p90: f.p90,
+  }));
+  const series: Series[] = [
+    { key: "p50", label: "Typical future (median)", color: "var(--chart-1)" },
+    {
+      key: "band",
+      label: "Middle 80% of futures",
+      color: "color-mix(in oklab, var(--chart-1) 22%, transparent)",
+    },
+  ];
+  return (
+    <ChartFrame
+      height={260}
+      legend={<Legend series={series} />}
+      table={
+        <Table
+          head={["End of", "Bad (10th pct)", "Typical", "Good (90th pct)"]}
+          rows={data.map((d) => [d.year, formatINR(d.p10), formatINR(d.p50), formatINR(d.p90)])}
+        />
+      }
+    >
+      <ComposedChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
+        <CartesianGrid vertical={false} stroke="var(--chart-grid)" />
+        <XAxis dataKey="year" {...axis} minTickGap={16} />
+        <YAxis {...axis} width={56} tickFormatter={compact} axisLine={false} />
+        <ReferenceLine y={0} stroke="var(--chart-axis)" />
+        <Tooltip
+          cursor={{ stroke: "var(--chart-axis)" }}
+          content={({ active, label }) => {
+            const row = data.find((d) => d.year === label);
+            return active && row ? (
+              <TooltipBox
+                title={`End of ${label}: savings set aside`}
+                rows={[
+                  { label: "Good future (90th pct)", value: formatINR(row.p90) },
+                  { label: "Typical", value: formatINR(row.p50), color: "var(--chart-1)" },
+                  { label: "Bad future (10th pct)", value: formatINR(row.p10) },
+                ]}
+              />
+            ) : null;
+          }}
+        />
+        <Area
+          type="monotone"
+          dataKey="band"
+          stroke="none"
+          fill="var(--chart-1)"
+          fillOpacity={0.18}
+          isAnimationActive={false}
+          activeDot={false}
+        />
+        <Line
+          type="monotone"
+          dataKey="p50"
+          stroke="var(--chart-1)"
+          strokeWidth={2}
+          dot={false}
+          isAnimationActive={false}
+          activeDot={{ r: 4, stroke: "var(--chart-surface)", strokeWidth: 2 }}
+        />
+      </ComposedChart>
     </ChartFrame>
   );
 }

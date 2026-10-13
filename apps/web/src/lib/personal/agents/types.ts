@@ -4,8 +4,10 @@
  */
 import type { AffordabilityLabel, PurchaseAnalysis, RuleCheck } from "../finance/affordability";
 import type { ScenarioResult } from "../finance/scenarios";
+import type { PlanOdds, RiskDriver } from "../finance/montecarlo";
+import type { ChangeView, SearchRound } from "../finance/optimize";
 import type { PlanImpact } from "../finance/plan";
-import type { ProfileValues, PurchaseRequest } from "../schemas";
+import type { PlanGoalValues, ProfileValues, PurchaseRequest } from "../schemas";
 
 export type AgentName =
   | "orchestrator"
@@ -15,7 +17,8 @@ export type AgentName =
   | "risk"
   | "verification"
   | "action"
-  | "copilot";
+  | "copilot"
+  | "strategist";
 
 export const AGENT_LABELS: Record<AgentName, string> = {
   orchestrator: "Orchestrator",
@@ -26,6 +29,7 @@ export const AGENT_LABELS: Record<AgentName, string> = {
   verification: "Verification",
   action: "Financial Action",
   copilot: "Copilot",
+  strategist: "Strategist",
 };
 
 export type StepStatus = "pending" | "running" | "done" | "failed" | "skipped" | "needs_input";
@@ -192,10 +196,50 @@ export type WorkflowRun = {
   scenarios: ScenarioResult[] | null;
   /** What this purchase does to the person's other saved goals (null when none are saved). */
   planImpact: PlanImpact | null;
+  /** The same comparison across possible futures, and the Strategist's best way to fit it in. */
+  planOdds: {
+    before: OddsSummary;
+    after: OddsSummary;
+    bestFit: { changes: ChangeView[]; after: OddsSummary; evaluations: number } | null;
+  } | null;
   findings: Finding[];
   checks: RuleCheck[];
   recommendation: Recommendation | null;
   actionPlanId: string | null;
   error: string | null;
   limits: { maxToolCalls: number; maxDurationMs: number; maxLlmCalls: number; llmCalls: number };
+};
+
+/** A summary of Monte Carlo odds small enough to keep on runs and send to the browser. */
+export type OddsSummary = Pick<PlanOdds, "paths" | "allOnTime" | "neverShort" | "score"> & {
+  goals: Pick<PlanOdds["goals"][number], "id" | "name" | "onTime" | "withinYear" | "medianDelay">[];
+};
+
+/**
+ * One run of the Strategist agent: measure the plan's odds, find what hurts most, search for
+ * changes that improve it, check the proposal on fresh futures, and hand it over for approval.
+ */
+export type StrategyRun = {
+  id: string;
+  createdAt: string;
+  finishedAt: string | null;
+  status: "running" | "completed" | "failed";
+  /** Fingerprint of the plan it was run on: a proposal can't be applied to a plan that changed. */
+  planKey: string;
+  plan: PlanStep[];
+  events: AgentEvent[];
+  toolCalls: ToolCallRecord[];
+  limits: WorkflowRun["limits"];
+  drivers: RiskDriver[];
+  rounds: SearchRound[];
+  proposal: {
+    changes: ChangeView[];
+    goals: PlanGoalValues[];
+    spendingCut: number;
+    before: OddsSummary;
+    after: OddsSummary;
+    evaluations: number;
+  } | null;
+  decision: "pending" | "applied" | "dismissed" | "none";
+  error: string | null;
 };

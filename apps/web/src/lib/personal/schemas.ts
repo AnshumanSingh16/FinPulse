@@ -173,6 +173,7 @@ export const PlanAssumptionsSchema = z.object({
   growthReturnPct: z.number().min(0).max(20),
   emergencyMonths: z.number().min(0).max(36),
   existingEmiMonthsLeft: z.number().int().min(0).max(360).nullable(),
+  monthlySpendingCut: z.number().min(0).max(1e9),
 });
 
 export const PlanBodySchema = z.object({

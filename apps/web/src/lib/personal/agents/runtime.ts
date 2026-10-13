@@ -25,15 +25,18 @@ export type ToolDef<I, O> = {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type AnyTool = ToolDef<any, any>;
 
+/** Anything an agent run records into: a workflow run, a strategy run… */
+export type TracedRun = Pick<WorkflowRun, "events" | "toolCalls" | "plan" | "limits">;
+
 export class LimitExceededError extends Error {}
 export class ToolInputError extends Error {}
 
-export class RunContext {
+export class RunContext<R extends TracedRun = WorkflowRun> {
   private readonly started = Date.now();
   readonly controller = new AbortController();
 
   constructor(
-    readonly run: WorkflowRun,
+    readonly run: R,
     private readonly listener: (event: AgentEvent) => void,
   ) {}
 

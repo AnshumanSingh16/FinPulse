@@ -5,7 +5,8 @@ import { type NextRequest, NextResponse } from "next/server";
 import { aiStatus, liveResearchEnabled } from "./agents/llm";
 import type { WorkflowRun } from "./agents/types";
 import { currentMonth } from "./finance/plan";
-import { projectFor, pulse } from "./plan-model";
+import { cachedOdds } from "./odds-cache";
+import { projectFor, pulse, summarizeOdds } from "./plan-model";
 import { storageLabel, type SessionState } from "./store";
 
 export function jsonError(status: number, message: string, details?: unknown) {
@@ -116,6 +117,8 @@ export function planView(session: SessionState) {
     startMonth,
   };
   const projected = projectFor(input);
+  const odds = projected.projection ? cachedOdds(input) : null;
+  const strategy = session.strategies[0] ?? null;
   return {
     startMonth,
     goals: session.goals,
@@ -124,6 +127,9 @@ export function planView(session: SessionState) {
     missing: projected.missing,
     checkIns: session.checkIns,
     pulse: pulse({ ...input, checkIns: session.checkIns }),
+    odds: odds ? { ...summarizeOdds(odds), fan: odds.fan, risk: odds.risk } : null,
+    /** The latest Strategist run (its proposal may be waiting for a decision). */
+    strategy,
   };
 }
 export type PlanView = ReturnType<typeof planView>;

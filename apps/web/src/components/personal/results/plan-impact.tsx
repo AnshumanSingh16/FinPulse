@@ -10,6 +10,7 @@ import type { WorkflowRun } from "@/lib/personal/agents/types";
 import { api } from "@/lib/personal/client";
 import { cn } from "@/lib/utils";
 
+import { oddsTone, pct } from "../plan-odds";
 import { fmtMonth } from "../plan-workspace";
 import { usePersonal } from "../provider";
 import { Notice } from "../ui";
@@ -96,6 +97,7 @@ export function PlanImpactCard({ run }: { run: WorkflowRun }) {
         </div>
         {addButton}
       </div>
+      {run.planOdds ? <OddsShift odds={run.planOdds} /> : null}
       {impact.affected.length ? (
         <ul className="flex flex-col gap-2">
           {impact.affected.map((a) => (
@@ -138,5 +140,71 @@ export function PlanImpactCard({ run }: { run: WorkflowRun }) {
       </p>
       {error ? <Notice tone="error">{error}</Notice> : null}
     </section>
+  );
+}
+
+/** The chance every goal lands on time without and with this purchase — and the best way to fit it. */
+function OddsShift({ odds }: { odds: NonNullable<WorkflowRun["planOdds"]> }) {
+  const before = new Map(odds.before.goals.map((g) => [g.id, g]));
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+        <span className="text-[13px] font-semibold text-ink-700">
+          Chance every goal lands on time
+        </span>
+        <span className="tabular flex items-center gap-2 font-display text-[22px] font-extrabold">
+          <span className={oddsTone(odds.before.allOnTime).text}>{pct(odds.before.allOnTime)}</span>
+          <ArrowRight className="size-5 text-ink-400" aria-hidden />
+          <span className={oddsTone(odds.after.allOnTime).text}>{pct(odds.after.allOnTime)}</span>
+        </span>
+        <span className="text-[12px] text-ink-500">
+          today → if you buy this now · {odds.after.paths} simulated futures
+        </span>
+      </div>
+      <ul className="grid gap-1.5 text-[13px] sm:grid-cols-2">
+        {odds.after.goals
+          .filter((g) => before.has(g.id))
+          .map((g) => (
+            <li
+              key={g.id}
+              className="flex justify-between gap-3 rounded-lg bg-surface-sunken/70 px-3 py-2"
+            >
+              <span className="truncate text-ink-700">{g.name}</span>
+              <span className="tabular whitespace-nowrap">
+                {pct(before.get(g.id)!.onTime)} →{" "}
+                <span className={cn("font-semibold", oddsTone(g.onTime).text)}>
+                  {pct(g.onTime)}
+                </span>
+              </span>
+            </li>
+          ))}
+      </ul>
+      {odds.bestFit ? (
+        <div className="flex flex-col gap-2 rounded-xl border border-brand-600/40 bg-brand-50/40 p-3.5">
+          <p className="text-[13px] font-semibold text-ink-900">
+            Best way to fit it in — found by the Strategist agent ({odds.bestFit.evaluations}{" "}
+            simulations)
+          </p>
+          <ol className="flex flex-col gap-1 text-[13.5px] text-ink-900">
+            {odds.bestFit.changes.map((c, i) => (
+              <li key={i} className="flex gap-2">
+                <span className="tabular text-ink-400">{i + 1}.</span> {c.text}
+              </li>
+            ))}
+          </ol>
+          <p className="text-[13px] text-ink-700">
+            Chance every goal lands on time:{" "}
+            <span className={cn("font-semibold", oddsTone(odds.bestFit.after.allOnTime).text)}>
+              {pct(odds.bestFit.after.allOnTime)}
+            </span>{" "}
+            (checked on {odds.bestFit.after.paths} fresh futures). Add it to your plan, then use{" "}
+            <Link href="/plan" className="font-semibold text-brand-700 hover:underline">
+              Find a better plan
+            </Link>{" "}
+            to apply changes like these.
+          </p>
+        </div>
+      ) : null}
+    </div>
   );
 }

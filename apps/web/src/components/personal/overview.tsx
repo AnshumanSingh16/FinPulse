@@ -23,6 +23,7 @@ import { emergencyFundCoverageMonths, summariseCashFlow } from "@/lib/personal/f
 import { cn } from "@/lib/utils";
 
 import { stepsFromEvents } from "./agent-activity";
+import { oddsTone, pct } from "./plan-odds";
 import { fmtMonth, GOAL_ICON, PlanStatusBadge } from "./plan-workspace";
 import { GoalInput } from "./goal-input";
 import { AgentGlyph, Meter, PulseMark } from "./kit";
@@ -114,56 +115,69 @@ export function Overview() {
             href: "/actions",
             cta: "Review",
           }
-        : late.length
+        : state.plan.odds && state.plan.odds.allOnTime < 0.6 && (plan?.goals.length ?? 0) > 0
           ? {
-              tone: late.some((g) => g.status === "not_reached") ? "bad" : "warn",
-              title: `${late.length} of your goals ${late.length === 1 ? "is" : "are"} running late`,
-              body: late
-                .slice(0, 2)
-                .map((g) =>
-                  g.status === "not_reached"
-                    ? `${g.name} is out of reach`
-                    : `${g.name} lands ${fmtMonth(g.achievedMonth)}, ${g.delayMonths} months late`,
-                )
-                .join("; "),
-              href: "/plan",
-              cta: "Re-plan",
+              tone: state.plan.odds.allOnTime < 0.4 ? "bad" : "warn",
+              title: `Your plan works in only ${pct(state.plan.odds.allOnTime)} of possible futures`,
+              body: (() => {
+                const weakest = [...state.plan.odds.goals].sort((a, b) => a.onTime - b.onTime)[0];
+                return weakest
+                  ? `Weakest goal: ${weakest.name}, on time in ${pct(weakest.onTime)}. The Strategist can search for the smallest changes that help most.`
+                  : "The Strategist can search for the smallest changes that help most.";
+              })(),
+              href: "/plan#strat-h",
+              cta: "Find a better plan",
             }
-          : pulse.trend === "behind"
+          : late.length
             ? {
-                tone: "warn",
-                title: `You're saving ${formatINR(Math.abs(pulse.averageGap ?? 0))} a month less than planned`,
-                body: pulse.ifContinues.length
-                  ? `If it continues: ${pulse.ifContinues.map((c) => `${c.name} moves to ${c.after.achievedMonth ? fmtMonth(c.after.achievedMonth) : "out of reach"}`).join("; ")}.`
-                  : `Your goals still hold, but spare money after goals falls to ${formatINR(pulse.freeMonthly?.ifContinues ?? 0)} a month.`,
-                href: "/plan#pulse",
-                cta: "See check-ins",
+                tone: late.some((g) => g.status === "not_reached") ? "bad" : "warn",
+                title: `${late.length} of your goals ${late.length === 1 ? "is" : "are"} running late`,
+                body: late
+                  .slice(0, 2)
+                  .map((g) =>
+                    g.status === "not_reached"
+                      ? `${g.name} is out of reach`
+                      : `${g.name} lands ${fmtMonth(g.achievedMonth)}, ${g.delayMonths} months late`,
+                  )
+                  .join("; "),
+                href: "/plan",
+                cta: "Re-plan",
               }
-            : cover !== null && cover < target
+            : pulse.trend === "behind"
               ? {
                   tone: "warn",
-                  title: "Your safety buffer is below your goal",
-                  body: `Savings cover ${cover.toFixed(1)} months of spending; your goal is ${target}.`,
-                  href: "/copilot?q=Build%20an%20emergency%20fund",
-                  cta: "Plan it",
+                  title: `You're saving ${formatINR(Math.abs(pulse.averageGap ?? 0))} a month less than planned`,
+                  body: pulse.ifContinues.length
+                    ? `If it continues: ${pulse.ifContinues.map((c) => `${c.name} moves to ${c.after.achievedMonth ? fmtMonth(c.after.achievedMonth) : "out of reach"}`).join("; ")}.`
+                    : `Your goals still hold, but spare money after goals falls to ${formatINR(pulse.freeMonthly?.ifContinues ?? 0)} a month.`,
+                  href: "/plan#pulse",
+                  cta: "See check-ins",
                 }
-              : pendingDocs.length
+              : cover !== null && cover < target
                 ? {
-                    tone: "info",
-                    title: "Confirm figures from your documents",
-                    body: `${pendingDocs.length} document${pendingDocs.length === 1 ? "" : "s"} waiting for your review.`,
-                    href: "/documents",
-                    cta: "Review",
+                    tone: "warn",
+                    title: "Your safety buffer is below your goal",
+                    body: `Savings cover ${cover.toFixed(1)} months of spending; your goal is ${target}.`,
+                    href: "/copilot?q=Build%20an%20emergency%20fund",
+                    cta: "Plan it",
                   }
-                : plan && pulse.due
+                : pendingDocs.length
                   ? {
                       tone: "info",
-                      title: "Time for your monthly check-in",
-                      body: "Record last month's take-home and spending to see whether your plan is holding.",
-                      href: "/plan#pulse",
-                      cta: "Check in",
+                      title: "Confirm figures from your documents",
+                      body: `${pendingDocs.length} document${pendingDocs.length === 1 ? "" : "s"} waiting for your review.`,
+                      href: "/documents",
+                      cta: "Review",
                     }
-                  : null;
+                  : plan && pulse.due
+                    ? {
+                        tone: "info",
+                        title: "Time for your monthly check-in",
+                        body: "Record last month's take-home and spending to see whether your plan is holding.",
+                        href: "/plan#pulse",
+                        cta: "Check in",
+                      }
+                    : null;
 
   const latestSteps = latest ? stepsFromEvents(latest.events, false) : [];
 
@@ -376,7 +390,18 @@ export function Overview() {
             <h2 id="plan-h" className="text-[16px] font-bold">
               Your plan
             </h2>
-            <PlanStatusBadge status={plan.summary.status} />
+            {state.plan.odds && plan.goals.length ? (
+              <span
+                className={cn(
+                  "rounded-full px-2.5 py-0.5 text-[12px] font-semibold",
+                  oddsTone(state.plan.odds.allOnTime).chip,
+                )}
+              >
+                {pct(state.plan.odds.allOnTime)} chance all land on time
+              </span>
+            ) : (
+              <PlanStatusBadge status={plan.summary.status} />
+            )}
             <Link
               href="/plan"
               className="ml-auto flex items-center gap-0.5 text-[13px] font-semibold text-brand-700 hover:underline"
@@ -390,6 +415,7 @@ export function Overview() {
               <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                 {plan.goals.map((g) => {
                   const Icon = GOAL_ICON[g.kind];
+                  const chance = state.plan.odds?.goals.find((x) => x.id === g.id)?.onTime;
                   return (
                     <li
                       key={g.id}
@@ -401,18 +427,22 @@ export function Overview() {
                         <span
                           className={cn(
                             "text-[12px]",
-                            g.status === "on_track"
-                              ? "text-brand-700"
-                              : g.status === "delayed"
-                                ? "text-caution-text"
-                                : "text-danger-text",
+                            chance !== undefined
+                              ? oddsTone(chance).text
+                              : g.status === "on_track"
+                                ? "text-brand-700"
+                                : g.status === "delayed"
+                                  ? "text-caution-text"
+                                  : "text-danger-text",
                           )}
                         >
-                          {g.status === "on_track"
-                            ? `On track · ${fmtMonth(g.achievedMonth)}`
-                            : g.status === "delayed"
-                              ? `${g.delayMonths} mo late · ${fmtMonth(g.achievedMonth)}`
-                              : "Out of reach"}
+                          {chance !== undefined
+                            ? `${pct(chance)} chance on time · ${fmtMonth(g.targetMonth)}`
+                            : g.status === "on_track"
+                              ? `On track · ${fmtMonth(g.achievedMonth)}`
+                              : g.status === "delayed"
+                                ? `${g.delayMonths} mo late · ${fmtMonth(g.achievedMonth)}`
+                                : "Out of reach"}
                         </span>
                       </span>
                     </li>

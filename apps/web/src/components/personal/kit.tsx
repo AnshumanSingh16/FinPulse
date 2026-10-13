@@ -10,6 +10,7 @@ import {
   BadgeCheck,
   Calculator,
   Compass,
+  Crosshair,
   ListChecks,
   MessagesSquare,
   Minus,
@@ -34,6 +35,11 @@ export const AGENT_META: Record<AgentName, { label: string; role: string; icon: 
   verification: { label: "Verification", role: "Checks inputs and assumptions", icon: BadgeCheck },
   action: { label: "Action", role: "Prepares next steps for approval", icon: ListChecks },
   copilot: { label: "Copilot", role: "Answers your questions with tools", icon: MessagesSquare },
+  strategist: {
+    label: "Strategist",
+    role: "Searches for changes that make the plan more likely to work",
+    icon: Crosshair,
+  },
 };
 
 export function AgentGlyph({

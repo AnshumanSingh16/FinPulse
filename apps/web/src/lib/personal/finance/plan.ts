@@ -93,6 +93,8 @@ export type PlanAssumptions = {
   emergencyMonths: number;
   /** Months left on existing EMIs; null = they continue throughout the projection. */
   existingEmiMonthsLeft: number | null;
+  /** A cut in monthly living costs the person has committed to (₹, today's money). */
+  monthlySpendingCut: number;
 };
 
 export const DEFAULT_ASSUMPTIONS: PlanAssumptions = {
@@ -102,6 +104,7 @@ export const DEFAULT_ASSUMPTIONS: PlanAssumptions = {
   growthReturnPct: 10,
   emergencyMonths: 6,
   existingEmiMonthsLeft: null,
+  monthlySpendingCut: 0,
 };
 
 export type PlanHousehold = {
@@ -237,34 +240,63 @@ function validate(household: PlanHousehold, goals: PlanGoal[], a: PlanAssumption
 
 type Loan = { goalId: string; balance: number; emi: number; r: number };
 
-// ---------------------------------------------------------------- projection
+// ---------------------------------------------------------------- paths
 
-export function projectPlan(input: {
+/**
+ * One possible future, month by month. The expected path uses the assumptions as constants; the
+ * Monte Carlo model (montecarlo.ts) draws random ones. All factors are relative to today.
+ */
+export type PlanPath = {
+  /** Take-home income in month m as a multiple of today's (growth, job loss, variability). */
+  income: Float64Array;
+  /** Living costs and fixed obligations in month m as a multiple of today's (inflation). */
+  spending: Float64Array;
+  /** Monthly return on near-term money in month m. */
+  safe: Float64Array;
+  /** Monthly return on long-term money in month m. */
+  growth: Float64Array;
+  /** One-off emergency spending in month m, ₹. */
+  shock: Float64Array;
+  /** Per goal (in prepared order): price in month m as a multiple of today's. */
+  price: Float64Array[];
+};
+
+export type PreparedPlan = ReturnType<typeof preparePlan>;
+
+/** Validate and precompute everything that doesn't depend on the path. */
+export function preparePlan(input: {
   household: PlanHousehold;
   goals: PlanGoal[];
   assumptions?: Partial<PlanAssumptions>;
   startMonth: string;
   /** Override the horizon (months). Defaults to the last goal + 5 years, between 5 and 30 years. */
   horizonMonths?: number;
-}): PlanProjection {
+}) {
   const a: PlanAssumptions = { ...DEFAULT_ASSUMPTIONS, ...input.assumptions };
-  const h = input.household;
-  validate(h, input.goals, a);
+  validate(input.household, input.goals, a);
+  // A spending cut the person has committed to is part of the plan.
+  const h: PlanHousehold = {
+    ...input.household,
+    monthlyExpenses: Math.max(0, input.household.monthlyExpenses - a.monthlySpendingCut),
+  };
   const start = input.startMonth;
   const goals = [...input.goals].sort(
     (x, y) => x.priority - y.priority || monthsBetween(y.targetMonth, x.targetMonth),
   );
-  const due = new Map(goals.map((g) => [g.id, Math.max(0, monthsBetween(start, g.targetMonth))]));
-  const lastDue = Math.max(0, ...due.values());
+  const dueOf = goals.map((g) => Math.max(0, monthsBetween(start, g.targetMonth)));
+  const due = new Map(goals.map((g, i) => [g.id, dueOf[i]!]));
+  const lastDue = Math.max(0, ...dueOf);
   const horizon =
     input.horizonMonths ?? Math.min(360, Math.max(60, Math.ceil((lastDue + 60) / 12) * 12));
 
   const rSafe = monthlyRate(a.safeReturnPct);
   const rGrowth = monthlyRate(a.growthReturnPct);
   const fundRate = (g: PlanGoal, m: number) => (due.get(g.id)! - m > 36 ? rGrowth : rSafe);
+  /** Expected price — what the person plans around. */
   const price = (g: PlanGoal, m: number) => grow(g.targetAmount, g.inflationPct, m);
-  const cashNeed = (g: PlanGoal, m: number) =>
-    (price(g, m) * ((g.funding === "loan" ? g.downPaymentPct : 100) + g.upfrontCostPct)) / 100;
+  const needShare = (g: PlanGoal) =>
+    ((g.funding === "loan" ? g.downPaymentPct : 100) + g.upfrontCostPct) / 100;
+  const cashNeed = (g: PlanGoal, m: number) => price(g, m) * needShare(g);
   // Compounding factors per goal: growth[j] is what ₹1 held at the end of month j is worth on the
   // goal's date; level[j] is what ₹1 contributed every month from j to the date is worth then.
   const factors = new Map<string, { growth: number[]; level: number[] }>();
@@ -280,13 +312,74 @@ export function projectPlan(input: {
     }
     factors.set(g.id, { growth, level });
   }
-  /** Contribution needed this month (month end) to reach the cash need on the goal's date. */
-  const required = (g: PlanGoal, fund: number, m: number) => {
+  /**
+   * Contribution planned this month (month end) to reach the expected cash need on the goal's
+   * date. Contributions are planned on expectations; what actually happens comes from the path.
+   */
+  const required = (g: PlanGoal, fund: number, m: number, needNow: number) => {
     const d = due.get(g.id)!;
-    if (d <= m) return Math.max(0, cashNeed(g, m) - fund);
+    if (d <= m) return Math.max(0, needNow - fund);
     const f = factors.get(g.id)!;
     return Math.max(0, (cashNeed(g, d) - fund * f.growth[m]!) / f.level[m]!);
   };
+  return {
+    a,
+    h,
+    start,
+    goals,
+    due,
+    horizon,
+    rSafe,
+    rGrowth,
+    price,
+    needShare,
+    cashNeed,
+    factors,
+    required,
+  };
+}
+
+/** The path where everything happens exactly as assumed. */
+export function expectedPath(p: PreparedPlan): PlanPath {
+  const n = p.horizon;
+  const income = new Float64Array(n);
+  const spending = new Float64Array(n);
+  for (let m = 0; m < n; m++) {
+    const yr = Math.floor(m / 12);
+    income[m] = Math.pow(1 + p.a.incomeGrowthPct / 100, yr);
+    spending[m] = Math.pow(1 + p.a.expenseInflationPct / 100, yr);
+  }
+  return {
+    income,
+    spending,
+    safe: new Float64Array(n).fill(p.rSafe),
+    growth: new Float64Array(n).fill(p.rGrowth),
+    shock: new Float64Array(n),
+    price: p.goals.map((g) => {
+      const arr = new Float64Array(n);
+      for (let m = 0; m < n; m++) arr[m] = Math.pow(1 + g.inflationPct / 100, m / 12);
+      return arr;
+    }),
+  };
+}
+
+// ---------------------------------------------------------------- projection
+
+export function projectPlan(input: Parameters<typeof preparePlan>[0]): PlanProjection {
+  const prep = preparePlan(input);
+  return runPlan(prep, expectedPath(prep));
+}
+
+/** Run the month-by-month simulation along one path. */
+export function runPlan(prep: PreparedPlan, path: PlanPath): PlanProjection {
+  const { a, h, start, goals, due, horizon, price, needShare, cashNeed, factors, required } = prep;
+  const gi = new Map(goals.map((g, i) => [g.id, i]));
+  /** Price actually paid along this path. */
+  const realPrice = (g: PlanGoal, m: number) =>
+    g.targetAmount * path.price[gi.get(g.id)!]![Math.min(m, horizon - 1)]!;
+  const realNeed = (g: PlanGoal, m: number) => realPrice(g, m) * needShare(g);
+  const fundRateAt = (g: PlanGoal, m: number) =>
+    due.get(g.id)! - m > 36 ? path.growth[m]! : path.safe[m]!;
 
   const essentials0 = h.monthlyExpenses + h.otherMonthlyObligations + h.existingEmis;
   const reserveTarget0 = a.emergencyMonths * essentials0;
@@ -320,20 +413,19 @@ export function projectPlan(input: {
   let yearBought: string[] = [];
 
   for (let m = 0; m < horizon; m++) {
-    const yr = Math.floor(m / 12);
-    const income = h.monthlyIncome * Math.pow(1 + a.incomeGrowthPct / 100, yr);
-    const inflate = Math.pow(1 + a.expenseInflationPct / 100, yr);
-    const spending = (h.monthlyExpenses + h.otherMonthlyObligations) * inflate;
+    const income = h.monthlyIncome * path.income[m]!;
+    const spending = (h.monthlyExpenses + h.otherMonthlyObligations) * path.spending[m]!;
+    const shock = path.shock[m]!;
     const oldEmi =
       a.existingEmiMonthsLeft === null || m < a.existingEmiMonthsLeft ? h.existingEmis : 0;
 
     // Returns on balances held through the month.
     if (m > 0) {
-      reserve *= 1 + rSafe;
-      if (free > 0) free *= 1 + rSafe;
+      reserve *= 1 + path.safe[m]!;
+      if (free > 0) free *= 1 + path.safe[m]!;
       for (const g of goals)
-        if (!achieved.has(g.id)) fund.set(g.id, fund.get(g.id)! * (1 + fundRate(g, m)));
-      investments *= 1 + rGrowth;
+        if (!achieved.has(g.id)) fund.set(g.id, fund.get(g.id)! * (1 + fundRateAt(g, m)));
+      investments *= 1 + path.growth[m]!;
     }
 
     // Loans taken for goals already bought.
@@ -347,7 +439,7 @@ export function projectPlan(input: {
     }
 
     const emis = oldEmi + newEmi;
-    const surplus = income - spending - emis;
+    const surplus = income - spending - emis - shock;
     const reserveTarget = a.emergencyMonths * (spending + emis);
 
     if (surplus >= 0) {
@@ -357,7 +449,7 @@ export function projectPlan(input: {
       s -= top;
       for (const g of goals) {
         if (achieved.has(g.id)) continue;
-        const need = required(g, fund.get(g.id)!, m);
+        const need = required(g, fund.get(g.id)!, m, realNeed(g, m));
         const c = Math.min(s, need);
         fund.set(g.id, fund.get(g.id)! + c);
         s -= c;
@@ -391,7 +483,7 @@ export function projectPlan(input: {
       if (m === 0) {
         for (const g of goals) {
           firstAllocated.set(g.id, 0);
-          firstRequired.set(g.id, required(g, fund.get(g.id)!, 0));
+          firstRequired.set(g.id, required(g, fund.get(g.id)!, 0, realNeed(g, 0)));
         }
         freeMonthlyNow = surplus;
       }
@@ -405,15 +497,15 @@ export function projectPlan(input: {
       const d = due.get(g.id)!;
       if (m < d) continue;
       if (m === d)
-        fundedAtDue.set(g.id, Math.min(100, (fund.get(g.id)! / cashNeed(g, d)) * 100 || 0));
-      const need = cashNeed(g, m);
+        fundedAtDue.set(g.id, Math.min(100, (fund.get(g.id)! / realNeed(g, d)) * 100 || 0));
+      const need = realNeed(g, m);
       const have = fund.get(g.id)!;
       if (have + Math.max(0, free) + 0.5 < need) continue;
       const fromFree = Math.max(0, need - have);
       free -= fromFree;
       free += Math.max(0, have - need);
       fund.set(g.id, 0);
-      const p = price(g, m);
+      const p = realPrice(g, m);
       achieved.set(g.id, { index: m, price: p });
       yearBought.push(g.name);
       if (g.funding === "loan" && g.downPaymentPct < 100) {

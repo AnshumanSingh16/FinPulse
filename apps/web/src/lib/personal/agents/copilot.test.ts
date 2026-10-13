@@ -152,6 +152,9 @@ describe("copilot rule-based answers for the home prompts", () => {
     expect(tool?.type === "tool" && tool.call.tool).toBe("review_goal_plan");
     const msg = items.find((i) => i.type === "message");
     expect(msg?.type === "message" && msg.text).toContain("Family trip to Japan");
+    expect(msg?.type === "message" && msg.text).toMatch(
+      /Across 1,000 possible futures, every goal lands on time in \d+% of them/,
+    );
     expect(msg?.type === "message" && msg.text).toMatch(/spare each month/);
   });
 
@@ -176,4 +179,23 @@ describe("copilot rule-based answers for the home prompts", () => {
     const m2 = missing.find((i) => i.type === "message");
     expect(m2?.type === "message" && m2.text).toMatch(/I need four things/);
   });
+
+  it("runs the Strategist when asked for a better plan, and changes nothing itself", async () => {
+    const s = loadSession("rb");
+    s.profile = { values: { ...DEMO_PROFILE }, sources: {}, isDemo: true, updatedAt: null };
+    const month = currentMonth();
+    s.goals = demoGoals(month).map((g) =>
+      g.kind === "car" ? { ...g, targetAmount: 3_500_000, targetMonth: month } : g,
+    );
+    const goalsBefore = JSON.stringify(s.goals);
+    const items = await ask("Find me a better plan");
+    const tool = items.find((i) => i.type === "tool");
+    expect(tool?.type === "tool" && tool.call.tool).toBe("find_better_plan");
+    expect(items.some((i) => i.type === "event" && i.event.agent === "strategist")).toBe(true);
+    const msg = items.find((i) => i.type === "message");
+    expect(msg?.type === "message" && msg.text).toMatch(
+      /Nothing has changed yet|no change was worth making/,
+    );
+    expect(JSON.stringify(s.goals)).toBe(goalsBefore);
+  }, 30_000);
 });

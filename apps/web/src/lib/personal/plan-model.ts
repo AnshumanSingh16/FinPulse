@@ -18,6 +18,8 @@ import {
   type PlanHousehold,
   type PlanProjection,
 } from "./finance/plan";
+import type { OddsSummary } from "./agents/types";
+import type { PlanOdds } from "./finance/montecarlo";
 import type { CheckInValues, PlanGoalValues, ProfileValues, PurchaseRequest } from "./schemas";
 
 export type CheckIn = CheckInValues & { id: string; at: string };
@@ -218,11 +220,13 @@ export function pulse(input: {
   startMonth: string;
 }): Pulse {
   const p = input.profile;
+  // A spending cut the person committed to in the plan raises what they should be saving.
   const expected =
     (p.monthlyIncome ?? 0) -
     (p.monthlyExpenses ?? 0) -
     (p.otherMonthlyObligations ?? 0) -
-    (p.existingEmis ?? 0);
+    (p.existingEmis ?? 0) +
+    (input.assumptions.monthlySpendingCut ?? 0);
   const entries: PulseEntry[] = [...input.checkIns]
     .sort((a, b) => monthsBetween(a.month, b.month))
     .map((c) => {
@@ -286,4 +290,44 @@ export function pulse(input: {
     lastMonth,
     due: lastMonth === null || monthsBetween(lastMonth, input.startMonth) > 1,
   };
+}
+
+/** Keep what the browser and stored runs need from a full simulation. */
+export function summarizeOdds(o: PlanOdds): OddsSummary {
+  return {
+    paths: o.paths,
+    allOnTime: o.allOnTime,
+    neverShort: o.neverShort,
+    score: o.score,
+    goals: o.goals.map(({ id, name, onTime, withinYear, medianDelay }) => ({
+      id,
+      name,
+      onTime,
+      withinYear,
+      medianDelay,
+    })),
+  };
+}
+
+/** A stable fingerprint of what a plan's odds depend on. */
+export function planKey(input: {
+  profile: ProfileValues;
+  goals: PlanGoalValues[];
+  assumptions: Partial<PlanAssumptions>;
+  startMonth: string;
+}): string {
+  const p = input.profile;
+  return JSON.stringify([
+    input.startMonth,
+    p.monthlyIncome,
+    p.monthlyExpenses,
+    p.existingEmis,
+    p.otherMonthlyObligations,
+    p.liquidSavings,
+    p.investments,
+    p.emergencyBufferMonths,
+    p.incomeVariability,
+    input.assumptions,
+    [...input.goals].sort((a, b) => a.priority - b.priority),
+  ]);
 }

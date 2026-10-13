@@ -14,6 +14,16 @@ import {
   type PrepayVsInvestResult,
   type RentVsBuyResult,
 } from "../finance/decisions";
+import {
+  riskDrivers,
+  simulatePlan,
+  spendRoom,
+  type PlanOdds,
+  type RiskDriver,
+  type SpendRoom,
+  VARIABLE_INCOME_RISK,
+} from "../finance/montecarlo";
+import { optimizePlanAsync, type Proposal, type SearchRound } from "../finance/optimize";
 import { planImpact, projectPlan, type PlanImpact, type PlanProjection } from "../finance/plan";
 import { PlanAssumptionsSchema, PlanGoalSchema } from "../schemas";
 import type { ToolDef } from "./runtime";
@@ -31,13 +41,15 @@ export const PlanHouseholdSchema = z.object({
   investments: money,
 });
 
-const PlanInput = z.object({
+export const PlanInputSchema = z.object({
   household: PlanHouseholdSchema,
   goals: z.array(PlanGoalSchema).max(13),
   assumptions: PlanAssumptionsSchema,
   startMonth: month,
 });
+const PlanInput = PlanInputSchema;
 type PlanInput = z.infer<typeof PlanInput>;
+const pct0 = (x: number) => `${Math.round(x * 100)}%`;
 
 const statusText: Record<PlanProjection["summary"]["status"], string> = {
   on_track: "every goal on track",
@@ -142,3 +154,105 @@ export const DecideBodySchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("rent_vs_buy"), input: RentVsBuyInputSchema }),
   z.object({ kind: z.literal("prepay_vs_invest"), input: PrepayInputSchema }),
 ]);
+
+// ---------------------------------------------------------------- probabilistic tools
+
+const Variability = z.enum(["stable", "variable"]).nullable().optional();
+const riskOf = (v: "stable" | "variable" | null | undefined) =>
+  v === "variable" ? VARIABLE_INCOME_RISK : {};
+
+export const simulatePlanTool: ToolDef<
+  PlanInput & { paths?: number; incomeVariability?: "stable" | "variable" | null },
+  PlanOdds
+> = {
+  name: "simulate_plan",
+  agent: "risk",
+  description:
+    "Run the plan through many possible futures (market swings, inflation, raises, job loss, emergencies) and report how often each goal lands on time and whether money ever runs out.",
+  input: PlanInput.extend({
+    paths: z.number().int().min(50).max(2000).optional(),
+    incomeVariability: Variability,
+  }),
+  run: ({ paths, incomeVariability, ...plan }) =>
+    simulatePlan(plan, { paths: paths ?? 1000, risk: riskOf(incomeVariability) }),
+  summarize: (o) =>
+    `${o.paths} futures: every goal on time in ${pct0(o.allOnTime)}; money never runs out in ${pct0(o.neverShort)}`,
+  slim: (o) => ({
+    paths: o.paths,
+    allOnTime: o.allOnTime,
+    neverShort: o.neverShort,
+    goals: o.goals,
+    score: o.score,
+  }),
+};
+
+export const rankRisksTool: ToolDef<
+  PlanInput & { incomeVariability?: "stable" | "variable" | null },
+  RiskDriver[]
+> = {
+  name: "rank_risks",
+  agent: "risk",
+  description:
+    "Re-run the futures with each risk switched off in turn to see which one costs the plan most.",
+  input: PlanInput.extend({ incomeVariability: Variability }),
+  run: ({ incomeVariability, ...plan }) =>
+    riskDrivers(plan, { paths: 300, risk: riskOf(incomeVariability) }),
+  summarize: (o) =>
+    o[0] && o[0].scoreCost >= 0.02
+      ? `biggest risk: ${o[0].label.toLowerCase()}`
+      : "no single risk stands out",
+};
+
+export const spendRoomTool: ToolDef<PlanInput & { target?: number }, SpendRoom> = {
+  name: "find_spending_room",
+  agent: "risk",
+  description:
+    "How much more (or less) the household could spend each month and still have every goal land on time in at least 80% of futures.",
+  input: PlanInput.extend({ target: z.number().min(0.5).max(0.99).optional() }),
+  run: ({ target, ...plan }) => spendRoom(plan, { target, paths: 300 }),
+  summarize: (o) =>
+    o.kind === "spare"
+      ? `${formatINR(o.monthly)}/month of room at ${pct0(o.target)} confidence`
+      : o.kind === "cut"
+        ? `needs ${formatINR(o.monthly)}/month less spending to reach ${pct0(o.target)}`
+        : `spending cuts alone don't reach ${pct0(o.target)}`,
+};
+
+/** The search, with a callback so each round can be reported as it finishes. */
+export function searchPlanTool(
+  onRound: (r: SearchRound) => void,
+  speed: "thorough" | "quick" = "thorough",
+): ToolDef<
+  PlanInput & { locked?: string[]; incomeVariability?: "stable" | "variable" | null },
+  Proposal
+> {
+  return {
+    name: "search_better_plan",
+    agent: "strategist",
+    description:
+      "Search concrete changes (dates, budgets, down payments, tenures, priorities, spending) for the smallest set that most improves the plan's odds; confirm the result on fresh futures.",
+    input: PlanInput.extend({
+      locked: z.array(z.string().max(40)).max(13).optional(),
+      incomeVariability: Variability,
+    }),
+    run: ({ locked, incomeVariability, ...plan }) =>
+      optimizePlanAsync(plan, {
+        locked,
+        risk: riskOf(incomeVariability),
+        onRound,
+        ...(speed === "quick"
+          ? { screenPaths: 80, confirmPaths: 250, checkPaths: 500, maxChanges: 2 }
+          : {}),
+      }),
+    summarize: (o) =>
+      o.changes.length
+        ? `${o.changes.length} change(s) found; every goal on time ${pct0(o.before.allOnTime)} → ${pct0(o.after.allOnTime)} on fresh futures`
+        : "no change beats its disruption",
+    slim: (o) => ({
+      changes: o.changes,
+      evaluations: o.evaluations,
+      before: { allOnTime: o.before.allOnTime, score: o.before.score },
+      after: { allOnTime: o.after.allOnTime, score: o.after.score },
+    }),
+  };
+}

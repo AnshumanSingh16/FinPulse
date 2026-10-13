@@ -5,7 +5,15 @@ An agentic financial planner for households in India. It runs entirely inside on
 
 ## The idea
 
-A single-purchase affordability check answers the wrong question. "Can I afford a ₹75 lakh flat?"
+A single-purchase affordability check answers the wrong question, in the wrong way. The wrong
+question, because goals compete for the same money; the wrong way, because it plays out one
+future where every assumption comes true. FinPulse fixes both.
+
+The question is answered across **possible futures**, not one: "Every goal lands on time in 97% of
+1,000 simulated futures; buying this flat now drops that to 0%; moving it 12 months later brings
+it back to 94%." A **Strategist agent** searches for that kind of fix itself.
+
+ "Can I afford a ₹75 lakh flat?"
 depends on what else the same salary and savings must pay for: the car due in 18 months, a child's
 education in 12 years, next year's trip. FinPulse is built around **one plan per household**:
 
@@ -23,6 +31,26 @@ education in 12 years, next year's trip. FinPulse is built around **one plan per
    compares them with the plan and re-projects with the recent trend ("if this continues…").
 4. **The recurring decisions** — rent vs buy, prepay vs invest — are simulations with explicit
    assumptions and a tipping point, not rules of thumb.
+5. **Probability, not a single path** (`finance/montecarlo.ts`). The same engine runs along 1,000
+   seeded random futures: yearly market returns around the assumed return (15-point volatility on
+   long-term money), living-cost inflation (±1.5 points) with each goal's price following it,
+   uneven raises, a 3% yearly chance of a 3–9 month gap in income (7% plus monthly swings for
+   variable earners), and a 10% yearly chance of an emergency cost of ~1.5 months of spending.
+   It reports each goal's chance of landing on time and within a year, the chance money never
+   runs out, the range of savings over time, **which risk costs the plan most** (each switched
+   off in turn, same futures) and **room to spend** (the most extra monthly spending that keeps
+   every goal on time in 80% of futures — or the cut needed to get there). With every risk off it
+   reproduces the single-path projection exactly; that is tested.
+6. **The Strategist agent** (`finance/optimize.ts`, `agents/strategist.ts`) changes plans instead
+   of only judging them. It searches concrete, human-sized changes — move a goal 6/12/24 months,
+   trim a budget 10/20%, change a down payment or loan tenure, reorder priorities, spend 5/10% less
+   — scoring each on the same futures (common random numbers, so a change wins on merit, not
+   luck). Each change carries a disruption cost, so it prefers fewer, smaller changes; each round
+   screens every candidate on a small sample and re-scores the best few on a larger one; the
+   final proposal is re-checked on **fresh futures** it never saw. Proposals wait for the person:
+   applying is a user action, refused if the plan or finances changed since the search.
+   It runs on its own ("Find a better plan"), inside every affordability analysis ("best way to
+   fit it in"), and from the copilot ("Find me a better plan").
 
 ## Run it
 
@@ -72,17 +100,20 @@ desktop.
    savings, ₹70,000 expenses, ₹15,000 EMIs (30 left), one dependent — plus three goals (daughter's
    education in 12 years, a ₹14 lakh car in 18 months on a loan, a ₹4.5 lakh trip in 10 months)
    and three monthly check-ins.
-2. **Home** shows the plan (3 of 3 goals on track) and the top insight from the check-ins: saving
-   ₹17,667 a month less than planned — the goals still hold, but spare money after goals falls to
-   ₹22,752 a month.
-3. **My plan**: the health strip (goals need ₹73,365 a month, 63.8% of what's left), the year-by-
-   year chart, each goal's monthly need, cash needed on its date (after inflation), the loan EMI
-   once bought. Move the car above education, or edit a date — everything re-projects instantly;
-   **Save plan**.
-4. **Can I afford this?** → "I want to buy a ₹75 lakh house" → **Check if I can afford it**. Nine
-   stages run, including **Checking your other goals**. Results: EMI ₹52,069, ₹5,50,000 left in
-   savings → *limited buffer* — and **Your other goals: buying this now pushes the Japan trip back
-   24 months**; spare money after goals drops from ₹59,594 to ₹21,003. **Add to my plan**.
+2. **Home** shows the plan — **97% chance all 3 goals land on time** — and the top insight from
+   the check-ins: saving ₹17,667 a month less than planned.
+3. **My plan**: the odds headline, the range of outcomes (median and the band 80% of futures fall
+   in), each goal's chance of landing on time, what could knock it off course, and room to spend
+   (about ₹36,000 a month at 80% confidence). Edit a date: the odds re-simulate as you type. **Find a
+   better plan** → the Strategist runs live and finds nothing worth changing (the plan already
+   works).
+4. **Can I afford this?** → "I want to buy a ₹75 lakh house" → **Check if I can afford it**. Ten
+   stages run, including **Checking your other goals** and **Finding the best way to fit it in**.
+   Results: EMI ₹52,069, ₹5,50,000 left in savings → *limited buffer* — and **chance every goal
+   lands on time 97% → 0%** (the trip 98% → 0%, the car 99% → 72%). **Best way to fit it in**,
+   found by the Strategist in 71 simulations: *move the house 12 months later* → about 93–94% on
+   fresh futures. **Add to my plan**, then on My plan **Find a better plan** → the same proposal, with
+   its five recorded steps → **Apply to my plan** → about 93%.
 5. **Next steps**: the first checklist item is "Re-plan the goals this purchase moves". Approve —
    the server refuses shortcuts (no ticking before approval; "Submit the loan application" can
    never be executed).
@@ -90,11 +121,16 @@ desktop.
    is ahead by ₹46.8 lakh after 15 years unless prices grow faster than 6.93% a year. Prepay vs
    invest ₹5 lakh on a ₹40 lakh loan at 8.5%: prepaying saves ₹10.5 lakh of interest; investing
    wins only above 9.41% a year after tax.
-7. **Ask FinPulse**: "Am I on track for my goals?", "Rent or buy: ₹75 lakh flat, rent ₹25,000".
+7. **Ask FinPulse**: "Am I on track for my goals?" (answers with probabilities), "Find me a better
+   plan" (runs the Strategist in the chat), "Rent or buy: ₹75 lakh flat, rent ₹25,000".
 8. **Documents**: upload `salary-slip-demo.txt` — the ₹1,85,000 net pay mismatch and the hidden
    "ignore previous instructions" line are both flagged.
 9. **Activity log**: every goal, agent step, plan change, check-in and approval, as recorded.
 10. Restart the server: the plan, analyses and check-ins are still there.
+
+Probabilities are reproducible for a given plan (seeded), but each load of the demo creates new
+goal ids, which seed each goal's price stream — so figures can differ by a point or two between
+demo loads.
 
 To rehearse without AI even when a key is configured: set `FINPULSE_AI=off` in `.env` and restart.
 
@@ -111,12 +147,18 @@ src/lib/personal/
     plan.ts         the multi-goal plan: month-by-month projection across every goal,
                     priority funding, inflation, returns, goal loans; plan impact of a new goal
     decisions.ts    rent vs buy and prepay vs invest simulations with break-even solving
+    montecarlo.ts   the probabilistic model: seeded random futures, odds per goal, outcome
+                    range, risk drivers, room to spend
+    optimize.ts     the plan search: levers, disruption costs, racing, fresh-futures check
     parse-inr.ts    "₹75 lakh", "1.2 crore", "15,00,000"
   agents/
     orchestrator.ts the workflow: plan → collect → research → analyse → stress → plan impact
                     → verify → synthesise → act → request approval → audit
-    plan-tools.ts   project_goal_plan, check_plan_impact, compare_rent_vs_buy,
+    plan-tools.ts   project_goal_plan, check_plan_impact, simulate_plan, rank_risks,
+                    find_spending_room, search_better_plan, compare_rent_vs_buy,
                     compare_prepay_vs_invest
+    strategist.ts   the Strategist agent: measure → explain → search → check → propose;
+                    applying a proposal (decideStrategy) is the person's action
     runtime.ts      RunContext: validates every tool call (Zod), enforces limits
                     (40 tool calls, 120 s, 3 model calls per run), records calls and events
     tools.ts        the typed tool registry
@@ -194,6 +236,13 @@ findings.
 - `finance/decisions.test.ts` — prepay vs invest (0% return → prepay; break-even ≈ loan rate when
   untaxed; tax raises it) and rent vs buy (extremes, break-even appreciation levels the two).
 - `plan-model.test.ts` — the monthly pulse (gaps, streaks, trend, "if this continues").
+- `finance/montecarlo.test.ts` — with every risk off, random futures reproduce the projection;
+  seeds reproduce; each goal's random stream is independent of the others; more risk never
+  helps; bigger goals are less likely; risk ranking and room to spend.
+- `finance/optimize.test.ts` — the search improves odds (confirmed on fresh futures), never
+  touches locked goals, leaves a working plan alone, and applies what it reports.
+- `agents/strategist.test.ts` — the five recorded steps and tool calls, and that a proposal is
+  applied only once and only to the plan it was made for.
 
 ## Limits and honest caveats
 
@@ -207,6 +256,13 @@ findings.
   returns, 10% education inflation, 7% stamp duty and registration on homes) are round,
   editable assumptions — not forecasts or product rates. The plan does not model taxes on
   returns, salary jumps or one-off windfalls; check-ins are how it stays honest.
+- The risk model's parameters (return volatility, job-loss and emergency chances, their sizes) are
+  round, disclosed assumptions, not calibrated forecasts; the probabilities are "under these
+  assumptions". Returns are drawn independently each year (no market regimes); job loss does not
+  change pay afterwards; taxes on returns are not modelled.
+- The Strategist's search is greedy (up to three changes) over a fixed set of levers; it can miss
+  combinations that only help together. Every proposal is checked on fresh futures before it is
+  shown.
 - Rent vs buy ignores home-loan tax benefits and selling costs; prepay vs invest ignores lost tax
   deductions and prepayment charges. Both say so on the page.
 - File storage assumes a single server process. For several instances, replace `store.ts` with a
