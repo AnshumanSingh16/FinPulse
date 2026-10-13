@@ -115,6 +115,7 @@ export function analyze(
 export function copilot(
   message: string,
   onItem: (item: CopilotStreamItem | { type: "error"; message: string }) => void,
+  runId?: string,
 ) {
-  return stream("/api/personal/copilot", { message }, onItem);
+  return stream("/api/personal/copilot", { message, runId }, onItem);
 }

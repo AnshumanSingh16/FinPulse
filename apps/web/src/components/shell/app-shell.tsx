@@ -6,11 +6,11 @@ import { Sidebar } from "./sidebar";
 export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-dvh flex-col lg:flex-row">
-      <Suspense fallback={<aside className="hidden w-64 shrink-0 border-r lg:block" />}>
+      <Suspense fallback={<aside className="hidden w-60 shrink-0 border-r border-line lg:block" />}>
         <Sidebar />
       </Suspense>
       <div className="flex min-w-0 flex-1 flex-col">
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-5 pb-28 sm:px-6 lg:px-10 lg:py-10">
+        <main className="mx-auto w-full max-w-[1200px] flex-1 px-4 pt-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:px-6 lg:px-8 lg:pt-7 lg:pb-12 xl:px-10">
           {children}
         </main>
       </div>

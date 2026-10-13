@@ -106,3 +106,20 @@ describe("verifyFigures", () => {
     ]);
   });
 });
+
+describe("input provenance", () => {
+  it("labels demo figures as demo data, not as the user's", async () => {
+    resetSession("prov");
+    const session = loadSession("prov");
+    const at = new Date().toISOString();
+    session.profile = {
+      values: { ...DEMO_PROFILE },
+      sources: { monthlyIncome: { kind: "demo", at }, liquidSavings: { kind: "document", at } },
+      isDemo: true,
+      updatedAt: at,
+    };
+    const run = await runAffordabilityWorkflow(session, "house", DEMO_PURCHASE);
+    expect(run.assumptions.find((a) => a.id === "in_monthlyIncome")?.basis).toBe("demo");
+    expect(run.assumptions.find((a) => a.id === "in_liquidSavings")?.basis).toBe("document");
+  });
+});

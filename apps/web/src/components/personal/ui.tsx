@@ -64,10 +64,10 @@ export const TONE_TEXT: Record<Tone, string> = {
   neutral: "text-muted-foreground",
 };
 export const TONE_SOFT: Record<Tone, string> = {
-  good: "bg-status-good/10 text-text-good",
-  warn: "bg-status-warning/15 text-text-warning",
-  bad: "bg-status-critical/10 text-text-critical",
-  neutral: "bg-muted text-muted-foreground",
+  good: "bg-brand-50 text-brand-700",
+  warn: "bg-caution-50 text-caution-text",
+  bad: "bg-danger-50 text-danger-text",
+  neutral: "bg-surface-sunken text-ink-500",
 };
 
 export function AssessmentBadge({
@@ -84,7 +84,7 @@ export function AssessmentBadge({
   return (
     <span
       className={cn(
-        "inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium",
+        "inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium whitespace-nowrap",
         TONE_SOFT[a.tone],
         className,
       )}
@@ -180,10 +180,10 @@ export function Notice({
   action?: ReactNode;
 }) {
   const map = {
-    info: { c: "bg-muted", i: Info, ic: "text-muted-foreground" },
-    warning: { c: "bg-status-warning/10", i: AlertTriangle, ic: "text-text-warning" },
-    error: { c: "bg-status-critical/8", i: ShieldAlert, ic: "text-text-critical" },
-    success: { c: "bg-status-good/8", i: CheckCircle2, ic: "text-text-good" },
+    info: { c: "bg-surface-sunken", i: Info, ic: "text-ink-500" },
+    warning: { c: "bg-caution-50", i: AlertTriangle, ic: "text-caution-text" },
+    error: { c: "bg-danger-50", i: ShieldAlert, ic: "text-danger-text" },
+    success: { c: "bg-brand-50", i: CheckCircle2, ic: "text-brand-700" },
   }[tone];
   const Icon = map.i;
   return (
@@ -247,7 +247,7 @@ export function EmptyState({
   icon?: typeof Info;
 }) {
   return (
-    <div className="flex flex-col items-center gap-2 rounded-2xl bg-muted/70 px-6 py-10 text-center">
+    <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-line-strong bg-surface px-6 py-10 text-center">
       <Icon className="size-6 text-muted-foreground" aria-hidden />
       <p className="text-sm font-medium">{title}</p>
       {children ? <div className="max-w-md text-sm text-muted-foreground">{children}</div> : null}
@@ -273,9 +273,7 @@ export function PageTitle({
     <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div className="flex min-w-0 flex-col gap-1">
         {eyebrow ? <div className="text-xs font-medium text-primary">{eyebrow}</div> : null}
-        <h1 className="text-2xl font-semibold tracking-tight text-balance sm:text-[28px]">
-          {title}
-        </h1>
+        <h1 className="text-[26px] leading-tight font-bold text-balance sm:text-[30px]">{title}</h1>
         {description ? (
           <p className="max-w-2xl text-sm text-pretty text-muted-foreground">{description}</p>
         ) : null}
@@ -308,14 +306,14 @@ export function Section({
       id={id}
       className={cn(
         "flex scroll-mt-20 flex-col gap-4",
-        card && "rounded-2xl border bg-card p-4 sm:p-6",
+        card && "rounded-2xl border border-line bg-surface p-4 shadow-xs sm:p-6",
         className,
       )}
     >
       {title || actions ? (
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 flex-col gap-1">
-            {title ? <h2 className="text-lg font-semibold tracking-tight">{title}</h2> : null}
+            {title ? <h2 className="text-[17px] font-bold">{title}</h2> : null}
             {description ? (
               <p className="text-sm text-pretty text-muted-foreground">{description}</p>
             ) : null}
@@ -349,7 +347,7 @@ export function Stat({
       <span className="text-xs text-muted-foreground">{label}</span>
       <span
         className={cn(
-          "tabular truncate font-semibold tracking-tight",
+          "tabular truncate font-display font-bold tracking-tight",
           size === "lg" ? "text-2xl sm:text-[28px]" : "text-lg",
           tone && TONE_TEXT[tone],
         )}
@@ -411,7 +409,10 @@ export function Disclosure({
   className?: string;
 }) {
   return (
-    <details className={cn("group rounded-2xl border bg-card", className)} open={defaultOpen}>
+    <details
+      className={cn("group rounded-2xl border border-line bg-surface shadow-xs", className)}
+      open={defaultOpen}
+    >
       <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-4 py-3 select-none hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none [&::-webkit-details-marker]:hidden">
         <span className="flex min-w-0 flex-col">
           <span className="text-sm font-medium">{title}</span>

@@ -99,3 +99,40 @@ describe("copilot AI tool-use loop (mocked model)", () => {
     expect(msg?.type === "message" && msg.notice).toMatch(/rule-based fallback/);
   });
 });
+
+describe("copilot rule-based answers for the home prompts", () => {
+  beforeEach(() => resetSession("rb"));
+  const ask = async (q: string) => {
+    const items: CopilotStreamItem[] = [];
+    await copilotTurn(loadSession("rb"), q, (i) => items.push(i));
+    return items;
+  };
+
+  it("plans an emergency fund from the profile", async () => {
+    const s = loadSession("rb");
+    s.profile = { values: { ...DEMO_PROFILE, liquidSavings: 300_000 }, sources: {}, isDemo: true, updatedAt: null };
+    const items = await ask("Build an emergency fund");
+    const tool = items.find((i) => i.type === "tool");
+    expect(tool?.type === "tool" && tool.call.tool).toBe("plan_emergency_fund");
+    const msg = items.find((i) => i.type === "message");
+    // 6 × (70,000 + 15,000) = 5,10,000 target; gap 2,10,000; 17,500 a month over 12 months
+    expect(msg?.type === "message" && msg.text).toContain("₹5,10,000");
+    expect(msg?.type === "message" && msg.text).toContain("₹17,500");
+  });
+
+  it("stress-tests today's finances without a purchase", async () => {
+    const s = loadSession("rb");
+    s.profile = { values: { ...DEMO_PROFILE }, sources: {}, isDemo: true, updatedAt: null };
+    const items = await ask("Stress-test my finances");
+    const msg = items.find((i) => i.type === "message");
+    // 25,00,000 / 85,000 = 29.4 months; income −20%: 1,60,000 − 85,000 = 75,000
+    expect(msg?.type === "message" && msg.text).toContain("29.4 months");
+    expect(msg?.type === "message" && msg.text).toContain("₹75,000");
+  });
+
+  it("asks for missing figures instead of guessing", async () => {
+    const items = await ask("Build an emergency fund");
+    const msg = items.find((i) => i.type === "message");
+    expect(msg?.type === "message" && msg.text).toMatch(/missing/);
+  });
+});

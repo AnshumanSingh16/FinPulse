@@ -18,7 +18,12 @@ import { monthlySavingsRequired, monthsToReachGoal } from "../finance/health";
 import { calculateEMI, calculateTotalInterest, calculateTotalRepayment } from "../finance/loan";
 import { runScenarioSet, STANDARD_SCENARIOS, type ScenarioResult } from "../finance/scenarios";
 import { interpretGoal } from "../goal";
-import { ProfileValuesSchema, PurchaseRequestSchema, PURCHASE_TYPES } from "../schemas";
+import {
+  ProfileValuesSchema,
+  PurchaseRequestSchema,
+  PURCHASE_TYPES,
+  type FinancialProfile,
+} from "../schemas";
 import { buildActionPlan, type ActionPlanInput } from "./action";
 import { resolveInputs } from "./planner";
 import { IllustrativeResearchProvider, researchProvider } from "./research";
@@ -62,6 +67,7 @@ const pct = (x: number | null) => (x === null ? "—" : `${(x * 100).toFixed(1)}
 export const resolveInputsTool: ToolDef<
   {
     profile: z.infer<typeof ProfileValuesSchema>;
+    sources: FinancialProfile["sources"];
     isDemo: boolean;
     request: z.infer<typeof PurchaseRequestSchema>;
   },
@@ -73,11 +79,23 @@ export const resolveInputsTool: ToolDef<
     "Check which required inputs are present, and disclose every assumption used to fill a gap.",
   input: z.object({
     profile: ProfileValuesSchema,
+    // Where each profile value came from (you, the demo, a document), so assumptions say so.
+    sources: z
+      .record(
+        z.string(),
+        z.object({
+          kind: z.enum(["user", "demo", "document", "derived"]),
+          at: z.string(),
+          note: z.string().optional(),
+          documentId: z.string().optional(),
+        }),
+      )
+      .default({}),
     isDemo: z.boolean(),
     request: PurchaseRequestSchema,
   }),
-  run: ({ profile, isDemo, request }) =>
-    resolveInputs({ values: profile, sources: {}, isDemo, updatedAt: null }, request),
+  run: ({ profile, sources, isDemo, request }) =>
+    resolveInputs({ values: profile, sources, isDemo, updatedAt: null }, request),
   summarize: (o) =>
     o.missing.length
       ? `${o.missing.length} required input(s) missing: ${o.missing.map((m) => m.label).join(", ")}`

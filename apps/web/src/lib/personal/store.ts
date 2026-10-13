@@ -106,6 +106,8 @@ export type SessionState = {
   documents: DocumentRecord[];
   audit: AuditEvent[];
   copilot: { role: "user" | "assistant"; text: string }[];
+  /** The analysis the copilot's follow-up questions are about. */
+  focusRunId?: string;
   rate: { windowStart: number; count: number };
 };
 

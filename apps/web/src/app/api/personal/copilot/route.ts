@@ -9,7 +9,11 @@ import { consumeRateLimit } from "@/lib/personal/store";
 export const dynamic = "force-dynamic";
 export const maxDuration = 180;
 
-const Body = z.object({ message: z.string().trim().min(1).max(1000) });
+const Body = z.object({
+  message: z.string().trim().min(1).max(1000),
+  /** Ask about this analysis: keeps it in focus for follow-up questions. */
+  runId: z.string().max(40).optional(),
+});
 
 /** One copilot turn. Streams tool calls and workflow events, then the reply. */
 export async function POST(request: NextRequest) {
@@ -20,5 +24,5 @@ export async function POST(request: NextRequest) {
   const session = await getSession();
   if (!consumeRateLimit(session))
     return jsonError(429, "Too many requests. Wait a minute and try again.");
-  return ndjsonStream((send) => copilotTurn(session, parsed.data.message, send));
+  return ndjsonStream((send) => copilotTurn(session, parsed.data.message, send, { runId: parsed.data.runId }));
 }

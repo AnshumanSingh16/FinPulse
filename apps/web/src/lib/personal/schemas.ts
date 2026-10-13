@@ -8,6 +8,7 @@ const money = z.number().finite().min(0).max(1e11);
 const nullableMoney = money.nullable();
 
 export const PROFILE_FIELDS = [
+  "name",
   "monthlyIncome",
   "incomeVariability",
   "monthlyExpenses",
@@ -23,6 +24,7 @@ export const PROFILE_FIELDS = [
 export type ProfileField = (typeof PROFILE_FIELDS)[number];
 
 export const ProfileValuesSchema = z.object({
+  name: z.string().trim().max(40).nullable(),
   monthlyIncome: nullableMoney,
   incomeVariability: z.enum(["stable", "variable"]).nullable(),
   monthlyExpenses: nullableMoney,
@@ -38,6 +40,7 @@ export const ProfileValuesSchema = z.object({
 export type ProfileValues = z.infer<typeof ProfileValuesSchema>;
 
 export const PROFILE_LABELS: Record<ProfileField, string> = {
+  name: "What should we call you?",
   monthlyIncome: "Monthly take-home income",
   incomeVariability: "Income variability",
   monthlyExpenses: "Monthly living expenses",
@@ -52,6 +55,7 @@ export const PROFILE_LABELS: Record<ProfileField, string> = {
 };
 
 export const EMPTY_PROFILE: ProfileValues = {
+  name: null,
   monthlyIncome: null,
   incomeVariability: null,
   monthlyExpenses: null,
@@ -103,6 +107,7 @@ export const AnalyzeBodySchema = z.object({
 
 /** Fictional demo profile. Not a real person; figures are illustrative. */
 export const DEMO_PROFILE: ProfileValues = {
+  name: "Riya",
   monthlyIncome: 200_000,
   incomeVariability: "stable",
   monthlyExpenses: 70_000,

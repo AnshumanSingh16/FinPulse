@@ -149,7 +149,12 @@ export async function runAffordabilityWorkflow(
     start(current);
     const resolved = await ctx.callTool(
       resolveInputsTool,
-      { profile: session.profile.values, isDemo: session.profile.isDemo, request },
+      {
+        profile: session.profile.values,
+        sources: session.profile.sources,
+        isDemo: session.profile.isDemo,
+        request,
+      },
       current.id,
     );
     run.assumptions = resolved.assumptions;

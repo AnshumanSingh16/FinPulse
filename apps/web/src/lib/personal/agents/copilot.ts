@@ -13,6 +13,11 @@ import { z } from "zod";
 import { formatINR } from "@/lib/format";
 
 import { analysePurchase, LABEL_TEXT } from "../finance/affordability";
+import {
+  emergencyFundCoverageMonths,
+  monthlySavingsRequired,
+  summariseCashFlow,
+} from "../finance/health";
 import { findINRAmounts, inrWords } from "../finance/parse-inr";
 import { runScenarioSet, type ScenarioParams } from "../finance/scenarios";
 import { detectPurchaseType } from "../goal";
@@ -83,8 +88,29 @@ const EmiArgs = z.object({
 });
 const Empty = z.object({});
 
+/** The analysis the user is looking at (focus), else the most recent completed one. */
 function latestCompleted(session: SessionState): WorkflowRun | undefined {
-  return session.runs.find((r) => r.status === "completed" && r.inputs && r.analysis);
+  const usable = (r: WorkflowRun) => r.status === "completed" && r.inputs && r.analysis;
+  const focused = session.focusRunId
+    ? session.runs.find((r) => r.id === session.focusRunId && usable(r))
+    : undefined;
+  return focused ?? session.runs.find(usable);
+}
+
+/** Core household figures from the profile, or which are missing. */
+function household(session: SessionState) {
+  const v = session.profile.values;
+  const missing = (["monthlyIncome", "monthlyExpenses", "liquidSavings", "existingEmis"] as const).filter(
+    (k) => v[k] === null,
+  );
+  if (missing.length) return { missing };
+  const flow = summariseCashFlow({
+    monthlyIncome: v.monthlyIncome!,
+    monthlyExpenses: v.monthlyExpenses!,
+    monthlyDebtPayments: v.existingEmis!,
+    monthlyOtherObligations: v.otherMonthlyObligations ?? 0,
+  });
+  return { missing, v, flow };
 }
 
 function runDigest(run: WorkflowRun) {
@@ -155,6 +181,59 @@ function purchaseFromArgs(a: z.infer<typeof AffordArgs>): PurchaseRequest {
 }
 
 const TOOLS: Record<string, ToolImpl> = {
+  plan_emergency_fund: {
+    description:
+      "Emergency-fund plan from the saved profile: target (months of essential spending), current cover, gap, and the monthly saving needed to close it in N months (default 12).",
+    schema: z.object({
+      target_months: z.number().min(1).max(24).optional(),
+      months_to_build: z.number().int().min(1).max(120).optional(),
+    }),
+    run: async (args: { target_months?: number; months_to_build?: number }, session) => {
+      const h = household(session);
+      if (!h.flow) return { error: `The profile is missing: ${h.missing.join(", ")}.` };
+      const targetMonths = args.target_months ?? h.v.emergencyBufferMonths ?? 6;
+      const months = args.months_to_build ?? 12;
+      const outflow = h.flow.totalMonthlyOutflow;
+      const target = Math.round(targetMonths * outflow);
+      const gap = Math.max(0, target - h.v.liquidSavings!);
+      return {
+        monthly_essential_spending: outflow,
+        target_months: targetMonths,
+        target_amount: target,
+        current_savings: h.v.liquidSavings,
+        current_cover_months: emergencyFundCoverageMonths(h.v.liquidSavings!, outflow),
+        gap,
+        months_to_build: months,
+        monthly_saving_needed: gap ? monthlySavingsRequired(gap, 0, months) : 0,
+        monthly_surplus_now: h.flow.monthlySurplus,
+      };
+    },
+    summarize: (o) => {
+      const r = o as { error?: string; gap?: number };
+      return r.error ?? (r.gap ? `gap of ${formatINR(r.gap)}` : "target already met");
+    },
+  },
+  stress_test_profile: {
+    description:
+      "Stress-test the household as it is today (no purchase): what happens if income stops, falls 20%, or expenses rise 15%. Uses the saved profile.",
+    schema: z.object({}),
+    run: async (_args, session) => {
+      const h = household(session);
+      if (!h.flow) return { error: `The profile is missing: ${h.missing.join(", ")}.` };
+      const { v, flow } = h;
+      const outflow = flow.totalMonthlyOutflow;
+      return {
+        monthly_surplus_now: flow.monthlySurplus,
+        months_savings_last_with_no_income: emergencyFundCoverageMonths(v.liquidSavings!, outflow),
+        surplus_if_income_falls_20pct: Math.round(v.monthlyIncome! * 0.8 - outflow),
+        surplus_if_expenses_rise_15pct: Math.round(
+          v.monthlyIncome! - (outflow + v.monthlyExpenses! * 0.15),
+        ),
+        note: "Hypothetical scenarios on today's finances, not predictions.",
+      };
+    },
+    summarize: (o) => ((o as { error?: string }).error ? "profile incomplete" : "3 scenarios run"),
+  },
   get_financial_profile: {
     description: "The user's financial profile (values and where each came from).",
     schema: Empty,
@@ -503,6 +582,23 @@ async function ruleTurn(
   emit: Emit,
 ): Promise<string> {
   const t = message.toLowerCase();
+
+  if (/emergency fund|rainy day|safety net/.test(t)) {
+    const { output } = await executeTool("plan_emergency_fund", {}, session, listener, emit);
+    const o = output as { error?: string; target_months: number; target_amount: number; current_cover_months: number | null; gap: number; monthly_saving_needed: number; monthly_surplus_now: number };
+    if (o.error) return `${o.error} Add them on My finances (or load the demo profile) and ask again.`;
+    if (!o.gap)
+      return `You already have ${o.current_cover_months?.toFixed(1)} months of essential spending saved — at or above your ${o.target_months}-month target of ${formatINR(o.target_amount)}. Keep it in a liquid account separate from goal savings.`;
+    return `A ${o.target_months}-month emergency fund for you is ${formatINR(o.target_amount)}. You have ${o.current_cover_months?.toFixed(1)} months covered, so the gap is ${formatINR(o.gap)}. Saving ${formatINR(o.monthly_saving_needed)} a month closes it in 12 months — that is ${Math.round((o.monthly_saving_needed / Math.max(1, o.monthly_surplus_now)) * 100)}% of your current monthly surplus.`;
+  }
+
+  // "Stress-test my finances": today's household, no purchase involved.
+  if (/stress.?test (my|our) finances|how safe are my finances/.test(t)) {
+    const { output } = await executeTool("stress_test_profile", {}, session, listener, emit);
+    const o = output as { error?: string; monthly_surplus_now: number; months_savings_last_with_no_income: number | null; surplus_if_income_falls_20pct: number; surplus_if_expenses_rise_15pct: number };
+    if (o.error) return `${o.error} Add them on My finances (or load the demo profile) and ask again.`;
+    return `Stress test of your finances today (hypothetical, not predictions):\n• If your income stopped, savings would cover ${o.months_savings_last_with_no_income?.toFixed(1) ?? "—"} months of essential spending.\n• If income fell 20%, you'd have ${formatINR(o.surplus_if_income_falls_20pct)} left each month (now ${formatINR(o.monthly_surplus_now)}).\n• If living expenses rose 15%, you'd have ${formatINR(o.surplus_if_expenses_rise_15pct)} left each month.\nTo stress-test a specific purchase, run "Can I afford this?" and open its What-if tab.`;
+  }
   const amounts = findINRAmounts(message).filter(
     (a) => a.hasCurrency || a.hasUnit || a.value >= 10_000,
   );
@@ -616,7 +712,10 @@ export async function copilotTurn(
   session: SessionState,
   message: string,
   emit: Emit,
+  opts: { runId?: string } = {},
 ): Promise<void> {
+  // Follow-up questions about a specific analysis keep it in focus for every tool.
+  if (opts.runId && session.runs.some((r) => r.id === opts.runId)) session.focusRunId = opts.runId;
   const listener: WorkflowListener = (event) => emit({ type: "event", event });
   const status = aiStatus();
   audit(session, "copilot_message", "user", `Copilot: ${message.slice(0, 120)}`);
