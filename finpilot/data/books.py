@@ -22,6 +22,10 @@ SCHEMA = [
     "CREATE TABLE IF NOT EXISTS goals (id INTEGER PRIMARY KEY AUTOINCREMENT, book TEXT, name TEXT, target REAL, saved REAL, target_date TEXT, icon TEXT, created_at TEXT)",
     "CREATE TABLE IF NOT EXISTS settings (book TEXT, key TEXT, value TEXT, PRIMARY KEY (book, key))",
     "CREATE TABLE IF NOT EXISTS entry_log (id TEXT, book TEXT, at TEXT, kind TEXT, summary TEXT, undo TEXT, undone INTEGER DEFAULT 0, PRIMARY KEY (book, id))",
+    "CREATE TABLE IF NOT EXISTS agent_actions (id TEXT, book TEXT, created_at TEXT, source TEXT, kind TEXT, title TEXT, summary TEXT, payload TEXT, "
+    "preview TEXT, state TEXT, decided_at TEXT, result TEXT, PRIMARY KEY (book, id))",
+    "CREATE TABLE IF NOT EXISTS memory (id INTEGER PRIMARY KEY AUTOINCREMENT, book TEXT, text TEXT, created_at TEXT)",
+    "CREATE TABLE IF NOT EXISTS checkups (book TEXT, lang TEXT, day TEXT, ran_at TEXT, data TEXT, PRIMARY KEY (book, lang))",
 ]
 
 
@@ -167,5 +171,83 @@ def pop_entry(db: Path, book: str, entry_id: str) -> dict | None:
 def reset_book(db: Path, book: str) -> None:
     """Forget everything the owner did in a book (used for 'Reset demo')."""
     with connect(db) as con:
-        for t in ("contacts", "promises", "cat_rules", "budgets", "goals", "settings", "entry_log"):
+        for t in ("contacts", "promises", "cat_rules", "budgets", "goals", "settings", "entry_log", "agent_actions", "memory", "checkups"):
             con.execute(f"DELETE FROM {t} WHERE book = ?", (book,))
+
+
+# ---------------------------------------------------------------- agent: drafted actions (owner confirms), memory, daily check-ups
+
+
+def save_action(db: Path, book: str, source: str, a: dict) -> None:
+    with connect(db) as con:
+        con.execute("INSERT OR REPLACE INTO agent_actions (id, book, created_at, source, kind, title, summary, payload, preview, state, decided_at, result) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NULL, NULL)",
+                    (a["action_id"], book, store.now(), source, a["action"], a["title"], a["summary"], json.dumps(a["payload"], default=str),
+                     json.dumps(a.get("preview") or {}, default=str)))
+
+
+def _action_row(r: dict) -> dict:
+    return r | {"payload": json.loads(r["payload"] or "{}"), "preview": json.loads(r["preview"] or "{}"), "result": json.loads(r["result"]) if r.get("result") else None}
+
+
+def get_action(db: Path, book: str, action_id: str) -> dict | None:
+    with connect(db) as con:
+        rows = _rows(con.execute("SELECT * FROM agent_actions WHERE book = ? AND id = ?", (book, action_id)))
+    return _action_row(rows[0]) if rows else None
+
+
+def actions(db: Path, book: str, ids: list[str] | None = None, state: str | None = None, source: str | None = None, limit: int = 50) -> list[dict]:
+    q, args = "SELECT * FROM agent_actions WHERE book = ?", [book]
+    if ids is not None:
+        q += f" AND id IN ({','.join('?' * len(ids))})" if ids else " AND 0"
+        args += ids
+    if state:
+        q += " AND state = ?"
+        args.append(state)
+    if source:
+        q += " AND source = ?"
+        args.append(source)
+    with connect(db) as con:
+        return [_action_row(r) for r in _rows(con.execute(q + " ORDER BY created_at DESC LIMIT ?", (*args, limit)))]
+
+
+def decide_action(db: Path, book: str, action_id: str, state: str, result: dict | None = None) -> None:
+    with connect(db) as con:
+        con.execute("UPDATE agent_actions SET state = ?, decided_at = ?, result = ? WHERE book = ? AND id = ?",
+                    (state, store.now(), json.dumps(result, default=str) if result else None, book, action_id))
+
+
+def expire_actions(db: Path, book: str, source: str) -> None:
+    """Older pending drafts from a source (e.g. yesterday's check-up) are replaced by the new run's."""
+    with connect(db) as con:
+        con.execute("UPDATE agent_actions SET state = 'expired', decided_at = ? WHERE book = ? AND source = ? AND state = 'pending'", (store.now(), book, source))
+
+
+def memories(db: Path, book: str) -> list[dict]:
+    with connect(db) as con:
+        return _rows(con.execute("SELECT id, text, created_at FROM memory WHERE book = ? ORDER BY id", (book,)))
+
+
+def add_memory(db: Path, book: str, text: str) -> int:
+    text = " ".join(str(text).split())[:300]
+    with connect(db) as con:
+        dup = con.execute("SELECT id FROM memory WHERE book = ? AND lower(text) = lower(?)", (book, text)).fetchone()
+        if dup:
+            return int(dup[0])
+        return int(con.execute("INSERT INTO memory (book, text, created_at) VALUES (?, ?, ?)", (book, text, store.now())).lastrowid)
+
+
+def delete_memory(db: Path, book: str, memory_id: int) -> bool:
+    with connect(db) as con:
+        return con.execute("DELETE FROM memory WHERE book = ? AND id = ?", (book, memory_id)).rowcount > 0
+
+
+def save_checkup(db: Path, book: str, lang: str, day: str, data: dict) -> None:
+    with connect(db) as con:
+        con.execute("INSERT OR REPLACE INTO checkups (book, lang, day, ran_at, data) VALUES (?, ?, ?, ?, ?)", (book, lang, day, store.now(), json.dumps(data, default=str)))
+
+
+def last_checkup(db: Path, book: str, lang: str) -> dict | None:
+    with connect(db) as con:
+        r = con.execute("SELECT day, ran_at, data FROM checkups WHERE book = ? AND lang = ?", (book, lang)).fetchone()
+    return {"day": r[0], "ran_at": r[1], **json.loads(r[2])} if r else None

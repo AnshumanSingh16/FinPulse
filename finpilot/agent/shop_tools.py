@@ -351,9 +351,13 @@ def t_draft_reminder(ctx: ToolContext, a: dict) -> dict:
     if not r:
         return {"status": "nothing_overdue", "customer": name, "message": f"Nothing from {name} is overdue, so there is nothing to remind them about."}
     r = r[0]
+    first = name.split()[0].lower()
+    notes = [m["text"] for m in books.memories(ctx.db_path, _book(ctx)) if first in m["text"].lower()]
+    if notes:
+        r["owner_notes"] = notes
     return _draft("send_reminder", f"WhatsApp reminder to {name}", f"Reminder for {fmt_inr(r['total'])} overdue",
                   {"customer": name, "text": r["text"], "whatsapp": r["whatsapp"], "phone_saved": bool(r["phone"])},
-                  {"total": r["total"], "invoices": r["invoices"], "oldest_days_late": r["oldest_days_late"]})
+                  {"total": r["total"], "invoices": r["invoices"], "oldest_days_late": r["oldest_days_late"], "owner_notes": r.get("owner_notes", [])})
 
 
 def t_draft_goal(ctx: ToolContext, a: dict) -> dict:
@@ -382,6 +386,132 @@ def t_draft_budget(ctx: ToolContext, a: dict) -> dict:
     avg = suggest_budgets(ctx.ledger, ctx.as_of).get(match)
     return _draft("set_budget", "Set a monthly budget", f"{match}: {fmt_inr(limit)} a month", {"category": match, "monthly_limit": limit},
                   {"spent_this_month": st["spent"], "suggested_from_recent_average": avg})
+
+
+# ---------------------------------------------------------------- plan, memory, review queue
+
+
+PLAN_STATES = ("todo", "doing", "done", "skipped")
+
+
+def t_update_plan(ctx: ToolContext, a: dict) -> dict:
+    _reject_unknown(a, {"steps"})
+    steps = a.get("steps")
+    if not isinstance(steps, list) or not 1 <= len(steps) <= 8:
+        raise ToolArgumentError("'steps' must be a list of 1 to 8 steps.")
+    out = []
+    for st in steps:
+        if not isinstance(st, dict):
+            raise ToolArgumentError("Each step must be an object with 'title' and 'status'.")
+        title = _str(st, "title", 90, required=True)
+        status = _str(st, "status", choices=PLAN_STATES) or "todo"
+        out.append({"title": title, "status": status})
+    return {"status": "ok", "plan": out, "message": "Plan shown to the owner. Update it as you finish each step."}
+
+
+def t_remember(ctx: ToolContext, a: dict) -> dict:
+    _reject_unknown(a, {"fact"})
+    fact = _str(a, "fact", 300, required=True)
+    if ctx.db_path is None:
+        return {"status": "not_available", "message": "Memory needs the app's saved books."}
+    mid = books.add_memory(ctx.db_path, _book(ctx), fact)
+    return {"status": "remembered", "id": mid, "fact": fact, "message": "Saved to the agent's memory for this shop. The owner can see and delete it."}
+
+
+def t_forget(ctx: ToolContext, a: dict) -> dict:
+    _reject_unknown(a, {"id"})
+    mid = _num(a, "id", 1, 1e9, required=True, integer=True)
+    if ctx.db_path is None or not books.delete_memory(ctx.db_path, _book(ctx), mid):
+        return {"status": "not_found", "message": f"No memory #{mid}."}
+    return {"status": "forgotten", "id": mid}
+
+
+def t_recall(ctx: ToolContext, a: dict) -> dict:
+    _reject_unknown(a, set())
+    mem = books.memories(ctx.db_path, _book(ctx)) if ctx.db_path else []
+    return {"status": "ok", "memories": [{"id": m["id"], "fact": m["text"]} for m in mem]}
+
+
+def _review_rows(ctx: ToolContext) -> pd.DataFrame:
+    led = ctx.ledger
+    mask = led["category"].isin(["Uncategorised", "Unknown", ""]) | led["reference"].astype(str).str.contains("auto:guess", na=False)
+    return led[mask]
+
+
+def t_review_queue(ctx: ToolContext, a: dict) -> dict:
+    _reject_unknown(a, set())
+    rows = _review_rows(ctx)
+    groups = []
+    for (party, direction), g in rows.groupby(["counterparty", "direction"]):
+        groups.append({"party": party, "direction": direction, "count": int(len(g)), "total": money(g["amount"].sum()),
+                       "current_category": g["category"].iloc[0], "is_guess": bool(g["reference"].astype(str).str.contains("auto:guess").any()),
+                       "example": str(g["description"].iloc[0])[:80]})
+    groups.sort(key=lambda r: -r["total"])
+    return {"status": "ok", "lines_to_review": int(len(rows)), "groups": groups[:15]}
+
+
+# ---------------------------------------------------------------- more drafts
+
+
+def t_draft_promise(ctx: ToolContext, a: dict) -> dict:
+    _reject_unknown(a, {"customer", "amount", "date", "note"})
+    name, cands = _match_name(ctx, _str(a, "customer", 80, required=True))
+    if name is None:
+        return {"status": "not_found", "message": "No single customer matches that name.", "did_you_mean": cands}
+    when = _date(a, "date", required=True)
+    if pd.Timestamp(when) < ctx.as_of:
+        raise ToolArgumentError("The promised date can't be in the past.")
+    amount = _num(a, "amount", 0, 1e10, default=0)
+    note = _str(a, "note", 200) or ""
+    summary = f"{name} promised {fmt_inr(amount) + ' ' if amount else ''}by {pd.Timestamp(when):%d %b %Y}"
+    return _draft("record_promise", "Note a promise to pay", summary, {"customer": name, "amount": amount, "date": when, "note": note})
+
+
+def t_draft_recategorise(ctx: ToolContext, a: dict) -> dict:
+    _reject_unknown(a, {"party", "category", "remember_for_party"})
+    name, cands = _match_name(ctx, _str(a, "party", 80, required=True))
+    if name is None:
+        return {"status": "not_found", "message": "No single party matches that name.", "did_you_mean": cands}
+    cat = _str(a, "category", 60, required=True)
+    known = {str(c) for c in ctx.ledger["category"].dropna().unique()} | {"Uncategorised"}
+    from finpilot.data.schema import CATEGORY_CLASS
+
+    known |= {c.title() for c in CATEGORY_CLASS}
+    match = next((k for k in known if k.lower() == cat.lower()), None)
+    if match is None:
+        return {"status": "invalid", "message": f"No category called '{cat}'.", "categories": sorted(known)[:40]}
+    rows = _review_rows(ctx)
+    rows = rows[rows["counterparty"] == name]
+    if not len(rows):
+        return {"status": "nothing_to_change", "message": f"No unreviewed lines for {name}."}
+    remember = bool(a.get("remember_for_party", True))
+    ids = rows["txn_id"].tolist()
+    return _draft("recategorise", "Fix categories", f"{len(ids)} payment(s) from/to {name} → {match}",
+                  {"ids": ids[:200], "category": match, "party": name, "remember": remember},
+                  {"count": len(ids), "total": money(rows["amount"].sum()), "from": sorted(set(rows["category"]))})
+
+
+PLAN_TOOLS: list[Tool] = [
+    Tool("update_plan",
+         "Show the owner your step-by-step plan as a live checklist, and update it as you go. Call it first for anything with more than one step "
+         "(a mission like 'collect my money', a check-up), then again with statuses changed (todo, doing, done, skipped).",
+         _obj({"steps": {"type": "array", "maxItems": 8, "items": {"type": "object", "properties": {"title": {"type": "string"}, "status": {"type": "string", "enum": list(PLAN_STATES)}},
+                                                                    "required": ["title", "status"]}}}, ["steps"]),
+         t_update_plan),
+    Tool("remember", "Save a lasting fact or preference the owner tells you about their shop (e.g. 'Ramesh is my brother — never send him reminders', 'GST is filed by my CA Mr. Shah'). "
+         "Not for figures — those always come from the records. The owner can see and delete memories.",
+         _obj({"fact": {"type": "string"}}, ["fact"]), t_remember),
+    Tool("forget", "Delete one saved memory by its id.", _obj({"id": {"type": "integer"}}, ["id"]), t_forget),
+    Tool("recall_memory", "List the facts and preferences the owner asked you to remember.", _obj({}), t_recall),
+    Tool("get_review_queue", "Bank lines that need a category (uncategorised, or incoming money only guessed as sales), grouped by party, with the current guess.",
+         _obj({}), t_review_queue),
+    Tool("draft_promise", "Prepare a note that a customer promised to pay (by a date, optionally an amount) for the owner to confirm. FinPilot then flags it if the date passes unpaid.",
+         _obj({"customer": {"type": "string"}, "amount": {"type": "number", "minimum": 0}, "date": {"type": "string", "description": "YYYY-MM-DD"}, "note": {"type": "string"}}, ["customer", "date"]),
+         t_draft_promise),
+    Tool("draft_recategorise", "Prepare a fix for the category of a party's unreviewed bank lines (and remember it for future lines) for the owner to confirm.",
+         _obj({"party": {"type": "string"}, "category": {"type": "string"}, "remember_for_party": {"type": "boolean"}}, ["party", "category"]),
+         t_draft_recategorise),
+]
 
 
 S = {"type": "string"}
@@ -425,4 +555,4 @@ SHOP_TOOLS: list[Tool] = [
     Tool("draft_budget", "Prepare a monthly spending limit for one cost category for the owner to confirm. Shows this month's spending so far.",
          _obj({"category": S, "monthly_limit": {"type": "number", "minimum": 1}}, ["category", "monthly_limit"]),
          t_draft_budget),
-]
+] + PLAN_TOOLS

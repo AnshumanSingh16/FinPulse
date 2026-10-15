@@ -48,7 +48,7 @@ def last_response(body, name):
 class TestDeclarations:
     def test_every_tool_is_declared_in_geminis_schema_subset(self):
         decls = gemini.function_declarations()
-        assert len(decls) == 21
+        assert len(decls) == 28
         blob = json.dumps(decls)
         assert "additionalProperties" not in blob and '"object"' not in blob
         sim = next(d for d in decls if d["name"] == "simulate_purchase")

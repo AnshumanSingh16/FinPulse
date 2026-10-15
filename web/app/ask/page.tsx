@@ -1,72 +1,25 @@
 "use client";
 
-import {
-  AlertTriangle, ArrowUp, BookUser, Bot, CalendarClock, Check, ChevronDown, CircleDashed, Copy, HandCoins, Lightbulb, Loader2, MessageCircle, Mic,
-  PiggyBank, Plus, RotateCcw, ShieldCheck, Sparkles, Store, Target, TrendingUp, Wallet, X,
-} from "lucide-react";
+import { AlertTriangle, ArrowUp, BookUser, Bot, Brain, Coins, Lightbulb, Mic, Plus, Scissors, Sparkles, Stethoscope, Store, Target, TrendingUp, Wallet } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useContext, useEffect, useRef, useState } from "react";
-import ReactMarkdown from "react-markdown";
+import { AgentAnswer, type AgentResult, applyEvent, emptyLive, type Live, LiveCard, MemorySheet, streamAgent } from "@/components/agent";
 import { AiModeChip, AiSetupSheet } from "@/components/ai-setup";
 import { DataVersion } from "@/components/data-version";
-import { EvidenceSheet } from "@/components/evidence";
-import { confetti, useToast } from "@/components/fx";
-import { Button, cx, Pill } from "@/components/ui";
-import { API, post } from "@/lib/api";
+import { Button, cx } from "@/components/ui";
 import { useT } from "@/lib/i18n";
-import type { Evidence } from "@/lib/types";
 
-interface DraftAction {
-  id: string;
-  kind: "record_entry" | "send_reminder" | "create_goal" | "set_budget";
-  title: string;
-  summary: string;
-  preview: {
-    would_settle?: { id: string; amount: number; full: boolean }[];
-    more_than_due?: number;
-    per_month?: number | null;
-    months_left?: number | null;
-    spent_this_month?: number;
-    suggested_from_recent_average?: number | null;
-    total?: number;
-    invoices?: { item_id: string; amount: number; due_date: string }[];
-    oldest_days_late?: number;
-  };
-  text?: string | null;
-  whatsapp?: string | null;
-  phone_saved?: boolean | null;
-}
-
-interface Answer {
-  conversation_id: string;
-  answer: string;
-  mode: "ai" | "rule-based";
-  verified: boolean;
-  has_figures: boolean;
-  warnings: string[];
-  steps: { label: string; tool: string; ok: boolean; checks: number }[];
-  notes: string[];
-  evidence: Evidence[];
-  actions: DraftAction[];
-  suggestions: string[];
-}
-
-interface LiveStep {
-  label: string;
-  done: boolean;
-  ok: boolean;
-}
-interface Live {
-  mode: "ai" | "rule-based" | null;
-  steps: LiveStep[];
-  notes: string[];
-  fallback?: string;
-}
-
+type Answer = AgentResult & { conversation_id: string };
 type Msg = { role: "user"; text: string } | { role: "assistant"; data: Answer } | { role: "error"; text: string };
 
+const MISSIONS = [
+  { I: Stethoscope, grad: "grad-hero", title: "Daily check-up", sub: "I review everything and prepare today's actions", q: "Run my daily check-up", q_hi: "मेरा रोज़ का चेक-अप करो" },
+  { I: Coins, grad: "grad-violet", title: "Collect my money", sub: "I find who owes you and draft reminders", q: "Help me collect my money", q_hi: "मेरी उधारी वसूलने में मदद करो" },
+  { I: Scissors, grad: "grad-sunset", title: "Cut my costs", sub: "I find what's rising and set budgets", q: "Help me cut my costs", q_hi: "मेरा खर्च कम करने में मदद करो" },
+];
+
 const CAPABILITIES = [
-  { I: Lightbulb, grad: "grad-hero", title: "Plan my day", q: "What should I do today?", q_hi: "आज मुझे क्या करना चाहिए?" },
+  { I: Lightbulb, grad: "grad-ocean", title: "Plan my day", q: "What should I do today?", q_hi: "आज मुझे क्या करना चाहिए?" },
   { I: BookUser, grad: "grad-violet", title: "Khata & udhaar", q: "Who owes me money, and who pays late?", q_hi: "किस पर उधारी बाकी है, और कौन देर से चुकाता है?" },
   { I: TrendingUp, grad: "grad-mint", title: "Profit & costs", q: "Am I making money? Why did costs go up last month?", q_hi: "क्या मैं मुनाफ़ा कमा रहा हूँ? पिछले महीने खर्च क्यों बढ़ा?" },
   { I: Wallet, grad: "grad-ocean", title: "Cash ahead", q: "Will I have enough cash for the next 3 months?", q_hi: "अगले 90 दिन का कैश अनुमान बताओ" },
@@ -80,8 +33,8 @@ const MORE = [
   "What's my health score?",
   "How much GST should I keep aside?",
   "Should I hire a helper for ₹15,000 a month?",
-  "Can I afford a ₹12 lakh machine on a loan at 11% for 3 years? It would save ₹45,000 a month.",
-  "Remind Metro Foods",
+  "Shree Ganesh promised to pay ₹89,000 by 10 Oct",
+  "Remember that Ramesh is my brother — never remind him",
   "Save ₹60,000 for a new fridge by March",
 ];
 const MORE_HI = [
@@ -90,7 +43,6 @@ const MORE_HI = [
   "मेरा सेहत स्कोर क्या है?",
   "GST के लिए कितना अलग रखूँ?",
   "₹15,000 महीने पर हेल्पर रखूँ?",
-  "क्या मैं ₹12 लाख की मशीन 11% पर 3 साल के लोन पर ले सकता हूँ? हर महीने ₹45,000 बचेंगे",
   "Metro Foods को याद दिलाओ",
 ];
 
@@ -102,40 +54,6 @@ export default function AskPage() {
   );
 }
 
-/** POST /api/ask/stream and feed server-sent events to `on`. Falls back to /api/ask if streaming isn't available. */
-async function askStream(body: object, on: (e: Record<string, unknown>) => void, lang: string): Promise<Answer> {
-  const res = await fetch(API + "/api/ask/stream", { method: "POST", headers: { "Content-Type": "application/json", "X-Lang": lang }, body: JSON.stringify(body) });
-  if (!res.ok || !res.body) {
-    if (res.status === 404) return post<Answer>("/api/ask", body);
-    let msg = `Something went wrong (${res.status}).`;
-    try {
-      const j = await res.json();
-      if (j?.detail) msg = String(j.detail);
-    } catch {}
-    throw new Error(msg);
-  }
-  const reader = res.body.getReader();
-  const dec = new TextDecoder();
-  let buf = "";
-  for (;;) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    buf += dec.decode(value, { stream: true });
-    let i;
-    while ((i = buf.indexOf("\n\n")) >= 0) {
-      const chunk = buf.slice(0, i);
-      buf = buf.slice(i + 2);
-      const line = chunk.split("\n").find((l) => l.startsWith("data: "));
-      if (!line) continue;
-      const e = JSON.parse(line.slice(6));
-      if (e.type === "final") return e.data as Answer;
-      if (e.type === "error") throw new Error(String(e.message));
-      on(e);
-    }
-  }
-  throw new Error("The answer was interrupted. Please try again.");
-}
-
 function Ask() {
   const { t, lang } = useT();
   const [listening, setListening] = useState(false);
@@ -145,6 +63,7 @@ function Ask() {
   const [input, setInput] = useState("");
   const [live, setLive] = useState<Live | null>(null);
   const [setup, setSetup] = useState(false);
+  const [memory, setMemory] = useState(false);
   const conv = useRef<string | null>(null);
   const end = useRef<HTMLDivElement>(null);
   const sentQ = useRef(false);
@@ -163,28 +82,9 @@ function Ask() {
     if (!q || busy) return;
     setInput("");
     setMsgs((m) => [...m, { role: "user", text: q }]);
-    setLive({ mode: null, steps: [], notes: [] });
+    setLive(emptyLive());
     try {
-      const a = await askStream(
-        { question: q, conversation_id: conv.current },
-        (e) =>
-          setLive((l) => {
-            if (!l) return l;
-            if (e.type === "start") return { ...l, mode: e.mode as Live["mode"] };
-            if (e.type === "note") return { ...l, notes: [...l.notes, String(e.text)] };
-            if (e.type === "fallback") return { ...l, mode: "rule-based", fallback: String(e.reason) };
-            if (e.type === "tool_start") return { ...l, steps: [...l.steps, { label: String(e.label), done: false, ok: true }] };
-            if (e.type === "tool_done") {
-              const steps = [...l.steps];
-              let k = steps.length - 1;
-              while (k >= 0 && steps[k].done) k--;
-              if (k >= 0) steps[k] = { ...steps[k], done: true, ok: Boolean(e.ok) };
-              return { ...l, steps };
-            }
-            return l;
-          }),
-        lang,
-      );
+      const a = await streamAgent<Answer>("/api/ask/stream", { question: q, conversation_id: conv.current }, (e) => setLive((l) => (l ? applyEvent(l, e) : l)), lang, "/api/ask");
       conv.current = a.conversation_id;
       setMsgs((m) => [...m, { role: "assistant", data: a }]);
     } catch (e) {
@@ -219,9 +119,12 @@ function Ask() {
         </div>
         <div className="flex items-center gap-2">
           <AiModeChip onClick={() => setSetup(true)} />
+          <Button size="sm" variant="secondary" onClick={() => setMemory(true)} aria-label={t("Memory")}>
+            <Brain className="size-4" /> <span className="hidden sm:inline">{t("Memory")}</span>
+          </Button>
           {msgs.length > 0 && (
-            <Button size="sm" variant="secondary" onClick={() => { setMsgs([]); conv.current = null; }} disabled={busy}>
-              <Plus className="size-4" /> {t("New chat")}
+            <Button size="sm" variant="secondary" onClick={() => { setMsgs([]); conv.current = null; }} disabled={busy} aria-label={t("New chat")}>
+              <Plus className="size-4" /> <span className="hidden sm:inline">{t("New chat")}</span>
             </Button>
           )}
         </div>
@@ -239,7 +142,7 @@ function Ask() {
               <AlertTriangle className="size-5 shrink-0" /> {m.text}
             </div>
           ) : (
-            <AnswerCard key={i} a={m.data} />
+            <AgentAnswer key={i} a={m.data} conversation={m.data.conversation_id} />
           ),
         )}
         {live && <LiveCard live={live} />}
@@ -307,6 +210,7 @@ function Ask() {
         </p>
       </div>
       <AiSetupSheet open={setup} onClose={() => setSetup(false)} />
+      <MemorySheet open={memory} onClose={() => setMemory(false)} />
     </div>
   );
 }
@@ -323,7 +227,7 @@ function Welcome({ onAsk, onSetup }: { onAsk: (q: string) => void; onSetup: () =
           </span>
           <div className="min-w-0 flex-1 text-sm">
             <p className="font-semibold text-ink">{state.ai.has_key ? t("The AI agent is paused") : t("Answers now come from built-in rules")}</p>
-            <p className="hidden text-ink-2 sm:block">{t("They work offline for common questions. Turn on the AI agent to ask anything in your own words — it plans, uses 21 tools and checks every figure.")}</p>
+            <p className="hidden text-ink-2 sm:block">{t("They work offline for common questions. Turn on the AI agent to ask anything in your own words — it plans, uses 28 tools and checks every figure.")}</p>
           </div>
           <Button size="sm" onClick={onSetup}>
             <Sparkles className="size-4" /> {state.ai.has_key ? t("Turn AI back on") : t("Set up AI")}
@@ -336,7 +240,22 @@ function Welcome({ onAsk, onSetup }: { onAsk: (q: string) => void; onSetup: () =
           {t("I look through your khata, bank and bills, run the numbers with tested calculations, check every figure, and can prepare entries and reminders for you to confirm.")}
         </p>
       </div>
-      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <p className="mt-6 mb-2 text-xs font-semibold tracking-wide text-ink-2 uppercase">{t("Give me a mission")}</p>
+      <div className="grid gap-3 sm:grid-cols-3">
+        {MISSIONS.map(({ I, grad, title, sub, q, q_hi }) => (
+          <button key={title} onClick={() => onAsk(lang === "hi" ? q_hi : q)} className={cx("group flex flex-col gap-3 rounded-3xl p-4 text-left shadow-md shadow-black/10 transition hover:-translate-y-0.5", grad)}>
+            <span className="glass grid size-10 place-items-center rounded-2xl">
+              <I className="size-5" aria-hidden />
+            </span>
+            <span>
+              <span className="block font-semibold">{t(title)}</span>
+              <span className="mt-0.5 block text-sm text-white/80">{t(sub)}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+      <p className="mt-6 mb-2 text-xs font-semibold tracking-wide text-ink-2 uppercase">{t("Or ask")}</p>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {CAPABILITIES.map(({ I, grad, title, q, q_hi }) => (
           <button key={title} onClick={() => onAsk(lang === "hi" ? q_hi : q)} className="card group flex flex-col gap-3 p-4 text-left transition hover:-translate-y-0.5 hover:border-brand/40">
             <span className={cx("grid size-10 place-items-center rounded-2xl", grad)}>
@@ -360,226 +279,3 @@ function Welcome({ onAsk, onSetup }: { onAsk: (q: string) => void; onSetup: () =
   );
 }
 
-function LiveCard({ live }: { live: Live }) {
-  const { t } = useT();
-  return (
-    <div className="card max-w-3xl p-4" aria-live="polite">
-      <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-ink">
-        <Loader2 className="size-4 animate-spin text-brand" />
-        {live.mode === "ai" ? t("The AI agent is working…") : t("Working it out…")}
-      </div>
-      {live.fallback && <p className="mb-2 rounded-xl bg-caution-50 px-3 py-2 text-xs text-caution">{live.fallback}</p>}
-      <ol className="space-y-1.5">
-        {live.notes.map((n, i) => (
-          <li key={`n${i}`} className="text-sm text-ink-2 italic">{n}</li>
-        ))}
-        {live.steps.map((s, i) => (
-          <li key={i} className="rise flex items-center gap-2 text-sm">
-            {s.done ? (
-              <span className={cx("grid size-5 place-items-center rounded-full", s.ok ? "bg-good-50 text-good" : "bg-caution-50 text-caution")}>
-                {s.ok ? <Check className="size-3.5" /> : <AlertTriangle className="size-3" />}
-              </span>
-            ) : (
-              <CircleDashed className="size-5 animate-spin text-brand" />
-            )}
-            <span className={s.done ? "text-ink" : "text-ink-2"}>{s.label}</span>
-          </li>
-        ))}
-        {live.steps.length === 0 && live.notes.length === 0 && (
-          <li className="flex items-center gap-2 text-sm text-ink-2">
-            <span className="flex gap-1">
-              <span className="dot size-1.5 rounded-full bg-brand" />
-              <span className="dot size-1.5 rounded-full bg-brand" />
-              <span className="dot size-1.5 rounded-full bg-brand" />
-            </span>
-            {t("Reading your question")}
-          </li>
-        )}
-      </ol>
-    </div>
-  );
-}
-
-function AnswerCard({ a }: { a: Answer }) {
-  const { t } = useT();
-  const [open, setOpen] = useState(false);
-  const [ev, setEv] = useState<Evidence | null>(null);
-  return (
-    <div className="max-w-3xl space-y-3">
-      <div className="card p-5">
-        <div className="prose-answer text-[0.97rem] leading-relaxed text-ink">
-          <ReactMarkdown>{a.answer}</ReactMarkdown>
-        </div>
-        {a.warnings.length > 0 && (
-          <div className="mt-3 space-y-1 rounded-2xl bg-caution-50 p-3 text-sm text-caution">
-            {a.warnings.map((w) => (
-              <p key={w} className="flex gap-2">
-                <AlertTriangle className="mt-0.5 size-4 shrink-0" /> {w}
-              </p>
-            ))}
-          </div>
-        )}
-        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-line pt-3">
-          {a.has_figures &&
-            (a.verified ? (
-              <Pill tone="good">
-                <ShieldCheck className="size-3.5" /> {t("Every figure checked against your records")}
-              </Pill>
-            ) : (
-              <Pill tone="caution">
-                <AlertTriangle className="size-3.5" /> {t("Some figures couldn't be checked")}
-              </Pill>
-            ))}
-          {a.mode === "ai" ? (
-            <Pill tone="info">
-              <Bot className="size-3.5" /> {t("AI agent")}
-            </Pill>
-          ) : (
-            <Pill>{t("Built-in answer (no AI)")}</Pill>
-          )}
-          {a.steps.length > 0 && (
-            <button onClick={() => setOpen((o) => !o)} className="ml-auto inline-flex items-center gap-1 text-sm font-medium text-ink-2 hover:text-ink" aria-expanded={open}>
-              {t("{n} steps · how I worked this out", { n: a.steps.length })} <ChevronDown className={cx("size-4 transition", open && "rotate-180")} />
-            </button>
-          )}
-        </div>
-        {open && (
-          <div className="mt-3 space-y-3">
-            {a.notes.length > 0 && (
-              <ul className="space-y-1 border-l-2 border-brand/30 pl-3">
-                {a.notes.map((n, i) => (
-                  <li key={i} className="text-sm text-ink-2 italic">{n}</li>
-                ))}
-              </ul>
-            )}
-            <ol className="space-y-1.5">
-              {a.steps.map((s, i) => (
-                <li key={i} className="flex items-center gap-2 text-sm">
-                  <span className={cx("grid size-5 place-items-center rounded-full", s.ok ? "bg-good-50 text-good" : "bg-caution-50 text-caution")}>
-                    {s.ok ? <Check className="size-3.5" /> : <AlertTriangle className="size-3" />}
-                  </span>
-                  {s.label}
-                  {s.checks > 0 && <span className="text-xs text-muted">· {t("{n} checks passed", { n: s.checks })}</span>}
-                </li>
-              ))}
-            </ol>
-            {a.evidence.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {a.evidence.map((e) => (
-                  <button key={e.title} onClick={() => setEv(e)} className="rounded-full border border-line px-3 py-1.5 text-xs font-medium text-ink-2 hover:border-brand hover:text-brand">
-                    <ShieldCheck className="mr-1 inline size-3.5" />
-                    {e.title}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-      {a.actions.map((x) => (
-        <ActionCard key={x.id} action={x} conversation={a.conversation_id} />
-      ))}
-      {ev && <EvidenceSheet evidence={ev} open={!!ev} onClose={() => setEv(null)} />}
-    </div>
-  );
-}
-
-const ACTION_ICON = { record_entry: HandCoins, send_reminder: MessageCircle, create_goal: PiggyBank, set_budget: CalendarClock };
-const ACTION_GRAD = { record_entry: "grad-mint", send_reminder: "grad-berry", create_goal: "grad-sunset", set_budget: "grad-ocean" };
-const inr = (n: number) => "₹" + Math.round(n).toLocaleString("en-IN");
-
-function ActionCard({ action, conversation }: { action: DraftAction; conversation: string }) {
-  const { t } = useT();
-  const toast = useToast();
-  const { refresh } = useContext(DataVersion);
-  const [state, setState] = useState<"pending" | "busy" | "done" | "cancelled" | "undone">("pending");
-  const [msg, setMsg] = useState<string | null>(null);
-  const [entryId, setEntryId] = useState<string | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-  const I = ACTION_ICON[action.kind];
-  const p = action.preview || {};
-
-  const decide = async (decision: "confirm" | "cancel") => {
-    setState("busy");
-    setErr(null);
-    try {
-      const r = await post<{ state: string; message?: string; id?: string; open?: string; cleared_all?: boolean }>(`/api/ask/action/${action.id}`, { conversation_id: conversation, decision });
-      if (decision === "cancel") {
-        setState("cancelled");
-        return;
-      }
-      if (r.open) window.open(r.open, "_blank", "noopener");
-      setMsg(r.message ?? null);
-      if (r.id) setEntryId(r.id);
-      if (r.cleared_all) confetti();
-      setState("done");
-      if (action.kind !== "send_reminder") refresh();
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e));
-      setState("pending");
-    }
-  };
-  const undo = async () => {
-    if (!entryId) return;
-    await post(`/api/entries/${entryId}/undo`, {});
-    setState("undone");
-    refresh();
-  };
-
-  return (
-    <div className={cx("card max-w-3xl overflow-hidden", state === "pending" && "ring-2 ring-brand/25")}>
-      <div className="flex items-start gap-3 p-4">
-        <span className={cx("grid size-10 shrink-0 place-items-center rounded-2xl", ACTION_GRAD[action.kind])}>
-          <I className="size-5" aria-hidden />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold tracking-wide text-brand uppercase">{state === "pending" || state === "busy" ? t("Ready for you to confirm") : t(action.title)}</p>
-          <p className="font-semibold text-ink">{action.summary}</p>
-          <div className="mt-1 space-y-0.5 text-sm text-ink-2">
-            {p.would_settle && p.would_settle.length > 0 && <p>{t("Clears")}: {p.would_settle.map((s) => `${s.id} (${inr(s.amount)}${s.full ? "" : ", part"})`).join(", ")}</p>}
-            {p.more_than_due ? <p>{t("{amt} more than they owe", { amt: inr(p.more_than_due) })}</p> : null}
-            {p.per_month && p.months_left ? <p>{t("Save {amt} a month for {m} months", { amt: inr(p.per_month), m: p.months_left })}</p> : null}
-            {p.spent_this_month != null && <p>{t("Spent so far this month: {amt}", { amt: inr(p.spent_this_month) })}</p>}
-            {p.invoices && <p>{p.invoices.map((i) => i.item_id).join(", ")} · {t("oldest {d} days late", { d: p.oldest_days_late ?? 0 })}</p>}
-          </div>
-          {action.kind === "send_reminder" && action.text && (
-            <pre className="mt-2 max-h-40 overflow-y-auto rounded-2xl bg-surface-2 p-3 font-sans text-sm whitespace-pre-wrap text-ink">{action.text}</pre>
-          )}
-          {action.kind === "send_reminder" && action.phone_saved === false && <p className="mt-1 text-xs text-muted">{t("No phone number saved — WhatsApp will ask you to pick the contact.")}</p>}
-        </div>
-      </div>
-      {err && <p className="mx-4 mb-3 rounded-xl bg-bad-50 px-3 py-2 text-sm text-bad">{err}</p>}
-      <div className="flex flex-wrap items-center gap-2 border-t border-line bg-surface-2/60 px-4 py-3">
-        {state === "pending" || state === "busy" ? (
-          <>
-            <Button onClick={() => decide("confirm")} disabled={state === "busy"}>
-              {action.kind === "send_reminder" ? <MessageCircle className="size-4" /> : <Check className="size-4" />}
-              {action.kind === "send_reminder" ? t("Open WhatsApp") : t("Confirm")}
-            </Button>
-            {action.kind === "send_reminder" && action.text && (
-              <Button variant="secondary" onClick={() => { navigator.clipboard?.writeText(action.text ?? ""); toast.show({ text: t("Copied") }); }}>
-                <Copy className="size-4" /> {t("Copy text")}
-              </Button>
-            )}
-            <Button variant="ghost" onClick={() => decide("cancel")} disabled={state === "busy"}>
-              <X className="size-4" /> {t("Not now")}
-            </Button>
-          </>
-        ) : state === "done" ? (
-          <>
-            <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-good">
-              <Check className="size-4" /> {msg ?? t("Done")}
-            </span>
-            {entryId && (
-              <Button size="sm" variant="ghost" className="ml-auto" onClick={undo}>
-                <RotateCcw className="size-4" /> {t("Undo")}
-              </Button>
-            )}
-          </>
-        ) : (
-          <span className="text-sm text-muted">{state === "undone" ? t("Undone") : t("Cancelled — nothing was saved.")}</span>
-        )}
-      </div>
-    </div>
-  );
-}

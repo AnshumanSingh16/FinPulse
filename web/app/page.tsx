@@ -7,6 +7,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useContext, useEffect, useState } from "react";
+import { AgentInbox } from "@/components/agent-inbox";
 import { CatIcon } from "@/components/cat";
 import { HeroCashChart, SalesCostsChart } from "@/components/charts";
 import { DataVersion } from "@/components/data-version";
@@ -61,6 +62,7 @@ export default function HomePage() {
       </header>
 
       <Hero home={data} />
+      <AgentInbox />
       <QuickActions />
 
       <div className="grid gap-4 md:grid-cols-2">

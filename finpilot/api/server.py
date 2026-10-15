@@ -56,6 +56,13 @@ STEP_LABEL = {
     "draft_reminder": "Drafted a WhatsApp reminder",
     "draft_goal": "Prepared a savings goal",
     "draft_budget": "Prepared a budget",
+    "update_plan": "Updated the plan",
+    "remember": "Saved to memory",
+    "forget": "Removed from memory",
+    "recall_memory": "Checked what you asked me to remember",
+    "get_review_queue": "Checked lines needing a category",
+    "draft_promise": "Prepared a promise note",
+    "draft_recategorise": "Prepared a category fix",
 }
 STEP_LABEL_HI = {
     "get_financial_summary": "बिक्री, खर्च और मुनाफ़ा निकाला",
@@ -79,6 +86,13 @@ STEP_LABEL_HI = {
     "draft_reminder": "WhatsApp याद-संदेश तैयार किया",
     "draft_goal": "बचत का लक्ष्य तैयार किया",
     "draft_budget": "बजट तैयार किया",
+    "update_plan": "योजना अपडेट की",
+    "remember": "याद में सेव किया",
+    "forget": "याद से हटाया",
+    "recall_memory": "आपकी कही बातें देखीं",
+    "get_review_queue": "बिना श्रेणी वाली एंट्री देखीं",
+    "draft_promise": "वादे का नोट तैयार किया",
+    "draft_recategorise": "श्रेणी सुधार तैयार किया",
 }
 STEP_DOING = {"en": "Working on it", "hi": "काम कर रहा हूँ"}
 
@@ -100,7 +114,10 @@ FOLLOWUPS = {
     "draft_entry": [("How did this week go?", "इस हफ़्ते कैसा रहा?"), ("Who owes me money?", "किस पर उधारी बाकी है?")],
     "draft_reminder": [("Who else owes me money?", "और किस पर उधारी बाकी है?"), ("Who pays late?", "कौन देर से चुकाता है?")],
     "draft_goal": [("How are my budgets and goals?", "मेरे बजट और लक्ष्य कैसे चल रहे हैं?")],
-    "draft_budget": [("How are my budgets and goals?", "मेरे बजट और लक्ष्य कैसे चल रहे हैं?")],
+    "draft_budget": [("How are my budgets and goals?", "मेरे बजट और लक्ष्य कैसे चल रहे हैं?"), ("Help me collect my money", "मेरी उधारी वसूलने में मदद करो")],
+    "draft_promise": [("Who else owes me money?", "और किस पर उधारी बाकी है?")],
+    "remember": [("What do you remember?", "तुम्हें क्या याद है?")],
+    "update_plan": [("Help me collect my money", "मेरी उधारी वसूलने में मदद करो"), ("Help me cut my costs", "मेरा खर्च कम करने में मदद करो")],
     "simulate_purchase": [("What if sales drop 20%?", "अगर बिक्री 20% गिरे तो?"), ("When could I run short of cash?", "कैश कब कम पड़ सकता है?")],
 }
 STARTERS = [("What should I do today?", "आज मुझे क्या करना चाहिए?"), ("Who owes me money?", "किस पर उधारी बाकी है?"), ("How did this week go?", "इस हफ़्ते कैसा रहा?")]
@@ -247,27 +264,35 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
             chat["messages"] = run.messages
             chat["results"] += [s.result for s in run.steps]
         store.log(db, "question", question)
+        return _package(run, d, lang, question, "chat") | {"conversation_id": cid}
+
+    def _action_out(a: dict) -> dict:
+        p = a["payload"]
+        return {"id": a["id"], "kind": a["kind"], "title": a["title"], "summary": a["summary"], "preview": a["preview"], "state": a["state"],
+                "text": p.get("text"), "whatsapp": p.get("whatsapp"), "phone_saved": p.get("phone_saved"), "result": a.get("result")}
+
+    def _package(run, d: dataset.Dataset, lang: str, question: str, source: str) -> dict:
         seen, ev = set(), []
         for tool, e in run.evidence:
             if tool not in seen:
                 seen.add(tool)
                 ev.append(views.evidence(e, step_label(tool, lang)))
-        actions = []
         for a in run.actions:
-            chat["actions"][a["action_id"]] = {"action": a["action"], "payload": a["payload"], "summary": a["summary"], "state": "pending"}
-            actions.append({"id": a["action_id"], "kind": a["action"], "title": a["title"], "summary": a["summary"], "preview": a.get("preview", {}),
-                            "text": a["payload"].get("text"), "whatsapp": a["payload"].get("whatsapp"), "phone_saved": a["payload"].get("phone_saved")})
+            books.save_action(db, d.book, source, a)
+        ids = [a["action_id"] for a in run.actions]
+        saved = {a["id"]: a for a in books.actions(db, d.book, ids=ids)}
         return {
-            "conversation_id": cid,
             "answer": run.answer,
             "mode": run.mode,
             "verified": run.verified,
-            "has_figures": bool(run.steps),
+            "has_figures": any(s.tool not in ("update_plan", "remember", "forget", "recall_memory") for s in run.steps),
             "warnings": run.warnings,
-            "steps": [{"label": step_label(s.tool, lang), "tool": s.tool, "ok": s.ok and s.checks_ok, "checks": len(s.checks)} for s in run.steps],
+            "steps": [{"label": step_label(s.tool, lang), "tool": s.tool, "ok": s.ok and s.checks_ok, "checks": len(s.checks)} for s in run.steps if s.tool != "update_plan"],
+            "plan": run.plan,
             "notes": run.notes,
+            "remembered": run.remembered,
             "evidence": ev,
-            "actions": actions,
+            "actions": [_action_out(saved[i]) for i in ids if i in saved],
             "suggestions": followups([s.tool for s in run.steps], question, lang),
         }
 
@@ -283,10 +308,7 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
     def ask(body: dict = Body(...)):
         return _run(_question(body), body.get("conversation_id"), lg())
 
-    @app.post("/api/ask/stream")
-    def ask_stream(body: dict = Body(...)):
-        """The same answer as /api/ask, with live progress as server-sent events: step started / finished, the agent's notes, then the final answer."""
-        question, cid, lang = _question(body), body.get("conversation_id"), lg()
+    def _stream(work_fn, lang: str) -> StreamingResponse:
         q: queue.Queue = queue.Queue()
 
         def on_event(e: dict) -> None:
@@ -296,7 +318,7 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
 
         def work() -> None:
             try:
-                q.put({"type": "final", "data": _run(question, cid, lang, on_event)})
+                q.put({"type": "final", "data": work_fn(on_event)})
             except Exception as e:  # never leave the client hanging
                 q.put({"type": "error", "message": f"Something went wrong ({type(e).__name__}). Please try again."})
 
@@ -312,21 +334,26 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
 
         return StreamingResponse(events(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
-    @app.post("/api/ask/action/{action_id}")
-    def ask_action(action_id: str, body: dict = Body(...)):
+    @app.post("/api/ask/stream")
+    def ask_stream(body: dict = Body(...)):
+        """The same answer as /api/ask, with live progress as server-sent events: plan, step started / finished, the agent's notes, then the final answer."""
+        question, cid, lang = _question(body), body.get("conversation_id"), lg()
+        return _stream(lambda on_event: _run(question, cid, lang, on_event), lang)
+
+    def _decide(d: dataset.Dataset, action_id: str, decision: str, cid: str | None = None) -> dict:
         """The owner's Confirm / Cancel on a card the agent drafted. Only this — never the model — saves anything."""
-        d = ds()
-        chat = chats.get(str(body.get("conversation_id") or ""))
-        item = chat and chat["actions"].get(action_id)
-        if not item:
+        item = books.get_action(db, d.book, action_id)
+        if not item or item["state"] == "expired":
             raise HTTPException(404, "This card has expired. Ask again to get a fresh one.")
         if item["state"] != "pending":
             raise HTTPException(409, f"Already {item['state']}.")
-        if body.get("decision") == "cancel":
-            item["state"] = "cancelled"
-            chat["notes"].append(f"The owner cancelled: {item['summary']}.")
+        chat = chats.get(str(cid or ""))
+        if decision == "cancel":
+            books.decide_action(db, d.book, action_id, "cancelled")
+            if chat:
+                chat["notes"].append(f"The owner cancelled: {item['summary']}.")
             return {"ok": True, "state": "cancelled"}
-        p, kind = item["payload"], item["action"]
+        p, kind = item["payload"], item["kind"]
         out: dict = {"ok": True, "state": "done"}
         if kind == "record_entry":
             out |= _record_entry(d, p)
@@ -339,15 +366,102 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
             books.set_budget(db, d.book, p["category"], float(p["monthly_limit"]))
             out["message"] = f"Budget saved: {item['summary']}"
             note = f"The owner confirmed the budget: {item['summary']}."
+        elif kind == "record_promise":
+            books.add_promise(db, d.book, p["customer"], float(p.get("amount") or 0), p["date"], p.get("note", ""))
+            out["message"] = f"Promise noted: {item['summary']}"
+            note = f"The owner confirmed: {item['summary']}."
+        elif kind == "recategorise":
+            n = _recategorise(d, p["ids"], p["category"], bool(p.get("remember")), p.get("party"))
+            out["message"] = f"Updated {n} line(s) to {p['category']}"
+            note = f"The owner confirmed: {item['summary']}."
         elif kind == "send_reminder":
             out |= {"message": "Opening WhatsApp — check the message and press send.", "open": p["whatsapp"]}
             note = f"The owner opened WhatsApp to send the reminder to {p['customer']} (FinPilot cannot tell whether it was sent)."
         else:
             raise HTTPException(400, "Unknown action.")
-        item["state"] = "done"
-        chat["notes"].append(note)
+        books.decide_action(db, d.book, action_id, "done", {k: v for k, v in out.items() if k in ("message", "id")})
+        if chat:
+            chat["notes"].append(note)
         store.log(db, "action_confirmed", f"{kind}: {item['summary']}")
         return out
+
+    @app.post("/api/ask/action/{action_id}")
+    def ask_action(action_id: str, body: dict = Body(...)):
+        return _decide(ds(), action_id, "cancel" if body.get("decision") == "cancel" else "confirm", body.get("conversation_id"))
+
+    # ------------------------------------------------------------ the agent's own work: daily check-up, inbox, approve all, memory
+
+    def _today() -> str:
+        return str(dataset.today().date())
+
+    def _checkup_view(d: dataset.Dataset, c: dict | None) -> dict | None:
+        if not c:
+            return None
+        rows = {a["id"]: a for a in books.actions(db, d.book, ids=c.get("action_ids", []))}
+        return {k: v for k, v in c.items() if k != "action_ids"} | {"actions": [_action_out(rows[i]) for i in c.get("action_ids", []) if i in rows]}
+
+    @app.get("/api/agent")
+    def agent_state():
+        d, lang = ds(), lg()
+        c = books.last_checkup(db, d.book, lang)
+        return {"checkup": _checkup_view(d, c), "stale": not c or c["day"] != _today(), "today": _today(),
+                "pending": len(books.actions(db, d.book, state="pending")), "memory": books.memories(db, d.book), "ai": ai_status()}
+
+    def _run_checkup(lang: str, on_event=None) -> dict:
+        d = ds()
+        ctx = ToolContext(d.ledger, d.obligations, d.balances, d.as_of, db, d.book, d.name.replace(" (fictional)", ""), lang)
+        run = orchestrator.checkup(ctx, d.name, settings(), client=client, lang=lang, on_event=on_event)
+        books.expire_actions(db, d.book, "checkup")
+        data = _package(run, d, lang, "", "checkup")
+        data["action_ids"] = [a["id"] for a in data.pop("actions")]
+        books.save_checkup(db, d.book, lang, _today(), data)
+        store.log(db, "checkup", f"{len(data['action_ids'])} action(s) prepared")
+        return _checkup_view(d, books.last_checkup(db, d.book, lang))
+
+    @app.post("/api/agent/checkup")
+    def agent_checkup():
+        return _run_checkup(lg())
+
+    @app.post("/api/agent/checkup/stream")
+    def agent_checkup_stream():
+        lang = lg()
+        return _stream(lambda on_event: _run_checkup(lang, on_event), lang)
+
+    @app.post("/api/agent/actions/{action_id}")
+    def agent_action(action_id: str, body: dict = Body(...)):
+        return _decide(ds(), action_id, "cancel" if body.get("decision") == "cancel" else "confirm", body.get("conversation_id"))
+
+    @app.post("/api/agent/approve-all")
+    def approve_all(body: dict = Body(...)):
+        """Confirm several drafted cards at once. Reminders are left for one-by-one (each opens WhatsApp for the owner to send)."""
+        d = ds()
+        results = []
+        for aid in [str(i) for i in body.get("ids", [])][:20]:
+            item = books.get_action(db, d.book, aid)
+            if not item or item["state"] != "pending" or item["kind"] == "send_reminder":
+                continue
+            try:
+                results.append({"id": aid, "ok": True, **_decide(ds(), aid, "confirm", body.get("conversation_id"))})
+            except HTTPException as e:
+                results.append({"id": aid, "ok": False, "message": e.detail})
+        return {"done": sum(r["ok"] for r in results), "results": results}
+
+    @app.get("/api/agent/memory")
+    def get_memory():
+        return books.memories(db, ds().book)
+
+    @app.post("/api/agent/memory")
+    def add_memory(body: dict = Body(...)):
+        text = str(body.get("text", "")).strip()
+        if not text:
+            raise HTTPException(400, "Write what I should remember.")
+        books.add_memory(db, ds().book, text)
+        return books.memories(db, ds().book)
+
+    @app.delete("/api/agent/memory/{memory_id}")
+    def delete_memory(memory_id: int):
+        books.delete_memory(db, ds().book, memory_id)
+        return books.memories(db, ds().book)
 
     # ------------------------------------------------------------ AI settings (the key stays on this computer)
 
@@ -661,27 +775,29 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
     def review():
         return khata_views.review(ds(), db)
 
-    @app.post("/api/categorise")
-    def recategorise(body: dict = Body(...)):
-        """Set the category for some transactions; optionally remember it for this party."""
-        d = ds()
-        ids = [str(i) for i in body.get("ids", [])]
-        cat = str(body.get("category", "")).strip()[:60]
-        if not ids or not cat:
-            raise HTTPException(400, "Choose transactions and a category.")
+    def _recategorise(d: dataset.Dataset, ids: list[str], cat: str, remember: bool = False, party: str | None = None) -> int:
         led = d.ledger.copy()
         mask = led["txn_id"].isin(ids)
         led.loc[mask, "category"] = cat
         led.loc[mask, "reference"] = led.loc[mask, "reference"].astype(str).str.replace("auto:guess", "", regex=False).str.strip()
         n = int(mask.sum())
-        if body.get("remember") and body.get("party"):
-            books.set_rule(db, d.book, str(body["party"]), cat)
-            same = (led["counterparty"].str.lower() == str(body["party"]).lower()) & ~mask & led["category"].isin(["Uncategorised", "Sales"]) & led["reference"].astype(str).str.contains("auto:guess")
+        if remember and party:
+            books.set_rule(db, d.book, str(party), cat)
+            same = (led["counterparty"].str.lower() == str(party).lower()) & ~mask & led["category"].isin(["Uncategorised", "Sales"]) & led["reference"].astype(str).str.contains("auto:guess")
             led.loc[same, "category"] = cat
             led.loc[same, "reference"] = led.loc[same, "reference"].astype(str).str.replace("auto:guess", "", regex=False).str.strip()
             n += int(same.sum())
         dataset.save(db, d, khata.Tables(led, d.obligations, d.balances))
-        return {"updated": n}
+        return n
+
+    @app.post("/api/categorise")
+    def recategorise(body: dict = Body(...)):
+        """Set the category for some transactions; optionally remember it for this party."""
+        ids = [str(i) for i in body.get("ids", [])]
+        cat = str(body.get("category", "")).strip()[:60]
+        if not ids or not cat:
+            raise HTTPException(400, "Choose transactions and a category.")
+        return {"updated": _recategorise(ds(), ids, cat, bool(body.get("remember")), body.get("party"))}
 
     # ------------------------------------------------------------ smart features
 

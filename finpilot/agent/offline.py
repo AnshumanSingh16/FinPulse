@@ -850,6 +850,254 @@ def _category(q: str, call: ToolCaller, as_of) -> str:
     return "\n".join(lines) + tr("cat.note")
 
 
+# ---------------------------------------------------------------- missions: multi-step goals with a visible plan (check-up, collect, cut costs), memory, promises
+
+P.update({
+    "m.ck.cash": ("Check cash and the month ahead", "कैश और आगे का महीना देखना"), "m.ck.owed": ("Check who owes you", "किस पर उधारी है, देखना"),
+    "m.ck.bills": ("Check bills due this week", "इस हफ़्ते के बिल देखना"), "m.ck.budget": ("Check budgets and goals", "बजट और लक्ष्य देखना"),
+    "m.ck.odd": ("Look for unusual payments", "असामान्य भुगतान खोजना"), "m.ck.review": ("Check bank lines needing a category", "बिना श्रेणी वाली एंट्री देखना"),
+    "m.ck.prep": ("Prepare actions for you", "आपके लिए काम तैयार करना"),
+    "ck.calm": ("**All calm today ✅** — nothing overdue, no bills this week and nothing unusual.", "**आज सब ठीक है ✅** — न उधारी बकाया, न इस हफ़्ते बिल, न कुछ असामान्य।"),
+    "ck.head": ("**Daily check-up — {n} thing(s) need you today.**", "**रोज़ का चेक-अप — आज {n} बातों पर ध्यान दें।**"),
+    "ck.cash": ("Cash in bank {cash}{low}.", "बैंक में {cash}{low}।"),
+    "ck.low": ("; lowest in the next 30 days {low} on {date}", "; अगले 30 दिन में सबसे कम {low}, {date} को"),
+    "ck.collect": ("**Collect {amt} from {name}** — oldest {days} days late.", "**{name} से {amt} वसूलें** — सबसे पुराना {days} दिन देर।"),
+    "ck.promise": ("**{name} broke a promise** to pay by {date}.", "**{name} ने {date} तक चुकाने का वादा तोड़ा।**"),
+    "ck.bills_od": ("**Pay {amt} of overdue supplier bills.**", "**सप्लायरों के {amt} के बकाया बिल चुकाएँ।**"),
+    "ck.bills": ("**Keep {amt} ready** for {n} bill(s) due by {date}.", "**{amt} तैयार रखें** — {date} तक {n} बिल।"),
+    "ck.budget": ("**Over budget:** {cats}.", "**बजट से ज़्यादा:** {cats}।"),
+    "ck.odd": ("**Check {n} unusual payment(s)**, e.g. {cat} {amt} on {date} ({id}).", "**{n} असामान्य भुगतान जाँचें**, जैसे {cat} {amt}, {date} ({id})।"),
+    "ck.review": ("**{n} bank line(s) need a category** — {party} is guessed as {cat}.", "**{n} बैंक एंट्री की श्रेणी तय करनी है** — {party} को {cat} माना गया है।"),
+    "ck.prepared": ("\nI've prepared {n} action(s) below — approve the ones you want. Nothing is saved or sent until you do.", "\nनीचे {n} काम तैयार हैं — जो ठीक लगें उन्हें मंज़ूरी दें। आपकी मंज़ूरी के बिना कुछ सेव या भेजा नहीं जाता।"),
+    "ck.skipped": ("\nSkipped a reminder to {names} — you asked me not to remind them.", "\n{names} को याद-संदेश नहीं बनाया — आपने मना किया था।"),
+    "m.co.find": ("Find who owes you and how late", "किस पर कितनी उधारी और कितनी देर, पता करना"), "m.co.mem": ("Check what you asked me to remember", "आपकी कही बातें देखना"),
+    "m.co.draft": ("Draft reminders for the most overdue", "सबसे पुराने बकाया वालों के लिए याद-संदेश बनाना"), "m.co.follow": ("Plan follow-ups", "आगे की योजना"),
+    "co.none": ("**Nobody owes you anything overdue right now. 🎉**", "**अभी किसी का कुछ बकाया नहीं है। 🎉**"),
+    "co.head": ("**Mission: collect {amt} overdue from {n} customer(s).**", "**मिशन: {n} ग्राहकों से {amt} की बकाया वसूली।**"),
+    "co.line": ("- {name}: {amt}, oldest {days} days late{rel}", "- {name}: {amt}, सबसे पुराना {days} दिन देर{rel}"),
+    "co.rel": (" · pays on time {p}% of the time", " · {p}% बार समय पर चुकाते हैं"),
+    "co.drafted": ("\nI've drafted {n} WhatsApp reminder(s) below — tap each to open WhatsApp and send it yourself.", "\nनीचे {n} WhatsApp याद-संदेश तैयार हैं — हर एक को दबाकर WhatsApp में ख़ुद भेजें।"),
+    "co.tip": ("\nWhen someone promises a date, tell me — e.g. *“{name} promised to pay by 25 Oct”* — and I'll track it.", "\nकोई तारीख़ का वादा करे तो बताइए — जैसे *“{name} ने 25 Oct तक देने का वादा किया”* — मैं याद रखूँगा।"),
+    "m.cc.look": ("Look at 3 months of costs", "3 महीने का खर्च देखना"), "m.cc.cmp": ("Compare last month with the one before", "पिछले महीने की तुलना"),
+    "m.cc.odd": ("Look for unusual or double payments", "असामान्य या दोहरे भुगतान खोजना"), "m.cc.budget": ("Prepare budgets for the biggest costs", "सबसे बड़े खर्चों का बजट तैयार करना"),
+    "cc.head": ("**Mission: cut costs.** Your biggest running costs ({a} to {b}), per month:", "**मिशन: खर्च घटाना।** आपके सबसे बड़े खर्च ({a} से {b}), हर महीने:"),
+    "cc.line": ("- {cat}: about {avg} a month{share}", "- {cat}: लगभग {avg} महीना{share}"),
+    "cc.share": (" ({p:g}% of sales)", " (बिक्री का {p:g}%)"),
+    "cc.rise": ("Biggest rise last month: **{cat}**, up {chg}.", "पिछले महीने सबसे ज़्यादा बढ़ा: **{cat}**, {chg}।"),
+    "cc.odd": ("{n} payment(s) look unusual or doubled — worth checking (ask *“any double payments?”*).", "{n} भुगतान असामान्य या दोहरे लगते हैं — जाँच लें (पूछें *“कोई दोहरा भुगतान?”*)।"),
+    "cc.budgets": ("\nI've prepared monthly budgets for {cats} at your recent average, so they can't creep up unnoticed — I'll flag them on Home if you go over.", "\n{cats} के लिए आपके हाल के औसत पर महीने का बजट तैयार किया है, ताकि खर्च चुपचाप न बढ़े — ज़्यादा होने पर होम पर बताऊँगा।"),
+    "cc.has_budgets": ("\nYou already have budgets for your biggest costs — see Goals & budgets.", "\nसबसे बड़े खर्चों का बजट पहले से है — लक्ष्य और बजट में देखें।"),
+    "mem.saved": ("**Got it — I'll remember:** “{fact}”. You can see or delete this under *Memory* on the Ask page.", "**ठीक है, याद रखूँगा:** “{fact}”। इसे 'पूछें' पेज पर *याद* में देख या हटा सकते हैं।"),
+    "mem.none": ("I haven't been asked to remember anything yet. Tell me things like *“remember that Ramesh is my brother — never remind him”*.", "अभी कुछ याद रखने को नहीं कहा गया। जैसे कहें *“याद रखना, रमेश मेरा भाई है — उसे याद-संदेश मत भेजना”*।"),
+    "mem.head": ("**Here's what you asked me to remember:**", "**आपने ये बातें याद रखने को कहा था:**"),
+    "mem.forgot": ("Done — I've forgotten #{id}.", "ठीक है — #{id} भूल गया।"),
+    "mem.nf": ("I couldn't find that memory.", "वह बात नहीं मिली।"),
+    "prom.need": ("Tell me who promised and by when — e.g. *“Metro Foods promised to pay by 25 Oct”*.", "बताइए किसने और कब तक का वादा किया — जैसे *“Metro Foods ने 25 Oct तक देने का वादा किया”*।"),
+})
+
+_NO_REMIND = re.compile(r"(never|don'?t|do not|not to|no)\s+(send\s+\w+\s+)?remind|no reminders?|mat (bhej|yaad)|nahi(n)? (bhej|yaad)|याद.*मत|मत.*याद", re.I)
+
+
+def _excluded(name: str, memories: list[dict]) -> bool:
+    first = name.split()[0].lower()
+    return any(first in m["fact"].lower() and _NO_REMIND.search(m["fact"]) for m in memories) if len(first) >= 3 else False
+
+
+def _plan(call: ToolCaller, keys: list[str], done: int = 0, doing: bool = True) -> None:
+    steps = [{"title": tr(k), "status": "done" if i < done else ("doing" if i == done and doing else "todo")} for i, k in enumerate(keys)]
+    call("update_plan", {"steps": steps})
+
+
+def _mission_checkup(q: str, call: ToolCaller, as_of) -> str:
+    keys = ["m.ck.cash", "m.ck.owed", "m.ck.bills", "m.ck.budget", "m.ck.odd", "m.ck.review", "m.ck.prep"]
+    _plan(call, keys, 0)
+    todo, drafted, skipped = [], 0, []
+    ok, c = call("get_cash_position", {})
+    cash_line = ""
+    if ok and c.get("status") == "ok":
+        ok2, f = call("forecast_cash_flow", {"horizon_days": 30})
+        low = tr("ck.low", low=_inr(f["lowest_balance"]), date=f["lowest_balance_date"]) if ok2 and f.get("status") == "ok" else ""
+        cash_line = tr("ck.cash", cash=_inr(c["cash_balance"]), low=low)
+    ok, h = call("get_health_score", {})
+    if ok and h.get("status") == "ok":
+        weak = min(h["components"], key=lambda x: x["points"])
+        cash_line += " " + tr("brief.health", score=h["score"], grade=tr(f"grade.{h['grade']}"), weak=tr(f"hs.{weak['key']}"))
+    _plan(call, keys, 1)
+    ok, ppl = call("get_customers_and_suppliers", {"side": "customers", "sort_by": "overdue", "limit": 5})
+    ok_m, mem = call("recall_memory", {})
+    memories = mem.get("memories", []) if ok_m else []
+    od = [p for p in ppl.get("people", []) if p["overdue"] > 0] if ok and ppl.get("status") == "ok" else []
+    for p in od[:2]:
+        todo.append(tr("ck.collect", amt=_inr(p["overdue"]), name=p["name"], days=p["oldest_days_late"]))
+        if _excluded(p["name"], memories):
+            skipped.append(p["name"])
+            continue
+        ok_r, r = call("draft_reminder", {"customer": p["name"]})
+        drafted += r.get("status") == "needs_confirmation"
+    for p in ppl.get("people", []) if ok else []:
+        if p.get("promise") and p["promise"].get("broken"):
+            todo.append(tr("ck.promise", name=p["name"], date=p["promise"]["date"]))
+    _plan(call, keys, 2)
+    ok, up = call("get_upcoming_payments", {"days": 7})
+    if ok and up.get("status") == "ok":
+        if up.get("overdue_total"):
+            todo.append(tr("ck.bills_od", amt=_inr(up["overdue_total"])))
+        if up["upcoming"]:
+            todo.append(tr("ck.bills", amt=_inr(up["upcoming_total"]), n=len(up["upcoming"]), date=up["upcoming"][-1]["due_date"]))
+    _plan(call, keys, 3)
+    ok, bg = call("get_budgets_and_goals", {})
+    if ok and bg.get("budget_month") and bg["budget_month"].get("over"):
+        todo.append(tr("ck.budget", cats=", ".join(bg["budget_month"]["over"])))
+    _plan(call, keys, 4)
+    ok, odd = call("find_unusual_transactions", {"lookback_days": 30})
+    if ok and odd.get("status") == "ok" and odd.get("flags"):
+        f = odd["flags"][0]
+        todo.append(tr("ck.odd", n=len(odd["flags"]), cat=f["category"], amt=_inr(f["amount"]), date=f["date"], id=", ".join(f["txn_ids"][:2])))
+    _plan(call, keys, 5)
+    ok, rq = call("get_review_queue", {})
+    if ok and rq.get("lines_to_review"):
+        g = next((g for g in rq["groups"] if g["is_guess"]), rq["groups"][0])
+        todo.append(tr("ck.review", n=rq["lines_to_review"], party=g["party"], cat=g["current_category"]))
+        if g["is_guess"] and g["current_category"] not in ("Uncategorised", "Unknown"):
+            ok_d, r = call("draft_recategorise", {"party": g["party"], "category": g["current_category"]})
+            drafted += r.get("status") == "needs_confirmation"
+    _plan(call, keys, len(keys), doing=False)
+    lines = [tr("ck.head", n=len(todo)) if todo else tr("ck.calm")]
+    lines += [f"{i}. {t}" for i, t in enumerate(todo, 1)]
+    if cash_line:
+        lines.append("\n" + cash_line)
+    if drafted:
+        lines.append(tr("ck.prepared", n=drafted))
+    if skipped:
+        lines.append(tr("ck.skipped", names=", ".join(skipped)))
+    return "\n".join(lines)
+
+
+def _mission_collect(q: str, call: ToolCaller, as_of) -> str:
+    keys = ["m.co.find", "m.co.mem", "m.co.draft", "m.co.follow"]
+    _plan(call, keys, 0)
+    ok, ppl = call("get_customers_and_suppliers", {"side": "customers", "sort_by": "overdue", "limit": 8})
+    od = [p for p in ppl.get("people", []) if p["overdue"] > 0] if ok and ppl.get("status") == "ok" else []
+    _plan(call, keys, 1)
+    ok_m, mem = call("recall_memory", {})
+    memories = mem.get("memories", []) if ok_m else []
+    if not od:
+        _plan(call, keys, len(keys), doing=False)
+        return tr("co.none")
+    _plan(call, keys, 2)
+    lines = [tr("co.head", amt=_inr(ppl["total_overdue"]), n=len(od))]
+    drafted, skipped = 0, []
+    for p in od:
+        rel = tr("co.rel", p=p["reliability_on_time_pct"]) if p.get("reliability_on_time_pct") is not None else ""
+        lines.append(tr("co.line", name=p["name"], amt=_inr(p["overdue"]), days=p["oldest_days_late"], rel=rel))
+    for p in od:
+        if drafted >= 3:
+            break
+        if _excluded(p["name"], memories):
+            skipped.append(p["name"])
+            continue
+        ok_r, r = call("draft_reminder", {"customer": p["name"]})
+        drafted += r.get("status") == "needs_confirmation"
+    _plan(call, keys, 3)
+    broken = [p for p in od if p.get("promise") and p["promise"].get("broken")]
+    for p in broken:
+        lines.append("\n" + tr("ck.promise", name=p["name"], date=p["promise"]["date"]))
+    _plan(call, keys, len(keys), doing=False)
+    if drafted:
+        lines.append(tr("co.drafted", n=drafted))
+    if skipped:
+        lines.append(tr("ck.skipped", names=", ".join(skipped)))
+    lines.append(tr("co.tip", name=od[0]["name"].split()[0]))
+    return "\n".join(lines)
+
+
+def _mission_costs(q: str, call: ToolCaller, as_of) -> str:
+    from finpilot.engine.common import last_full_month
+
+    keys = ["m.cc.look", "m.cc.cmp", "m.cc.odd", "m.cc.budget"]
+    _plan(call, keys, 0)
+    _, m_end = last_full_month(as_of)
+    start = (m_end - pd.DateOffset(months=2)).replace(day=1)
+    ok, s = call("get_financial_summary", {"start_date": str(start.date()), "end_date": str(m_end.date())})
+    if s.get("status") != "ok":
+        return s.get("message", "")
+    avg = s["expenses_by_category_monthly_average"]
+    top = sorted(avg, key=lambda c: -avg[c])[:4]
+    lines = [tr("cc.head", a=s["period"]["start"], b=s["period"]["end"])]
+    share = s.get("expense_share_of_sales_pct", {})
+    lines += [tr("cc.line", cat=c, avg=_inr(avg[c]), share=tr("cc.share", p=share[c]) if c in share else "") for c in top]
+    _plan(call, keys, 1)
+    ok, e = call("analyze_expense_changes", {"months": 1})
+    if ok and e.get("status") == "ok":
+        ups = [c for c in e["by_category"] if c["change"] > 0]
+        if ups:
+            u = max(ups, key=lambda c: c["change"])
+            lines.append("\n" + tr("cc.rise", cat=u["category"], chg=_inr(u["change"])))
+    _plan(call, keys, 2)
+    ok, odd = call("find_unusual_transactions", {"lookback_days": 90})
+    if ok and odd.get("status") == "ok" and odd.get("flags"):
+        lines.append(("" if any(x.startswith("\n") for x in lines[1:]) else "\n") + tr("cc.odd", n=len(odd["flags"])))
+    _plan(call, keys, 3)
+    ok, bg = call("get_budgets_and_goals", {})
+    have = set((bg.get("budget_month") or {}).get("rows") and [r["category"] for r in bg["budget_month"]["rows"]] or [])
+    sugg = bg.get("suggested_monthly_budgets", {}) if ok else {}
+    picked = [c for c in top if c in sugg and c not in have][:2]
+    for c in picked:
+        call("draft_budget", {"category": c, "monthly_limit": sugg[c]})
+    _plan(call, keys, len(keys), doing=False)
+    lines.append(tr("cc.budgets", cats=" & ".join(picked)) if picked else tr("cc.has_budgets"))
+    return "\n".join(lines)
+
+
+_REMEMBER = re.compile(r"^\s*(?:please\s+)?(?:remember|yaad rakh\w*|dhyan rakh\w*|याद रखना|याद रखो)\s*(?:that|ki|कि)?\s*[:,-]?\s*(.+)$", re.I)
+
+
+def _remember(q: str, call: ToolCaller, as_of) -> str:
+    m = _REMEMBER.match(q)
+    fact = (m.group(1) if m else q).strip().rstrip(".")
+    ok, r = call("remember", {"fact": fact[:300]})
+    return tr("mem.saved", fact=fact) if r.get("status") == "remembered" else r.get("message", "")
+
+
+def _recall(q: str, call: ToolCaller, as_of) -> str:
+    ok, r = call("recall_memory", {})
+    mem = r.get("memories", [])
+    if not mem:
+        return tr("mem.none")
+    return "\n".join([tr("mem.head")] + [f"- #{m['id']}: {m['fact']}" for m in mem])
+
+
+def _forget(q: str, call: ToolCaller, as_of) -> str:
+    m = re.search(r"#?(\d+)", q)
+    if not m:
+        return _recall(q, call, as_of)
+    ok, r = call("forget", {"id": int(m.group(1))})
+    return tr("mem.forgot", id=m.group(1)) if r.get("status") == "forgotten" else tr("mem.nf")
+
+
+_MON = r"(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*"
+
+
+def _promise_with(parties: list[str]) -> Callable:
+    def handler(q: str, call: ToolCaller, as_of) -> str:
+        name = _find_party(q, parties)
+        m = re.search(rf"(\d{{1,2}})\s*{_MON}|{_MON}\s*(\d{{1,2}})", q, re.I)
+        if not name or not m:
+            return tr("prom.need")
+        day = int(m.group(1) or m.group(4))
+        mon = (m.group(2) or m.group(3))[:3].lower()
+        d = pd.Timestamp(f"{day} {mon} {as_of.year}")
+        if d < as_of:
+            d = d.replace(year=as_of.year + 1)
+        args = {"customer": name, "date": str(d.date())}
+        amounts = _money(q)
+        if amounts:
+            args["amount"] = amounts[0]
+        ok, r = call("draft_promise", args)
+        return _draft_reply(r)
+    return handler
+
+
 _GENERIC = {"traders", "trader", "enterprises", "foods", "pvt", "ltd", "retail", "store", "stores", "shop", "suppliers", "supplier", "agro", "wholesale",
             "and", "the", "india", "services", "company", "co", "mart", "customer", "walk-in", "bank", "sharma", "kumar"}
 
@@ -872,20 +1120,28 @@ _Q_START = re.compile(r"^\s*(how|what|why|when|which|who|whom|is|are|was|were|ca
 _ENTRY_VERB = re.compile(r"\b(add|record|enter|note|log|likh\w*|daal\w*|jod\w*|darj)\b|जोड़|लिख|दर्ज", re.I)
 _ENTRY_KIND = re.compile(r"^\s*(sold|sale of|received|got|collected|paid|spent|bought|udhaar|udhar|gave|diya|diye|mila|mile|becha|bechi)\b"
                          r"|\b(becha|bechi|beche|bika|udhaar|udhar|chukaya|chukaye|kharcha kiya|jama kiya|bheje|mile|mila)\b|बेचा|उधार दिया|चुकाया|मिले|मिला", re.I)
-EXCLUSIVE = {"records", "entry", "remind", "action", "purchase", "briefing", "greet", "price", "discount", "hire", "budget_goal"}
+EXCLUSIVE = {"records", "entry", "remind", "action", "purchase", "briefing", "greet", "price", "discount", "hire", "budget_goal",
+             "checkup", "collect", "costs", "remember", "recall", "forget", "promise"}
 
 BASE_INTENTS: list[tuple[str, re.Pattern, Callable | None]] = [
     ("records", re.compile(r"\b(T\d{4}|U\d{5}|E\d{5}|INV-\d{3,}|BILL-[A-Z0-9-]+|SCH-\d{3,}|K-\d{4})\b"), _records),
     ("greet", re.compile(r"^\s*(hi+|hello|hey|namaste|namaskar|good (?:morning|evening|afternoon)|thanks?|thank you|shukriya|dhanyavad|नमस्ते|नमस्कार|धन्यवाद|शुक्रिया)\b[\s!.?🙏]*\w{0,12}[\s!.?]*$", re.I), _greet),
-    ("remind", re.compile(r"\b(remind|reminder|yaad dila\w*|whatsapp)\b|याद दिला", re.I), None),
+    ("remember", re.compile(r"^\s*(?:please\s+)?(?:remember|yaad rakh\w*|dhyan rakh\w*)\b|^\s*याद रख|\b(never|don'?t|do not)\s+(send\s+\w+\s+)?remind\b", re.I), _remember),
+    ("recall", re.compile(r"what do you (remember|know about (me|my (shop|business)))|(show|list)( me)? (your )?memor(y|ies)|kya yaad hai|क्या याद है", re.I), _recall),
+    ("forget", re.compile(r"^\s*(forget|bhool ja\w*|भूल जाओ)\b", re.I), _forget),
     ("entry", re.compile(r"$^"), None),  # decided in code, see answer()
+    ("promise", re.compile(r"\b(promised?|will pay (by|on)|vaada|wada|वादा)\b", re.I), None),
+    ("checkup", re.compile(r"\b(check-?up|daily check|autopilot|scan my (shop|business|books))\b|चेक-?अप", re.I), _mission_checkup),
+    ("collect", re.compile(r"\b(collect|recover|chase|get back)\b.{0,25}\b(money|dues|payments?|udhaa?r|paisa|everyone|all)\b|\bremind (all|everyone|everybody|sab\w*)\b|\b(vasool\w*|wasool\w*|vasuli|wasuli)\b|वसूल", re.I), _mission_collect),
+    ("costs", re.compile(r"\b(cut|reduce|lower|control|bring down|save on)\b.{0,15}\b(costs?|expenses?|spending|kharch\w*)\b|kharch\w* kam|खर्च कम", re.I), _mission_costs),
+    ("remind", re.compile(r"\b(remind|reminder|yaad dila\w*|whatsapp)\b|याद दिला", re.I), None),
     ("action", re.compile(r"\b(send|pay (?:the|this|bill)|file|submit|transfer)\b|भेज", re.I), _action),
     ("purchase", re.compile(r"\b(afford|buy|purchase|invest in|should (?:i|we) get|kharid\w*|le sakte|le sakta)\b|ख़रीद|खरीद|ले सकता|ले सकते", re.I), _purchase),
     ("budget_goal", re.compile(r"\b(budget|goal|savings? (?:goal|target)|save (?:₹|rs|up|for|\d)|bachat|lakshya)\b|बजट|लक्ष्य|बचत|बचाने", re.I), _budget_goal),
     ("price", re.compile(r"\b(raise|increase|hike|lower|reduce|cut)\b.{0,20}\b(price|prices|rate|rates)\b|\bprice (?:rise|hike|increase)|\b(daam|dam|keemat|kimat)\b|दाम|कीमत", re.I), _price),
     ("discount", re.compile(r"\b(discount|offer|chhoot|chhut)\b|छूट|ऑफ़र", re.I), _discount),
     ("hire", re.compile(r"\b(hire|hiring|helper|employee|worker|staff|naukar|karigar|rakh\w*)\b|कर्मचारी|हेल्पर|रखूँ|रखना", re.I), _hire),
-    ("briefing", re.compile(r"\b(what should (?:i|we) (?:do|focus)|to ?do today|today'?s? (?:plan|tasks?|priorit\w*)|priorit\w*|what needs|anything (?:urgent|important)|brief\w*|aaj kya|kya karu\w*|kya karna)\b|आज क्या|क्या करूँ|क्या करना", re.I), _briefing),
+    ("briefing", re.compile(r"\b(what should (?:i|we) (?:do|focus)|to ?do today|today'?s? (?:plan|tasks?|priorit\w*)|priorit\w*|what needs|anything (?:urgent|important)|brief\w*|aaj kya|kya karu\w*|kya karna)\b|आज क्या|क्या करूँ|क्या करना", re.I), _mission_checkup),
     ("forecast", re.compile(r"\b(forecast|next \d+ days|runway|run out|projection|cash flow|will (?:i|we) have|anuman|agle)\b|अनुमान|अगले", re.I), _forecast),
     ("health", re.compile(r"\b(health|score|sehat|rating|how healthy)\b|सेहत|स्कोर", re.I), _health),
     ("week", re.compile(r"\b(this week|last week|past week|last 7 days|weekly|week|hafte|hafta)\b|हफ़्ते|हफ्ते|सप्ताह", re.I), _week),
@@ -926,8 +1182,12 @@ def plan(question: str, parties: list[str] | None = None) -> list[tuple[str, Cal
                 found.append((key, _category))
             continue
         if key == "remind":
-            if pat.search(q):
+            if pat.search(q) and not _REMEMBER.match(q):
                 found.append((key, _remind_with(parties)))
+            continue
+        if key == "promise":
+            if pat.search(q) and not is_question:
+                found.append((key, _promise_with(parties)))
             continue
         if pat.search(q):
             found.append((key, handler))

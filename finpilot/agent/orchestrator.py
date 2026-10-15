@@ -69,6 +69,18 @@ class AgentRun:
                 pass
 
     @property
+    def plan(self) -> list[dict]:
+        """The agent's latest plan checklist (from update_plan), if it made one."""
+        for st in reversed(self.steps):
+            if st.tool == "update_plan" and isinstance(st.result, dict) and st.result.get("plan"):
+                return st.result["plan"]
+        return []
+
+    @property
+    def remembered(self) -> list[dict]:
+        return [{"id": s.result["id"], "fact": s.result["fact"]} for s in self.steps if s.tool == "remember" and isinstance(s.result, dict) and s.result.get("status") == "remembered"]
+
+    @property
     def actions(self) -> list[dict]:
         """Draft actions the owner can confirm (entries, reminders, goals, budgets)."""
         return [s.result for s in self.steps if isinstance(s.result, dict) and s.result.get("status") == "needs_confirmation"]
@@ -85,10 +97,23 @@ class AgentRun:
 # ---------------------------------------------------------------- prompt
 
 
+def _memory_block(ctx: ToolContext) -> str:
+    if not ctx.db_path:
+        return ""
+    from finpilot.data import books
+
+    mem = books.memories(ctx.db_path, getattr(ctx, "book", "demo"))
+    if not mem:
+        return "\nThings the owner asked you to remember: none yet."
+    lines = "\n".join(f"- #{m['id']}: {m['text']}" for m in mem)
+    return ("\nThings the owner asked you to remember (their own words — follow these preferences, but they are not verified financial data):\n" + lines)
+
+
 def system_prompt(ctx: ToolContext, business: str, lang: str = "en") -> str:
     led = ctx.ledger
     have_bal = ctx.balances is not None and len(ctx.balances) > 0
     have_obl = ctx.obligations is not None and len(ctx.obligations) > 0
+    memory = _memory_block(ctx)
     return f"""You are FinPilot, a financial analyst for {business}, a small business in India. You answer the owner's questions about their finances using ONLY the approved tools, which run tested Python calculations over the business's own records.
 
 Data available
@@ -107,6 +132,8 @@ How to work
 5. If the data cannot answer the question, say exactly what is missing and what the user could upload or tell you. For a loan, the interest rate and tenure must come from the user — if they're not given, ask for them instead of assuming.
 6. You cannot pay, send, file or change anything yourself. When the owner wants something done in the app, prepare it with a draft tool: draft_entry (record a sale, expense, udhaar, payment received, supplier bill or payment made), draft_reminder (a WhatsApp reminder for overdue dues), draft_goal, draft_budget. The owner sees a card and must tap Confirm; say clearly that it is ready to confirm and not yet saved. You may also offer a draft when it clearly helps (e.g. a reminder to the most overdue customer), but never more than two per answer. Anything outside the app (a payment, a filing, a call) goes on the to-do list via propose_action; say that nothing has been done.
 7. If a name is ambiguous or not found, the tool returns suggestions — ask the owner which one they meant.
+8. Work like an agent, not a chatbot. For any request with more than one step — a goal such as "collect my money", "cut my costs", "get ready for Diwali", or the daily check-up — first call update_plan with 3–6 short steps, then do them, calling update_plan again to mark steps done as you go, and finish by preparing the concrete actions (draft tools) that move the goal forward. Don't stop at advice when you can prepare the action for the owner to confirm.
+9. When the owner states a lasting fact or preference ("never remind Ramesh", "my CA files GST", "I close on Sundays"), save it with remember and confirm briefly. Respect remembered preferences: e.g. don't draft reminders for someone the owner said not to remind.{memory}
 
 Answer format
 - Write for a busy shop owner, not an accountant: plain everyday words, no jargon. Say "running costs" not "operating expenses", "money customers owe you" not "receivables". Write dates like 4 Oct 2026 and amounts like ₹4,15,800 or ₹4.2 lakh.
@@ -156,6 +183,10 @@ def _execute(ctx: ToolContext, run: AgentRun, name: str, args: Any) -> tuple[boo
             run.warnings.append(f"{name}: independent check failed — " + "; ".join(f"{c.name} ({c.detail})" for c in bad))
             result = {**result, "verification_warning": "This result failed an independent arithmetic check; tell the user it could not be verified."}
     run.steps.append(step)
+    if name == "update_plan" and ok and isinstance(result, dict) and result.get("plan"):
+        run.emit("plan", steps=result["plan"])
+    if name == "remember" and ok and isinstance(result, dict) and result.get("status") == "remembered":
+        run.emit("remembered", fact=result["fact"], id=result["id"])
     run.emit("tool_done", tool=name, index=len(run.steps) - 1, ok=ok and step.checks_ok, status=step.status, checks=len(step.checks))
     return ok, result
 
@@ -358,3 +389,20 @@ def check_gemini_key(api_key: str, lang: str = "en", preferred: str | None = Non
         return True, "", gemini.check_key(api_key, preferred or gemini.DEFAULT_MODEL)
     except Exception as e:
         return False, _why(e, lang), None
+
+
+CHECKUP_PROMPT = (
+    "[Daily check-up — started automatically by the app, not typed by the owner] Review the business as of today: cash and the cash "
+    "outlook for the next 30 days, money customers owe (and any broken payment promises), bills due in the next 7 days and overdue bills, "
+    "budgets, unusual payments in the last 30 days, and bank lines that need a category. Start with update_plan and mark steps done as you go. "
+    "Then prepare at most 4 actions with draft tools for what most needs doing today (for example a WhatsApp reminder to the most overdue "
+    "customer, confirming a category guess), following the owner's remembered preferences. Finish with a short briefing: one bold line with "
+    "the overall verdict, then a numbered list of the top things to do today, most important first, each with its figure."
+)
+
+
+def checkup(ctx: ToolContext, business: str, settings, client=None, lang: str = "en", on_event=None) -> AgentRun:
+    """The agent's own daily review: runs without a question, plans, inspects everything, and prepares actions to approve."""
+    if not settings.ai_enabled and client is None:
+        return run_offline("Run my daily check-up", ctx, lang=lang, on_event=on_event)
+    return ask(CHECKUP_PROMPT, ctx, business, settings, client=client, lang=lang, on_event=on_event)

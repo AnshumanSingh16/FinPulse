@@ -100,7 +100,10 @@ class TestTools:
                    "propose_action": {"action": "a", "reason": "b"}, "get_person_details": {"name": "Metro"},
                    "run_what_if": {"kind": "price", "price_change_pct": 5}, "draft_entry": {"kind": "sale", "amount": 500},
                    "draft_reminder": {"customer": "Metro Foods"}, "draft_goal": {"name": "Fridge", "target": 60000},
-                   "draft_budget": {"category": "Rent", "monthly_limit": 50000}}
+                   "draft_budget": {"category": "Rent", "monthly_limit": 50000},
+                   "update_plan": {"steps": [{"title": "Check cash", "status": "doing"}]}, "remember": {"fact": "Closed on Sundays"},
+                   "forget": {"id": 1}, "draft_promise": {"customer": "Metro Foods", "date": "2026-10-10"},
+                   "draft_recategorise": {"party": "Metro Foods", "category": "Sales"}}
         for t in TOOLS:
             ok, r = run_tool(ctx, t.name, minimal.get(t.name, {}))
             assert ok, (t.name, r)

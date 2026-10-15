@@ -17,8 +17,8 @@ const HI: Record<string, string> = {
   "Am I making money? Why did costs go up last month?": "क्या मैं मुनाफ़ा कमा रहा हूँ? पिछले महीने खर्च क्यों बढ़ा?",
   "Will I have enough cash for the next 3 months?": "क्या अगले 3 महीने के लिए कैश काफ़ी है?", "Can I raise prices by 5%?": "दाम 5% बढ़ाऊँ तो?", "Add a sale of ₹500 cash": "₹500 की नकद बिक्री जोड़ो",
   "Answers now come from built-in rules": "अभी जवाब बिल्ट-इन नियमों से आ रहे हैं",
-  "They work offline for common questions. Turn on the AI agent to ask anything in your own words — it plans, uses 21 tools and checks every figure.":
-    "ये आम सवालों के लिए बिना इंटरनेट चलते हैं। अपने शब्दों में कुछ भी पूछने के लिए AI एजेंट चालू करें — वह योजना बनाता है, 21 टूल इस्तेमाल करता है और हर आंकड़ा जाँचता है।",
+  "They work offline for common questions. Turn on the AI agent to ask anything in your own words — it plans, uses 28 tools and checks every figure.":
+    "ये आम सवालों के लिए बिना इंटरनेट चलते हैं। अपने शब्दों में कुछ भी पूछने के लिए AI एजेंट चालू करें — वह योजना बनाता है, 28 टूल इस्तेमाल करता है और हर आंकड़ा जाँचता है।",
   "Set up AI": "AI चालू करें", "Turn AI back on": "AI फिर चालू करें", "AI agent": "AI एजेंट", "AI agent on": "AI एजेंट चालू", "Built-in answers": "बिल्ट-इन जवाब",
   "The AI agent is working…": "AI एजेंट काम कर रहा है…", "Working it out…": "हिसाब लगा रहा हूँ…", "Reading your question": "आपका सवाल पढ़ रहा हूँ",
   "Ask anything…": "कुछ भी पूछें…", "Your question": "आपका सवाल", "Speak your question": "बोलकर पूछें", Send: "भेजें",
@@ -35,8 +35,8 @@ const HI: Record<string, string> = {
   "The AI agent is on": "AI एजेंट चालू है", "The AI agent is paused": "AI एजेंट रुका हुआ है", "AI agent is on": "AI एजेंट चालू हो गया", "Key removed from this computer": "Key इस कंप्यूटर से हटा दी गई",
   "Key {hint} is saved on this computer only.": "Key {hint} सिर्फ़ इसी कंप्यूटर पर सेव है।", "Using the key from your computer's settings ({hint}).": "आपके कंप्यूटर की सेटिंग वाली key ({hint}) इस्तेमाल हो रही है।",
   "Model: {model}": "मॉडल: {model}", "Pause AI (use built-in answers)": "AI रोकें (बिल्ट-इन जवाब)", "Remove key": "Key हटाएँ",
-  "Without AI, Ask uses FinPilot's built-in rules — they work offline and cover common questions. With your own Anthropic API key, an AI agent plans each question, uses 21 tools on your records, checks every figure and can prepare entries, reminders, goals and budgets for you to confirm.":
-    "AI के बिना, FinPilot अपने बिल्ट-इन नियमों से जवाब देता है — ये बिना इंटरनेट आम सवालों के लिए चलते हैं। अपनी Anthropic API key से AI एजेंट हर सवाल की योजना बनाता है, आपके हिसाब पर 21 टूल चलाता है, हर आंकड़ा जाँचता है, और एंट्री, याद-संदेश, लक्ष्य व बजट आपकी पुष्टि के लिए तैयार कर सकता है।",
+  "Without AI, Ask uses FinPilot's built-in rules — they work offline and cover common questions. With your own Anthropic API key, an AI agent plans each question, uses 28 tools on your records, checks every figure and can prepare entries, reminders, goals and budgets for you to confirm.":
+    "AI के बिना, FinPilot अपने बिल्ट-इन नियमों से जवाब देता है — ये बिना इंटरनेट आम सवालों के लिए चलते हैं। अपनी Anthropic API key से AI एजेंट हर सवाल की योजना बनाता है, आपके हिसाब पर 28 टूल चलाता है, हर आंकड़ा जाँचता है, और एंट्री, याद-संदेश, लक्ष्य व बजट आपकी पुष्टि के लिए तैयार कर सकता है।",
   "Get a key from the Anthropic Console (usage is billed by Anthropic to your account).": "Anthropic Console से key लें (इस्तेमाल का बिल Anthropic आपके खाते में लगाता है)।",
   "Paste it here:": "यहाँ पेस्ट करें:", "Anthropic API key": "Anthropic API key", "I understand what is sent to Anthropic when AI is on.": "मैं समझता हूँ कि AI चालू होने पर Anthropic को क्या भेजा जाता है।",
   "Checking the key…": "Key जाँच रहे हैं…", "Check key and turn on AI": "Key जाँचें और AI चालू करें",
@@ -49,14 +49,32 @@ const HI: Record<string, string> = {
   "Google Gemini (free)": "Google Gemini (मुफ़्त)", "Anthropic Claude": "Anthropic Claude", "API key": "API key", "{provider} · model {model}": "{provider} · मॉडल {model}",
   "Get a free key from Google AI Studio: sign in with your Google account and click “Create API key”.": "Google AI Studio से मुफ़्त key लें: अपने Google खाते से साइन इन करें और “Create API key” दबाएँ।",
   "I understand what is sent to Google when AI is on.": "मैं समझता हूँ कि AI चालू होने पर Google को क्या भेजा जाता है।",
-  "Without AI, Ask uses FinPilot's built-in rules — they work offline and cover common questions. With an API key, an AI agent plans each question, uses 21 tools on your records, checks every figure and can prepare entries, reminders, goals and budgets for you to confirm.":
-    "AI के बिना, FinPilot अपने बिल्ट-इन नियमों से जवाब देता है — ये बिना इंटरनेट आम सवालों के लिए चलते हैं। API key से AI एजेंट हर सवाल की योजना बनाता है, आपके हिसाब पर 21 टूल चलाता है, हर आंकड़ा जाँचता है, और एंट्री, याद-संदेश, लक्ष्य व बजट आपकी पुष्टि के लिए तैयार कर सकता है।",
+  "Without AI, Ask uses FinPilot's built-in rules — they work offline and cover common questions. With an API key, an AI agent plans each question, uses 28 tools on your records, checks every figure and can prepare entries, reminders, goals and budgets for you to confirm.":
+    "AI के बिना, FinPilot अपने बिल्ट-इन नियमों से जवाब देता है — ये बिना इंटरनेट आम सवालों के लिए चलते हैं। API key से AI एजेंट हर सवाल की योजना बनाता है, आपके हिसाब पर 28 टूल चलाता है, हर आंकड़ा जाँचता है, और एंट्री, याद-संदेश, लक्ष्य व बजट आपकी पुष्टि के लिए तैयार कर सकता है।",
   "Your question and the results of the tools the agent runs — amounts, dates, and customer and supplier names — are sent to Google to write the answer. Your uploaded files and full records are not sent. With AI off, nothing leaves this computer.":
     "आपका सवाल और एजेंट के टूल के नतीजे — रकम, तारीख़ें, और ग्राहकों व सप्लायरों के नाम — जवाब लिखने के लिए Google को भेजे जाते हैं। आपकी अपलोड की गई फ़ाइलें और पूरा हिसाब नहीं भेजा जाता। AI बंद हो तो कुछ भी बाहर नहीं जाता।",
   "Free tier: Google's terms allow it to use what you send on the free tier to improve its products, and people may review it. Try it on the demo shop; for your real books, consider a paid (billing-enabled) key.":
     "मुफ़्त टियर: Google की शर्तों के अनुसार मुफ़्त टियर पर भेजा गया डेटा उसके प्रोडक्ट सुधारने में इस्तेमाल हो सकता है और लोग इसे देख सकते हैं। डेमो दुकान पर आज़माएँ; असली हिसाब के लिए पेड (billing वाली) key बेहतर है।",
   "AI agent: your question and the figures its tools work out are sent to the AI provider. Your files are not.": "AI एजेंट: आपका सवाल और टूल से निकले आंकड़े AI प्रदाता को भेजे जाते हैं। आपकी फ़ाइलें नहीं।",
   "On — Ask uses the AI agent ({provider}).": "चालू — 'पूछें' AI एजेंट ({provider}) इस्तेमाल करता है।",
+  // agent v3
+  "Your agent": "आपका एजेंट", "Doing today's check-up…": "आज का चेक-अप कर रहा है…", "The AI agent is doing today's check-up…": "AI एजेंट आज का चेक-अप कर रहा है…",
+  "Checked your books today at {time}": "आज {time} बजे आपका हिसाब जाँचा", "{n} waiting for you": "{n} आपकी मंज़ूरी के इंतज़ार में",
+  "Checks your books every day and prepares what needs doing.": "हर दिन आपका हिसाब जाँचता है और ज़रूरी काम तैयार करता है।",
+  Memory: "याद", "Run check-up again": "चेक-अप फिर चलाएँ", "Run again": "फिर चलाएँ", "Give it a task": "काम दें", "Getting ready…": "तैयार हो रहा है…",
+  "Agent's plan": "एजेंट की योजना", "{d} of {n} done": "{n} में से {d} पूरे", "Remembered": "याद रखा", "You told me": "आपने कहा था",
+  "{n} line(s), {amt}": "{n} एंट्री, {amt}", now: "अभी", "Replaced by a newer check-up.": "नए चेक-अप ने इसकी जगह ले ली।",
+  "Approved {n}": "{n} मंज़ूर", "{n} actions are ready. Reminders open WhatsApp one by one.": "{n} काम तैयार हैं। याद-संदेश एक-एक करके WhatsApp में खुलते हैं।",
+  "Approve all ({n})": "सब मंज़ूर करें ({n})", "What the agent remembers": "एजेंट को क्या याद है",
+  "Preferences and facts you told the agent. It follows them — for example it won't draft reminders for someone you said not to remind. Figures always come from your records, never from here.":
+    "आपकी बताई बातें और पसंद। एजेंट इन्हें मानता है — जैसे जिसे याद-संदेश न भेजने को कहा, उसके लिए नहीं बनाएगा। आंकड़े हमेशा आपके हिसाब से आते हैं, यहाँ से नहीं।",
+  "Nothing yet. Try: “Remember that Ramesh is my brother — never remind him.”": "अभी कुछ नहीं। कहें: “याद रखना, रमेश मेरा भाई है — उसे याद-संदेश मत भेजना।”",
+  Forget: "भूल जाओ", "Add something to remember…": "याद रखने को कुछ लिखें…", Add: "जोड़ें",
+  "Give me a mission": "मुझे कोई मिशन दें", "Or ask": "या पूछें", "Daily check-up": "रोज़ का चेक-अप", "I review everything and prepare today's actions": "मैं सब जाँचकर आज के काम तैयार करता हूँ",
+  "Collect my money": "मेरी उधारी वसूलो", "I find who owes you and draft reminders": "मैं पता करता हूँ किस पर बाकी है और याद-संदेश बनाता हूँ",
+  "Cut my costs": "मेरा खर्च घटाओ", "I find what's rising and set budgets": "मैं देखता हूँ क्या बढ़ रहा है और बजट तय करता हूँ",
+  "Preview message": "संदेश देखें", "Plan finished: {d} of {n} steps done": "योजना पूरी: {n} में से {d} क़दम", "How I worked this out ({n})": "मैंने कैसे निकाला ({n})",
+  "Note a promise to pay": "भुगतान के वादे का नोट", "Fix categories": "श्रेणी सुधारें",
   // theme
   Theme: "थीम", Light: "हल्की", Auto: "अपने आप", Dark: "गहरी",
   // navigation

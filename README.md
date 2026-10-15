@@ -15,7 +15,12 @@ A friendly, bilingual (English / हिंदी) money app for small shop owner
 - **Calendar:** money in/out by day, invoices and bills due, regular payments, and typical GST/TDS dates, plus a GST set-aside estimate.
 - **Auto-categorise** bank statement lines (UPI/NEFT narrations → Sales, Electricity, Rent…) and learn from your corrections.
 - **Reports:** a monthly report for your CA and a loan-readiness summary for a bank — print or save as PDF.
-- **Ask FinPilot — an agent, not just a chatbot:** ask in English, Hindi or Hinglish (*“what should I do today?”*, *“who pays late?”*, *“is my rent too high?”*, *“add a sale of ₹500”*). It plans, runs tools on your records while you watch the steps live, checks every figure, and can **prepare** entries, WhatsApp reminders, savings goals and budgets — which are saved only when you tap **Confirm**.
+- **Your agent works for you, not just answers:**
+  - **Daily check-up by itself** — open the app and the agent reviews your cash, dues, broken promises, bills, budgets, odd payments and uncategorised lines, ticking off a plan you can watch, then leaves a briefing on Home with actions ready to **Approve** (or **Approve all**).
+  - **Missions** — *“collect my money”*, *“cut my costs”*: it writes a step-by-step plan, works through it live, and prepares several actions (reminders for each overdue customer, budgets for your biggest costs).
+  - **Memory** — tell it *“never remind Ramesh, he's my brother”* and it remembers and acts on it (it will skip him). See or delete memories any time.
+  - **Ask anything** in English, Hindi or Hinglish (*“who pays late?”*, *“is my rent too high?”*, *“add a sale of ₹500”*, *“Metro promised to pay by 25 Oct”*). Every figure is checked against your records.
+  - **It prepares, you approve:** entries, WhatsApp reminders, payment promises, category fixes, goals and budgets are saved only when you tap **Confirm** — cards wait in the inbox, even after a restart.
 - **Light and dark themes** (follows your phone, or pick one).
 
 All financial figures are calculated by tested Python code, never by the AI. Every number has a **“How do we know?”** link showing the method, assumptions and the exact records behind it.
@@ -159,12 +164,15 @@ npm run build                                       # rebuilds finpilot/web for 
 
 ### How the agent works
 
-1. **Plan and call tools.** The model gets the question, a description of the available data and the rules. Before each round it writes one short line of what it will check — shown live in Ask, with each tool step, over a server-sent-event stream (`POST /api/ask/stream`). It chooses from 21 approved tools:
+1. **Plan and call tools.** The model gets the question, a description of the available data and the rules. Before each round it writes one short line of what it will check — shown live in Ask, with each tool step, over a server-sent-event stream (`POST /api/ask/stream`). It chooses from 28 approved tools:
    - money: `get_financial_summary`, `analyze_expense_changes`, `find_unusual_transactions`, `get_cash_position`, `forecast_cash_flow`
    - khata: `get_receivables_and_payables`, `get_upcoming_payments`, `get_customers_and_suppliers`, `get_person_details`
    - insight: `get_health_score`, `get_weekly_story`, `get_budgets_and_goals`, `get_tax_calendar_and_gst`
    - decisions: `simulate_purchase`, `run_what_if` (price, discount, hire, loan)
-   - records & actions: `get_supporting_records`, `propose_action`, and the **draft tools** `draft_entry`, `draft_reminder`, `draft_goal`, `draft_budget`
+   - records & actions: `get_supporting_records`, `get_review_queue`, `propose_action`, and the **draft tools** `draft_entry`, `draft_reminder`, `draft_promise`, `draft_recategorise`, `draft_goal`, `draft_budget`
+   - working memory: `update_plan` (the live checklist the owner sees), `remember`, `recall_memory`, `forget` (facts and preferences the owner states — shown in the prompt as the owner's words, never as financial data)
+
+   For a goal or the daily check-up the agent is told to plan first (`update_plan`), mark steps done as it goes, and finish by preparing actions rather than stopping at advice. The **daily check-up** (`POST /api/agent/checkup/stream`) is started by the app itself once a day per book; its briefing and cards are stored, and drafts from an older check-up expire when a new one runs. All drafted cards are kept in the local database (`agent_actions`) until the owner confirms, cancels or they expire; **Approve all** confirms every card except WhatsApp reminders, which the owner opens one by one.
 
    It can call several tools in one round and keep going across rounds. A hard limit of `FINPILOT_MAX_STEPS` rounds applies.
 2. **Validate arguments.** Every argument is checked in Python before a tool runs: types, ranges, real dates, no unknown fields, and no "as of" dates in the future. Invalid calls go back to the model as errors. A loan simulation with no rate or tenure returns `needs_input`, and the agent asks the user.
@@ -198,7 +206,7 @@ The rule-based mode uses the same tools, validation and verification, with a sma
 ## Tests
 
 ```bash
-pytest            # 251 tests, about a minute
+pytest            # 259 tests, about a minute
 ```
 
 The tests cover:
@@ -217,6 +225,7 @@ The tests cover:
   - catching invented figures, dates and ids
   - the repair turn, the step limit, refusal and truncation handling, and the API-failure fallback
 
+- **The proactive agent:** the daily check-up (plan ticks to done, actions saved, runs once a day, older drafts expire), approve-all across a restart, memory that changes what is drafted, promises and category fixes, and an AI check-up with a scripted model.
 - **The agentic layer:** the khata/health/GST/what-if tools against independent sums, drafts that never save, confirm/cancel/expiry of action cards, the rule-based planner on everyday English/Hinglish/Hindi questions, the live-progress stream, and in-app key setup (consent required, key never echoed back).
 
   These use a scripted fake model, so no network or API key is needed. Gemini runs through the same loop with a scripted fake of its REST API (tool declarations, thought-signature round trip, repair turn, step limit, key setup). The live AI agent (either provider) has not been tested against the real APIs in this repository's test suite.

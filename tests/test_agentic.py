@@ -141,7 +141,7 @@ class TestPlanner:
         run = run_offline("What should I do today?", ctx)
         tools = [s.tool for s in run.steps]
         assert {"get_customers_and_suppliers", "get_upcoming_payments", "get_health_score", "get_cash_position"} <= set(tools)
-        assert [a["action"] for a in run.actions] == ["send_reminder"]
+        assert {a["action"] for a in run.actions} == {"send_reminder"} and run.plan and all(st["status"] == "done" for st in run.plan)
         assert run.verified and "Metro Foods" in run.answer
 
     def test_two_part_question_runs_both(self, ctx):
@@ -164,7 +164,7 @@ class TestPlanner:
 
     def test_hindi_briefing(self, ctx):
         run = run_offline("आज मुझे क्या करना चाहिए?", ctx, lang="hi")
-        assert run.actions and "वसूली" in run.answer and run.verified
+        assert run.actions and "वसूल" in run.answer and run.verified
 
     def test_purchase_beats_saving_words(self, ctx):
         assert "simulate_purchase" in tools_for("Can we afford a ₹12 lakh machine? It would save ₹45,000 a month.", ctx)
@@ -271,7 +271,8 @@ class TestAskAPI:
         assert kinds[0] == "start" and kinds[-1] == "final" and "tool_start" in kinds and "tool_done" in kinds
         assert all(e.get("label") for e in events if e["type"] == "tool_start")
         final = events[-1]["data"]
-        assert final["verified"] and final["actions"] and len(final["steps"]) == kinds.count("tool_done")
+        done = [e for e in events if e["type"] == "tool_done" and e["tool"] != "update_plan"]
+        assert final["verified"] and final["actions"] and len(final["steps"]) == len(done) and "plan" in kinds and final["plan"]
 
     def test_stream_in_hindi(self, app_client):
         with app_client.stream("POST", "/api/ask/stream", json={"question": "किस पर उधारी बाकी है?"}, headers={"X-Lang": "hi"}) as resp:

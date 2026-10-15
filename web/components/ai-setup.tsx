@@ -81,7 +81,7 @@ export function AiSetupSheet({ open, onClose }: { open: boolean; onClose: () => 
       ) : (
         <div className="space-y-4">
           <p className="text-sm text-ink-2">
-            {t("Without AI, Ask uses FinPilot's built-in rules — they work offline and cover common questions. With an API key, an AI agent plans each question, uses 21 tools on your records, checks every figure and can prepare entries, reminders, goals and budgets for you to confirm.")}
+            {t("Without AI, Ask uses FinPilot's built-in rules — they work offline and cover common questions. With an API key, an AI agent plans each question, uses 28 tools on your records, checks every figure and can prepare entries, reminders, goals and budgets for you to confirm.")}
           </p>
           <Segmented
             value={provider}
