@@ -6,6 +6,8 @@ except, in AI mode, the question and tool outputs to Anthropic's API (see README
 from __future__ import annotations
 
 import json
+import queue
+import threading
 import uuid
 from contextvars import ContextVar
 from pathlib import Path
@@ -13,10 +15,12 @@ from pathlib import Path
 import pandas as pd
 from fastapi import Body, FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from finpilot.agent import orchestrator
 from finpilot.agent.tools import ToolContext
+from finpilot import config
 from finpilot.config import settings
 from finpilot.data import books, khata, loader, store
 from finpilot.data.parse_entry import parse as parse_entry
@@ -41,6 +45,17 @@ STEP_LABEL = {
     "simulate_purchase": "Tested the purchase against your cash",
     "get_supporting_records": "Pulled up the exact records",
     "propose_action": "Added a to-do for you to approve",
+    "get_customers_and_suppliers": "Went through your khata",
+    "get_person_details": "Opened their khata page",
+    "get_health_score": "Worked out your health score",
+    "get_weekly_story": "Looked at the last 7 days",
+    "get_budgets_and_goals": "Checked your budgets and goals",
+    "get_tax_calendar_and_gst": "Checked GST and tax dates",
+    "run_what_if": "Ran the numbers on your averages",
+    "draft_entry": "Prepared the entry for you to confirm",
+    "draft_reminder": "Drafted a WhatsApp reminder",
+    "draft_goal": "Prepared a savings goal",
+    "draft_budget": "Prepared a budget",
 }
 STEP_LABEL_HI = {
     "get_financial_summary": "बिक्री, खर्च और मुनाफ़ा निकाला",
@@ -53,7 +68,42 @@ STEP_LABEL_HI = {
     "simulate_purchase": "ख़रीद को आपके कैश पर परखा",
     "get_supporting_records": "सही रिकॉर्ड निकाले",
     "propose_action": "आपकी मंज़ूरी के लिए काम जोड़ा",
+    "get_customers_and_suppliers": "आपका खाता देखा",
+    "get_person_details": "उनका खाता खोला",
+    "get_health_score": "सेहत स्कोर निकाला",
+    "get_weekly_story": "पिछले 7 दिन देखे",
+    "get_budgets_and_goals": "बजट और लक्ष्य देखे",
+    "get_tax_calendar_and_gst": "GST और टैक्स की तारीख़ें देखीं",
+    "run_what_if": "आपके औसत पर हिसाब लगाया",
+    "draft_entry": "एंट्री पुष्टि के लिए तैयार की",
+    "draft_reminder": "WhatsApp याद-संदेश तैयार किया",
+    "draft_goal": "बचत का लक्ष्य तैयार किया",
+    "draft_budget": "बजट तैयार किया",
 }
+STEP_DOING = {"en": "Working on it", "hi": "काम कर रहा हूँ"}
+
+# Follow-up questions offered after an answer, by the tools it used (English, Hindi).
+FOLLOWUPS = {
+    "get_receivables_and_payables": [("Remind the most overdue customer", "सबसे पुराने बकाया वाले को याद दिलाओ"), ("Who pays late?", "कौन देर से चुकाता है?")],
+    "get_customers_and_suppliers": [("How much does my top customer owe?", "मेरे सबसे बड़े ग्राहक पर कितना बाकी है?"), ("What should I do today?", "आज मुझे क्या करना चाहिए?")],
+    "get_person_details": [("Who else owes me money?", "और किस पर उधारी बाकी है?")],
+    "get_cash_position": [("When could I run short of cash?", "कैश कब कम पड़ सकता है?"), ("Who owes me money?", "किस पर उधारी बाकी है?")],
+    "forecast_cash_flow": [("What if customers pay 30 days late?", "अगर ग्राहक 30 दिन देर से चुकाएँ तो?"), ("Which bills are coming up?", "कौन से बिल आने वाले हैं?")],
+    "get_financial_summary": [("Why did costs go up last month?", "पिछले महीने खर्च क्यों बढ़ा?"), ("Can I raise prices by 5%?", "दाम 5% बढ़ाऊँ तो?")],
+    "analyze_expense_changes": [("Any double or unusual payments?", "कोई दोहरा या अजीब भुगतान?"), ("Set budgets from my averages", "मेरे औसत से बजट बताओ")],
+    "find_unusual_transactions": [("Show me the biggest costs", "सबसे बड़े खर्च दिखाओ")],
+    "get_health_score": [("How can I improve my score?", "स्कोर कैसे सुधारूँ?"), ("How did this week go?", "इस हफ़्ते कैसा रहा?")],
+    "get_weekly_story": [("Who are my best customers?", "मेरे सबसे अच्छे ग्राहक कौन हैं?"), ("What's my health score?", "मेरा सेहत स्कोर क्या है?")],
+    "run_what_if": [("What if I give a 10% discount for 2 weeks?", "2 हफ़्ते 10% छूट दूँ तो?"), ("Should I hire a helper for ₹15,000?", "₹15,000 पर हेल्पर रखूँ?")],
+    "get_tax_calendar_and_gst": [("Which bills are due this month?", "इस महीने कौन से बिल देने हैं?")],
+    "get_budgets_and_goals": [("Is my rent too high?", "क्या मेरा किराया ज़्यादा है?")],
+    "draft_entry": [("How did this week go?", "इस हफ़्ते कैसा रहा?"), ("Who owes me money?", "किस पर उधारी बाकी है?")],
+    "draft_reminder": [("Who else owes me money?", "और किस पर उधारी बाकी है?"), ("Who pays late?", "कौन देर से चुकाता है?")],
+    "draft_goal": [("How are my budgets and goals?", "मेरे बजट और लक्ष्य कैसे चल रहे हैं?")],
+    "draft_budget": [("How are my budgets and goals?", "मेरे बजट और लक्ष्य कैसे चल रहे हैं?")],
+    "simulate_purchase": [("What if sales drop 20%?", "अगर बिक्री 20% गिरे तो?"), ("When could I run short of cash?", "कैश कब कम पड़ सकता है?")],
+}
+STARTERS = [("What should I do today?", "आज मुझे क्या करना चाहिए?"), ("Who owes me money?", "किस पर उधारी बाकी है?"), ("How did this week go?", "इस हफ़्ते कैसा रहा?")]
 _LANG: ContextVar[str] = ContextVar("lang", default="en")
 
 
@@ -61,13 +111,24 @@ def lg() -> str:
     return _LANG.get()
 
 
-def step_label(tool: str) -> str:
-    return (STEP_LABEL_HI if lg() == "hi" else STEP_LABEL).get(tool, tool)
+def step_label(tool: str, lang: str | None = None) -> str:
+    return (STEP_LABEL_HI if (lang or lg()) == "hi" else STEP_LABEL).get(tool, tool)
+
+
+def followups(tools: list[str], question: str, lang: str) -> list[str]:
+    i = 1 if lang == "hi" else 0
+    out: list[str] = []
+    for t in dict.fromkeys(tools):
+        for pair in FOLLOWUPS.get(t, []):
+            if pair[i] not in out and pair[0].lower().rstrip("?") not in question.lower():
+                out.append(pair[i])
+    if not tools:
+        out = [p[i] for p in STARTERS]
+    return out[:3]
 
 
 def create_app(db: Path | None = None, client=None, static_dir: Path | None = STATIC) -> FastAPI:
-    cfg = settings()
-    db = Path(db or cfg.db_path)
+    db = Path(db or settings().db_path)
     app = FastAPI(title="FinPilot API", docs_url="/api/docs", openapi_url="/api/openapi.json")
     app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"], allow_methods=["*"], allow_headers=["*"])
     chats: dict[str, dict] = {}
@@ -102,7 +163,7 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
                 "balance_rows": 0 if up["balances"] is None else int(len(up["balances"])),
                 "ready": dataset.uploaded(db) is not None,
             },
-            "ai": {"enabled": cfg.ai_enabled or client is not None, "model": cfg.model},
+            "ai": ai_status(),
         }
 
     @app.post("/api/source")
@@ -156,20 +217,30 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
 
     # ------------------------------------------------------------ ask
 
-    @app.post("/api/ask")
-    def ask(body: dict = Body(...)):
-        question = str(body.get("question", "")).strip()
-        if not question:
-            raise HTTPException(400, "Ask a question.")
-        if len(question) > 2000:
-            raise HTTPException(400, "Please keep questions under 2,000 characters.")
-        d = ds()
-        cid = body.get("conversation_id") or uuid.uuid4().hex
-        chat = chats.setdefault(cid, {"messages": [], "results": [], "source": d.source})
+    def ai_status() -> dict:
+        cfg = settings()
+        key = cfg.anthropic_api_key or ""
+        saved_here = "ANTHROPIC_API_KEY" in config.local_env()
+        return {"enabled": cfg.ai_enabled or client is not None, "has_key": bool(key) or client is not None, "paused": cfg.ai_disabled,
+                "key_hint": f"…{key[-4:]}" if len(key) > 8 else None, "source": "app" if saved_here else ("environment" if key else None), "model": cfg.model}
+
+    def _chat(cid: str | None, d: dataset.Dataset) -> tuple[str, dict]:
+        cid = cid or uuid.uuid4().hex
+        chat = chats.setdefault(cid, {"messages": [], "results": [], "source": d.source, "actions": {}, "notes": []})
         if chat["source"] != d.source:
-            chat.update(messages=[], results=[], source=d.source)
-        ctx = ToolContext(d.ledger, d.obligations, d.balances, d.as_of, db)
-        run = orchestrator.ask(question, ctx, d.name, cfg, client=client, history=chat["messages"], prior_results=chat["results"], lang=lg())
+            chat.update(messages=[], results=[], source=d.source, actions={}, notes=[])
+        return cid, chat
+
+    def _run(question: str, cid: str | None, lang: str, on_event=None) -> dict:
+        d = ds()
+        cid, chat = _chat(cid, d)
+        ctx = ToolContext(d.ledger, d.obligations, d.balances, d.as_of, db, d.book, d.name.replace(" (fictional)", ""), lang)
+        preface = ""
+        if chat["notes"]:
+            preface = "[App note — not typed by the owner] Since your last answer: " + " ".join(chat["notes"])
+            chat["notes"] = []
+        run = orchestrator.ask(question, ctx, d.name, settings(), client=client, history=chat["messages"], prior_results=chat["results"],
+                               lang=lang, on_event=on_event, preface=preface)
         if run.mode == "ai" and run.messages:
             chat["messages"] = run.messages
             chat["results"] += [s.result for s in run.steps]
@@ -178,7 +249,12 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
         for tool, e in run.evidence:
             if tool not in seen:
                 seen.add(tool)
-                ev.append(views.evidence(e, step_label(tool)))
+                ev.append(views.evidence(e, step_label(tool, lang)))
+        actions = []
+        for a in run.actions:
+            chat["actions"][a["action_id"]] = {"action": a["action"], "payload": a["payload"], "summary": a["summary"], "state": "pending"}
+            actions.append({"id": a["action_id"], "kind": a["action"], "title": a["title"], "summary": a["summary"], "preview": a.get("preview", {}),
+                            "text": a["payload"].get("text"), "whatsapp": a["payload"].get("whatsapp"), "phone_saved": a["payload"].get("phone_saved")})
         return {
             "conversation_id": cid,
             "answer": run.answer,
@@ -186,9 +262,120 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
             "verified": run.verified,
             "has_figures": bool(run.steps),
             "warnings": run.warnings,
-            "steps": [{"label": step_label(s.tool), "ok": s.ok and s.checks_ok, "checks": len(s.checks)} for s in run.steps],
+            "steps": [{"label": step_label(s.tool, lang), "tool": s.tool, "ok": s.ok and s.checks_ok, "checks": len(s.checks)} for s in run.steps],
+            "notes": run.notes,
             "evidence": ev,
+            "actions": actions,
+            "suggestions": followups([s.tool for s in run.steps], question, lang),
         }
+
+    def _question(body: dict) -> str:
+        question = str(body.get("question", "")).strip()
+        if not question:
+            raise HTTPException(400, "Ask a question.")
+        if len(question) > 2000:
+            raise HTTPException(400, "Please keep questions under 2,000 characters.")
+        return question
+
+    @app.post("/api/ask")
+    def ask(body: dict = Body(...)):
+        return _run(_question(body), body.get("conversation_id"), lg())
+
+    @app.post("/api/ask/stream")
+    def ask_stream(body: dict = Body(...)):
+        """The same answer as /api/ask, with live progress as server-sent events: step started / finished, the agent's notes, then the final answer."""
+        question, cid, lang = _question(body), body.get("conversation_id"), lg()
+        q: queue.Queue = queue.Queue()
+
+        def on_event(e: dict) -> None:
+            if e.get("tool"):
+                e = {**e, "label": step_label(e["tool"], lang)}
+            q.put(e)
+
+        def work() -> None:
+            try:
+                q.put({"type": "final", "data": _run(question, cid, lang, on_event)})
+            except Exception as e:  # never leave the client hanging
+                q.put({"type": "error", "message": f"Something went wrong ({type(e).__name__}). Please try again."})
+
+        q.put({"type": "start", "mode": "ai" if ai_status()["enabled"] else "rule-based", "label": STEP_DOING.get(lang, STEP_DOING["en"])})
+        threading.Thread(target=work, daemon=True).start()
+
+        def events():
+            while True:
+                e = q.get()
+                yield f"data: {json.dumps(e, default=str, ensure_ascii=False)}\n\n"
+                if e["type"] in ("final", "error"):
+                    break
+
+        return StreamingResponse(events(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+    @app.post("/api/ask/action/{action_id}")
+    def ask_action(action_id: str, body: dict = Body(...)):
+        """The owner's Confirm / Cancel on a card the agent drafted. Only this — never the model — saves anything."""
+        d = ds()
+        chat = chats.get(str(body.get("conversation_id") or ""))
+        item = chat and chat["actions"].get(action_id)
+        if not item:
+            raise HTTPException(404, "This card has expired. Ask again to get a fresh one.")
+        if item["state"] != "pending":
+            raise HTTPException(409, f"Already {item['state']}.")
+        if body.get("decision") == "cancel":
+            item["state"] = "cancelled"
+            chat["notes"].append(f"The owner cancelled: {item['summary']}.")
+            return {"ok": True, "state": "cancelled"}
+        p, kind = item["payload"], item["action"]
+        out: dict = {"ok": True, "state": "done"}
+        if kind == "record_entry":
+            out |= _record_entry(d, p)
+            note = f"The owner confirmed and saved: {out['message']} (entry {out['id']})."
+        elif kind == "create_goal":
+            books.add_goal(db, d.book, p["name"], float(p["target"]), p.get("target_date"), "target", float(p.get("saved") or 0))
+            out["message"] = f"Goal saved: {item['summary']}"
+            note = f"The owner confirmed the goal: {item['summary']}."
+        elif kind == "set_budget":
+            books.set_budget(db, d.book, p["category"], float(p["monthly_limit"]))
+            out["message"] = f"Budget saved: {item['summary']}"
+            note = f"The owner confirmed the budget: {item['summary']}."
+        elif kind == "send_reminder":
+            out |= {"message": "Opening WhatsApp — check the message and press send.", "open": p["whatsapp"]}
+            note = f"The owner opened WhatsApp to send the reminder to {p['customer']} (FinPilot cannot tell whether it was sent)."
+        else:
+            raise HTTPException(400, "Unknown action.")
+        item["state"] = "done"
+        chat["notes"].append(note)
+        store.log(db, "action_confirmed", f"{kind}: {item['summary']}")
+        return out
+
+    # ------------------------------------------------------------ AI settings (the key stays on this computer)
+
+    @app.get("/api/ai")
+    def get_ai():
+        return ai_status()
+
+    @app.post("/api/ai/key")
+    def set_ai_key(body: dict = Body(...)):
+        key = str(body.get("key") or "").strip()
+        if not body.get("consent"):
+            raise HTTPException(400, "Please tick the box to confirm you understand what is sent to Anthropic.")
+        if not key.startswith("sk-ant-") or len(key) < 20 or any(c.isspace() for c in key):
+            raise HTTPException(400, "That doesn't look like an Anthropic API key (it starts with sk-ant-).")
+        ok, why = orchestrator.check_key(key, lg())
+        if not ok:
+            raise HTTPException(400, f"The key didn't work: {why}.")
+        config.save_local("ANTHROPIC_API_KEY", key)
+        config.save_local("FINPILOT_AI", None)
+        return ai_status()
+
+    @app.delete("/api/ai/key")
+    def remove_ai_key():
+        config.save_local("ANTHROPIC_API_KEY", None)
+        return ai_status()
+
+    @app.post("/api/ai/pause")
+    def pause_ai(body: dict = Body(...)):
+        config.save_local("FINPILOT_AI", "off" if body.get("paused") else None)
+        return ai_status()
 
     # ------------------------------------------------------------ to-dos (the approval queue)
 
@@ -375,9 +562,7 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
         return {"entries": books.entries(db, d.book), "parties": _known_parties(d), "categories": khata_views.categories(d),
                 "today": str(d.as_of.date())}
 
-    @app.post("/api/entries")
-    def add_entry(body: dict = Body(...)):
-        d = ds()
+    def _record_entry(d: dataset.Dataset, body: dict) -> dict:
         try:
             res = khata.record(d.tables(), str(body.get("kind")), body.get("amount"), body.get("date") or d.as_of,
                                party=str(body.get("party") or ""), category=str(body.get("category") or ""), mode=str(body.get("mode") or "cash"),
@@ -398,6 +583,10 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
             msg += f" · {views.short(res.unapplied)} more than was due"
         return {"id": res.entry_id, "message": msg, "settled": res.settled, "remaining": remaining,
                 "cleared_all": bool(res.settled) and remaining is not None and remaining <= 0}
+
+    @app.post("/api/entries")
+    def add_entry(body: dict = Body(...)):
+        return _record_entry(ds(), body)
 
     @app.post("/api/entries/{entry_id}/undo")
     def undo_entry(entry_id: str):

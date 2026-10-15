@@ -137,7 +137,7 @@ export default function CalendarPage() {
                   onClick={() => setSel(d.date)}
                   className={cx(
                     "flex aspect-square flex-col items-start rounded-xl p-1.5 text-left text-xs transition sm:aspect-[1.1] sm:p-2",
-                    isSel ? "grad-violet shadow-lg" : isToday ? "bg-brand-50 ring-2 ring-brand" : d.date > data.today ? "bg-canvas/60 hover:bg-canvas" : "bg-canvas hover:bg-[#ece9f5]",
+                    isSel ? "grad-violet shadow-lg" : isToday ? "bg-brand-50 ring-2 ring-brand" : d.date > data.today ? "bg-canvas/60 hover:bg-canvas" : "bg-canvas hover:bg-brand-50",
                   )}
                 >
                   <span className={cx("font-semibold", isSel ? "text-white" : "text-ink")}>{d.day}</span>

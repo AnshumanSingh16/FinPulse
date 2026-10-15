@@ -1,11 +1,11 @@
 "use client";
 
 import {
-  BookUser, CalendarDays, Database, FileText, Gauge, House, Languages, LayoutGrid, MessageCircleQuestion, Plus, Sparkles, Target, Wallet, X,
+  BookUser, CalendarDays, Database, FileText, Gauge, House, Languages, LayoutGrid, MessageCircleQuestion, Monitor, Moon, Plus, Sparkles, Sun, Target, Wallet, X,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { post } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 import { DataVersion } from "./data-version";
@@ -34,7 +34,7 @@ function active(path: string, href: string) {
 export function Logo({ light }: { light?: boolean }) {
   return (
     <Link href="/" className="flex items-center gap-2.5" aria-label="FinPilot home">
-      <span className="grid size-9 place-items-center rounded-xl border border-[#3a3157] bg-gradient-to-br from-[#2a2342] to-[#0f0f12] text-gold">
+      <span className="grad-hero grid size-9 place-items-center rounded-xl text-[#ffd27a] shadow-sm">
         <Sparkles className="size-5" aria-hidden />
       </span>
       <span className={cx("display text-[1.3rem]", light && "text-white")}>FinPilot</span>
@@ -48,8 +48,41 @@ export function LangToggle({ className }: { className?: string }) {
     <div className={cx("inline-flex items-center rounded-full border border-line bg-surface p-0.5 text-xs font-semibold", className)} role="group" aria-label="Language">
       <Languages className="mx-1.5 size-3.5 text-ink-2" aria-hidden />
       {(["en", "hi"] as const).map((l) => (
-        <button key={l} onClick={() => setLang(l)} aria-pressed={lang === l} className={cx("rounded-full px-2.5 py-1 transition", lang === l ? "bg-[#f4f2ee] text-black shadow-sm" : "text-ink-2")}>
+        <button key={l} onClick={() => setLang(l)} aria-pressed={lang === l} className={cx("rounded-full px-2.5 py-1 transition", lang === l ? "bg-brand text-on-brand shadow-sm" : "text-ink-2")}>
           {l === "en" ? "EN" : "हिं"}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+type Theme = "auto" | "light" | "dark";
+
+export function ThemeToggle({ className }: { className?: string }) {
+  const { t } = useT();
+  const [theme, setTheme] = useState<Theme>("auto");
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem("finpilot.theme");
+      if (v === "light" || v === "dark") setTheme(v);
+    } catch {}
+  }, []);
+  const choose = (v: Theme) => {
+    setTheme(v);
+    try {
+      if (v === "auto") localStorage.removeItem("finpilot.theme");
+      else localStorage.setItem("finpilot.theme", v);
+    } catch {}
+    if (v === "auto") delete document.documentElement.dataset.theme;
+    else document.documentElement.dataset.theme = v;
+  };
+  const opts: [Theme, React.ElementType, string][] = [["light", Sun, "Light"], ["auto", Monitor, "Auto"], ["dark", Moon, "Dark"]];
+  return (
+    <div className={cx("inline-flex items-center rounded-full border border-line bg-surface p-0.5", className)} role="group" aria-label={t("Theme")}>
+      {opts.map(([v, I, label]) => (
+        <button key={v} onClick={() => choose(v)} aria-pressed={theme === v} title={t(label)} aria-label={t(label)}
+          className={cx("grid size-7 place-items-center rounded-full transition", theme === v ? "bg-brand text-on-brand shadow-sm" : "text-ink-2 hover:text-ink")}>
+          <I className="size-3.5" aria-hidden />
         </button>
       ))}
     </div>
@@ -76,7 +109,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       href={href}
       className={cx(
         "flex h-11 items-center gap-3 rounded-xl px-3 text-[0.95rem] font-medium transition",
-        active(path, href) ? "bg-surface-2 text-ink shadow-[inset_2px_0_0_0_var(--color-gold)]" : "text-ink-2 hover:bg-surface hover:text-ink",
+        active(path, href) ? "bg-brand-50 font-semibold text-brand" : "text-ink-2 hover:bg-surface-2 hover:text-ink",
       )}
     >
       <I className="size-5" aria-hidden /> {t(label)}
@@ -85,11 +118,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-dvh">
-      <aside className="no-print fixed inset-y-0 left-0 hidden w-64 flex-col overflow-y-auto border-r border-line bg-[#0f0f11] px-4 py-6 lg:flex">
+      <aside className="no-print fixed inset-y-0 left-0 hidden w-64 flex-col overflow-y-auto border-r border-line bg-surface px-4 py-6 lg:flex">
         <div className="flex items-center justify-between px-2">
           <Logo />
         </div>
-        <button onClick={() => qe.open()} className="neo mt-6 flex h-12 items-center justify-center gap-2 bg-[#f4f2ee] text-sm font-bold tracking-wider text-black uppercase [--neo-edge:#7d7a85] hover:bg-white">
+        <button onClick={() => qe.open()} className="mt-6 flex h-12 items-center justify-center gap-2 rounded-full bg-brand text-[0.95rem] font-semibold text-on-brand shadow-md shadow-brand/20 transition hover:bg-brand-600 active:scale-[0.98]">
           <Plus className="size-5" /> {t("New entry")}
         </button>
         <nav className="mt-6 space-y-1" aria-label="Main">
@@ -98,7 +131,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
           {EXTRA.map(({ href, label, icon }) => navItem(href, label, icon))}
         </nav>
         <div className="mt-auto space-y-3 pt-6">
-          <LangToggle />
+          <div className="flex items-center justify-between gap-2">
+            <LangToggle />
+            <ThemeToggle />
+          </div>
           {state && (
             <div className="rounded-2xl border border-line bg-surface p-3 text-xs text-ink-2">
               <p className="font-semibold text-ink">{state.business}</p>
@@ -108,14 +144,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <header className="no-print sticky top-0 z-30 flex h-14 items-center justify-between border-b border-line bg-[#0b0b0d]/90 px-4 backdrop-blur lg:hidden">
+      <header className="no-print sticky top-0 z-30 flex h-14 items-center justify-between border-b border-line bg-surface/90 px-4 backdrop-blur lg:hidden">
         <Logo />
         <LangToggle />
       </header>
 
       <div className="lg:pl-64">
         {state?.is_demo && !active(path, "/data/") && !isReport && (
-          <div className="no-print flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-b border-line bg-[#111114] px-4 py-2 text-center text-xs tracking-wide text-ink-2">
+          <div className="no-print flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-b border-line bg-caution-50 px-4 py-2 text-center text-xs text-ink-2">
             <span>{t("You're exploring a demo shop with made-up numbers.")}</span>
             {state.upload.ready ? (
               <button onClick={useMine} className="font-semibold text-gold underline underline-offset-2">
@@ -132,31 +168,32 @@ export function Shell({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Mobile tab bar with the big + */}
-      <nav className="no-print fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-line bg-[#0f0f11]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden" aria-label="Main">
+      <nav className="no-print fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden" aria-label="Main">
         {[MAIN[0], MAIN[1]].map(({ href, label, icon: I }) => (
-          <Link key={href} href={href} className={cx("flex h-16 flex-col items-center justify-center gap-1 text-[0.7rem] font-medium", active(path, href) ? "text-gold" : "text-muted")}>
+          <Link key={href} href={href} className={cx("flex h-16 flex-col items-center justify-center gap-1 text-[0.7rem] font-medium", active(path, href) ? "text-brand" : "text-muted")}>
             <I className="size-[22px]" aria-hidden /> {t(label)}
           </Link>
         ))}
         <div className="grid place-items-center">
-          <button onClick={() => qe.open()} className="neo -mt-7 grid size-14 place-items-center bg-[#f4f2ee] text-black [--neo-edge:#7d7a85]" aria-label={t("New entry")}>
+          <button onClick={() => qe.open()} className="-mt-7 grid size-14 place-items-center rounded-full bg-brand text-on-brand shadow-lg shadow-brand/30 ring-4 ring-canvas transition active:scale-95" aria-label={t("New entry")}>
             <Plus className="size-7" />
           </button>
         </div>
-        <Link href="/ask/" className={cx("flex h-16 flex-col items-center justify-center gap-1 text-[0.7rem] font-medium", active(path, "/ask/") ? "text-gold" : "text-muted")}>
+        <Link href="/ask/" className={cx("flex h-16 flex-col items-center justify-center gap-1 text-[0.7rem] font-medium", active(path, "/ask/") ? "text-brand" : "text-muted")}>
           <MessageCircleQuestion className="size-[22px]" aria-hidden /> {t("Ask")}
         </Link>
-        <button onClick={() => setMore(true)} className={cx("flex h-16 flex-col items-center justify-center gap-1 text-[0.7rem] font-medium", more ? "text-gold" : "text-muted")}>
+        <button onClick={() => setMore(true)} className={cx("flex h-16 flex-col items-center justify-center gap-1 text-[0.7rem] font-medium", more ? "text-brand" : "text-muted")}>
           <LayoutGrid className="size-[22px]" aria-hidden /> {t("More")}
         </button>
       </nav>
 
       {more && (
         <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal aria-label={t("More")}>
-          <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={() => setMore(false)} />
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={() => setMore(false)} />
           <div className="sheet absolute inset-x-0 bottom-0 rounded-t-3xl border-t border-line bg-surface p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))]">
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-4 flex items-center justify-between gap-3">
               <p className="font-semibold">{t("More")}</p>
+              <ThemeToggle className="ml-auto" />
               <button onClick={() => setMore(false)} aria-label={t("Close")} className="rounded-full p-1.5 hover:bg-canvas">
                 <X className="size-5" />
               </button>

@@ -92,7 +92,7 @@ function Khata() {
       {loading && !data && <Loading />}
       {data && (
         <>
-          <section className={cx("rise flex flex-wrap items-end justify-between gap-4 rounded-[1.75rem] p-6 shadow-xl", cust ? "grad-mint shadow-black/60" : "grad-sunset shadow-black/60")}>
+          <section className={cx("rise flex flex-wrap items-end justify-between gap-4 rounded-[1.75rem] p-6 shadow-xl", cust ? "grad-mint shadow-black/10" : "grad-sunset shadow-black/10")}>
             <div>
               <p className="text-sm text-white/85">{t(cust ? "You'll get" : "You'll give")}</p>
               <p className="display num text-5xl">

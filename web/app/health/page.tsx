@@ -39,8 +39,8 @@ export default function HealthPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl">{t("Health score")}</h1>
-      <section className="grad-hero flex flex-wrap items-center gap-6 rounded-[1.75rem] p-6 shadow-xl shadow-black/60">
-        <div className="rounded-3xl border border-line bg-black/40 p-3 text-ink">
+      <section className="grad-hero flex flex-wrap items-center gap-6 rounded-[1.75rem] p-6 shadow-xl shadow-black/10">
+        <div className="rounded-3xl bg-surface p-3 text-ink shadow-lg">
           <Gauge score={data.score} size={220} />
         </div>
         <div>

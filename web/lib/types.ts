@@ -16,7 +16,7 @@ export interface AppState {
   as_of: string;
   as_of_label: string;
   upload: { name: string; bank_rows: number; invoice_rows: number; balance_rows: number; ready: boolean };
-  ai: { enabled: boolean; model: string };
+  ai: AiStatus;
 }
 
 export interface Action {
@@ -113,4 +113,13 @@ export interface Rec {
   amount: number;
   direction: "in" | "out";
   status?: string;
+}
+
+export interface AiStatus {
+  enabled: boolean;
+  has_key: boolean;
+  paused: boolean;
+  key_hint: string | null;
+  source: "app" | "environment" | null;
+  model: string;
 }

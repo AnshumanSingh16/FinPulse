@@ -41,7 +41,7 @@ export function CatIcon({ category, size = "md", className }: { category: string
   const box = size === "sm" ? "size-8" : size === "lg" ? "size-12" : "size-10";
   const ic = size === "sm" ? "size-4" : size === "lg" ? "size-6" : "size-5";
   return (
-    <span className={cx("grid shrink-0 place-items-center rounded-2xl border", box, className)} style={{ background: `${fg}1f`, borderColor: `${fg}40`, color: `color-mix(in srgb, ${fg} 55%, white)` }} aria-hidden>
+    <span className={cx("grid shrink-0 place-items-center rounded-2xl border", box, className)} style={{ background: `color-mix(in srgb, ${fg} 13%, var(--color-surface))`, borderColor: `color-mix(in srgb, ${fg} 24%, var(--color-surface))`, color: `color-mix(in srgb, ${fg} 78%, var(--color-ink))` }} aria-hidden>
       <I className={ic} />
     </span>
   );

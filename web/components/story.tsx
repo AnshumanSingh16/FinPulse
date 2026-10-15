@@ -45,7 +45,7 @@ export function StoryViewer({ cards, title, range, onClose }: { cards: StoryCard
   const look = LOOK[c.kind] ?? LOOK.net;
   const Icon = c.kind === "net" && c.positive === false ? TrendingDown : look.I;
   return (
-    <div className="fixed inset-0 z-[70] grid place-items-center bg-black/80 p-0 sm:p-6" role="dialog" aria-modal aria-label={title}>
+    <div className="fixed inset-0 z-[70] grid place-items-center bg-black/70 p-0 sm:p-6" role="dialog" aria-modal aria-label={title}>
       <div className={cx("relative flex h-full w-full flex-col overflow-hidden sm:h-[640px] sm:max-w-sm sm:rounded-[2rem]", look.grad)}>
         <div className="flex gap-1 p-3">
           {cards.map((_, n) => (

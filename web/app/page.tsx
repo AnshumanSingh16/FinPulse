@@ -96,7 +96,7 @@ function Hero({ home }: { home: Home }) {
   const { status, cash } = home;
   const grad = status.tone === "bad" ? "grad-hero-bad" : status.tone === "caution" ? "grad-hero-caution" : "grad-hero";
   return (
-    <section className={cx("rise rise-1 overflow-hidden rounded-[1.75rem] p-5 shadow-xl shadow-black/60 sm:p-7", grad)}>
+    <section className={cx("rise rise-1 overflow-hidden rounded-[1.75rem] p-5 shadow-xl shadow-black/10 sm:p-7", grad)}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="max-w-xl">
           <p className="display text-2xl leading-tight sm:text-[1.7rem]">{status.headline}</p>
@@ -203,7 +203,7 @@ function StoryCardTile() {
   if (!data) return <Card className="h-44 animate-pulse" />;
   return (
     <>
-      <button onClick={() => setOpen(true)} className="rise rise-4 grad-sunset relative flex items-center gap-4 overflow-hidden rounded-[1.5rem] p-5 text-left shadow-lg shadow-black/60 transition hover:brightness-105">
+      <button onClick={() => setOpen(true)} className="rise rise-4 grad-sunset relative flex items-center gap-4 overflow-hidden rounded-[1.5rem] p-5 text-left shadow-lg shadow-black/10 transition hover:brightness-105">
         <div className="flex -space-x-3">
           {["grad-hero", "grad-ocean", "grad-mint"].map((g, i) => (
             <span key={g} className={cx("grid size-14 place-items-center rounded-full ring-4 ring-white/30", g)} style={{ zIndex: 3 - i }}>

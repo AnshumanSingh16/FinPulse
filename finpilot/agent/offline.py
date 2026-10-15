@@ -142,12 +142,14 @@ P = {
     "rec.none": ("No matching records.", "कोई रिकॉर्ड नहीं मिला।"),
     "act.ok": ("**Added to your to-dos (#{id}) for your approval.** Nothing has been sent, paid or filed — FinPilot can't do that.",
                "**आपकी मंज़ूरी के लिए काम-सूची में जोड़ा (#{id})।** कुछ भेजा, भरा या चुकाया नहीं गया — FinPilot ऐसा नहीं करता।"),
-    "help": ("I can answer questions like:\n- *How profitable were we in the last 6 months?*\n- *Why did expenses go up last month?*\n- *Any duplicate or unusual payments?*\n"
-             "- *How much cash do we have, and who owes us?*\n- *Forecast our cash for the next 90 days.*\n"
-             "- *Can we afford a ₹12 lakh packing machine on a loan at 11% for 3 years? It would save ₹45,000 a month.*",
-             "मैं ऐसे सवालों के जवाब दे सकता हूँ:\n- *पिछले 6 महीने में कितना मुनाफ़ा हुआ?*\n- *पिछले महीने खर्च क्यों बढ़ा?*\n- *कोई दोहरा या अजीब भुगतान?*\n"
-             "- *बैंक में कितना पैसा है, और किस पर उधारी बाकी है?*\n- *अगले 90 दिन का कैश अनुमान बताओ।*\n"
-             "- *क्या मैं ₹12 लाख की मशीन 11% पर 3 साल के लोन पर ले सकता हूँ? इससे हर महीने ₹45,000 बचेंगे।*"),
+    "help": ("I didn't quite catch that. I can help with things like:\n- *What should I do today?*\n- *Who owes me money?* · *Who pays late?* · *How much does Metro owe?*\n"
+             "- *Am I making money?* · *How did this week go?* · *What's my health score?*\n- *Is my rent too high?* · *Why did costs go up?* · *Any double payments?*\n"
+             "- *Can I raise prices by 5%?* · *Should I hire a helper for ₹15,000?* · *How much GST should I keep aside?*\n"
+             "- *Can we afford a ₹12 lakh machine on a loan at 11% for 3 years?*\n- *Add a sale of ₹500 cash* · *Remind Metro Foods* · *Save ₹60,000 for a fridge by March*",
+             "मैं ठीक से समझ नहीं पाया। मैं इनमें मदद कर सकता हूँ:\n- *आज मुझे क्या करना चाहिए?*\n- *किस पर उधारी बाकी है?* · *कौन देर से चुकाता है?*\n"
+             "- *क्या मैं मुनाफ़ा कमा रहा हूँ?* · *इस हफ़्ते कैसा रहा?* · *मेरा सेहत स्कोर क्या है?*\n- *पिछले महीने खर्च क्यों बढ़ा?* · *कोई दोहरा भुगतान?*\n"
+             "- *दाम 5% बढ़ाऊँ तो?* · *₹15,000 पर हेल्पर रखूँ?* · *GST के लिए कितना अलग रखूँ?*\n"
+             "- *क्या मैं ₹12 लाख की मशीन 11% पर 3 साल के लोन पर ले सकता हूँ?*\n- *₹500 की नकद बिक्री जोड़ो* · *Metro को याद दिलाओ*"),
 }
 
 
@@ -392,17 +394,560 @@ def _action(q: str, call: ToolCaller, as_of) -> str:
     return tr("act.ok", id=r["approval_id"])
 
 
-INTENTS: list[tuple[re.Pattern, Callable]] = [
-    (re.compile(r"\b(T\d{4}|U\d{5}|E\d{5}|INV-\d{3,}|BILL-[A-Z0-9-]+|SCH-\d{3,}|K-\d{4})\b"), _records),
-    (re.compile(r"\b(send|remind|reminder|pay (?:the|this|bill)|file|submit|transfer)\b|याद दिला|भेज", re.I), _action),
-    (re.compile(r"\b(afford|buy|purchase|invest in|should (?:i|we) get|kharid\w*|le sakte|le sakta)\b|ख़रीद|खरीद|ले सकता|ले सकते", re.I), _purchase),
-    (re.compile(r"\b(forecast|next \d+ days|runway|run out|projection|cash flow|will (?:i|we) have|anuman|agle)\b|अनुमान|अगले", re.I), _forecast),
-    (re.compile(r"\b(duplicate|unusual|anomal|suspicious|odd|strange|fraud|double|ajeeb|dohra)\w*|दोहरा|अजीब|असामान्य", re.I), _unusual),
-    (re.compile(r"\b(expense|expenses|cost|costs|spend|spending|spent|kharcha|kharch|kharche)\b|खर्च", re.I), _expenses),
-    (re.compile(r"\b(overdue|owe|owes|owed|receivable|payable|collect|pending|due|bills|upcoming|udhaar|udhar|baki|baaki)\b|उधार|बाकी|बकाया|देना|लेना", re.I), _owed),
-    (re.compile(r"\b(cash|balance|bank|paisa|paise)\b|कैश|बैलेंस|पैसा|पैसे|बैंक", re.I), _cash),
-    (re.compile(r"\b(profit\w*|revenue|sales|summary|margin|income|how (?:is|are|was) (?:the |my )?business|performance|munafa|munafe|bikri|dhanda|dhandha)\b|मुनाफ़ा|मुनाफा|बिक्री|कारोबार|धंधा", re.I), _summary),
+# ---------------------------------------------------------------- shop handlers (khata, health, week, what-ifs, GST, drafts)
+
+P.update({
+    "greet": ("Namaste! 🙏 I'm your FinPilot assistant. I look at your own records and tell you what matters. Try:\n"
+              "- *What should I do today?*\n- *Who owes me money?*\n- *Who are my best customers?*\n- *Add a sale of ₹500 cash*",
+              "नमस्ते! 🙏 मैं आपका FinPilot सहायक हूँ। आपके अपने हिसाब से बताता हूँ कि क्या ज़रूरी है। पूछिए:\n"
+              "- *आज मुझे क्या करना चाहिए?*\n- *किस पर उधारी बाकी है?*\n- *मेरे सबसे अच्छे ग्राहक कौन हैं?*\n- *₹500 की नकद बिक्री जोड़ो*"),
+    "brief.head": ("**Here's what needs you today ({date}):**", "**आज ({date}) आपके ध्यान लायक बातें:**"),
+    "brief.collect": ("**Collect from {name}** — {amt} overdue, oldest {days} days late. I've drafted a WhatsApp reminder below for you to check.",
+                      "**{name} से वसूली करें** — {amt} बकाया, सबसे पुराना {days} दिन देर से। नीचे WhatsApp याद-संदेश तैयार है, देखकर भेजें।"),
+    "brief.collect_more": ("Also overdue: {rest}.", "और बकाया: {rest}।"),
+    "brief.bills": ("**Keep {amt} ready** for {n} bill(s) due by {date}.", "**{amt} तैयार रखें** — {date} तक {n} बिल देने हैं।"),
+    "brief.bills_overdue": ("**{amt} of supplier bills are already overdue** — pay or call them.", "**सप्लायरों के {amt} के बिल पहले से बकाया हैं** — चुकाएँ या बात करें।"),
+    "brief.odd": ("**Check {n} unusual payment(s)** in the last 30 days, e.g. {cat} {amt} on {date} ({id}).", "**{n} असामान्य भुगतान जाँचें** (पिछले 30 दिन), जैसे {cat} {amt}, {date} ({id})।"),
+    "brief.health": ("Health score **{score}/100** ({grade}). Weakest area: {weak}.", "सेहत स्कोर **{score}/100** ({grade})। सबसे कमज़ोर: {weak}।"),
+    "brief.cash": ("Cash in bank: {cash}.", "बैंक में कैश: {cash}।"),
+    "brief.calm": ("Nothing urgent — no overdue dues and no bills this week. 👍", "कुछ ज़रूरी नहीं — न उधारी बकाया, न इस हफ़्ते कोई बिल। 👍"),
+    "grade.Excellent": ("Excellent", "बहुत बढ़िया"), "grade.Good": ("Good", "अच्छा"), "grade.Fair": ("Fair", "ठीक-ठाक"), "grade.Needs attention": ("Needs attention", "ध्यान चाहिए"),
+    "hs.cash": ("cash cushion", "कैश की गद्दी"), "hs.profit": ("profit margin", "मुनाफ़े का मार्जिन"), "hs.collections": ("collecting dues", "उधारी वसूली"),
+    "hs.bills": ("paying bills on time", "समय पर बिल चुकाना"), "hs.momentum": ("sales growth", "बिक्री में बढ़त"),
+    "best.head": ("**Your top customers** by money received, {start} to {end}:", "**आपके सबसे अच्छे ग्राहक** (मिले पैसे के हिसाब से), {start} से {end}:"),
+    "best.line": ("{i}. **{name}** — {amt}{owes}", "{i}. **{name}** — {amt}{owes}"),
+    "best.owes": (" · still owes {amt}", " · अभी {amt} बाकी"),
+    "best.total": ("All customers together paid {amt} in this period.", "इस दौरान सभी ग्राहकों से कुल {amt} मिले।"),
+    "late.head": ("**Slowest payers** (from their paid bills):", "**सबसे देर से चुकाने वाले** (चुकाए बिलों के आधार पर):"),
+    "late.line": ("- **{name}** — {ontime}% on time, {days} days late on average{od}", "- **{name}** — {ontime}% समय पर, औसतन {days} दिन देर{od}"),
+    "late.od": ("; {amt} overdue now", "; अभी {amt} बकाया"),
+    "late.none": ("Not enough paid bills yet to judge who pays late.", "अभी इतने चुकाए बिल नहीं कि देर से चुकाने वालों का पता चले।"),
+    "sup.head": ("**Your suppliers** — you owe {total} in all, {overdue} overdue:", "**आपके सप्लायर** — कुल {total} देने हैं, {overdue} बकाया:"),
+    "sup.line": ("- **{name}** — owe {amt}{od}; paid {paid} in the period", "- **{name}** — {amt} देने हैं{od}; इस दौरान {paid} चुकाए"),
+    "sup.od": (" ({amt} overdue)", " ({amt} बकाया)"),
+    "person.nf": ("I couldn't find one person by that name.{dym}", "उस नाम से कोई एक व्यक्ति नहीं मिला।{dym}"),
+    "person.dym": (" Did you mean: {names}?", " क्या आपका मतलब: {names}?"),
+    "person.cust": ("**{name}** has paid you {amt} in total ({n} transactions, last on {last}).", "**{name}** ने अब तक कुल {amt} दिए ({n} लेन-देन, आख़िरी {last} को)।"),
+    "person.sup": ("**{name}**: you've paid them {amt} in total ({n} transactions, last on {last}).", "**{name}**: आपने कुल {amt} चुकाए ({n} लेन-देन, आख़िरी {last} को)।"),
+    "person.owes": ("- Still open: {amt}", "- अभी बाकी: {amt}"),
+    "person.item": ("  - {id}: {amt}, due {date}{late}", "  - {id}: {amt}, देय {date}{late}"),
+    "person.late": (" ({d} days late)", " ({d} दिन देर)"),
+    "person.rel": ("- Payment habit: {label} — {ontime}% of bills on time, {days} days late on average.", "- चुकाने की आदत: {ontime}% बिल समय पर, औसतन {days} दिन देर।"),
+    "person.clear": ("- Nothing pending. ✅", "- कुछ बाकी नहीं। ✅"),
+    "person.tip": ("\nSay *“remind {name}”* and I'll draft a WhatsApp reminder.", "\n*“{name} को याद दिलाओ”* कहिए, मैं WhatsApp संदेश तैयार कर दूँगा।"),
+    "health.head": ("**Your health score is {score}/100 — {grade}.**", "**आपका सेहत स्कोर {score}/100 है — {grade}।**"),
+    "health.line": ("- {icon} {label}: {pts:g}/20", "- {icon} {label}: {pts:g}/20"),
+    "health.hist": ("Recent months: {hist}.", "पिछले महीने: {hist}।"),
+    "health.note": ("\nA summary of your own records — not a credit score.", "\nयह आपके अपने हिसाब का सार है — क्रेडिट स्कोर नहीं।"),
+    "week.head": ("**Last 7 days ({a} to {b}): sales {sales}**{vs}", "**पिछले 7 दिन ({a} से {b}): बिक्री {sales}**{vs}"),
+    "week.vs": (" (the week before: {prev})", " (उससे पहले के हफ़्ते: {prev})"),
+    "week.best": ("- Best day: {day} {date}, {amt}", "- सबसे अच्छा दिन: {date}, {amt}"),
+    "week.top": ("- Top customer: {name}, {amt}", "- सबसे बड़ा ग्राहक: {name}, {amt}"),
+    "week.spend": ("- Biggest payment: {what} to {party}, {amt} ({id})", "- सबसे बड़ा भुगतान: {what} — {party}, {amt} ({id})"),
+    "week.inout": ("- Money in {inn}, money out {out}", "- आया {inn}, गया {out}"),
+    "week.udhaar": ("- Udhaar given {given}; dues collected {coll}", "- उधारी दी {given}; वसूली {coll}"),
+    "wi.price": ("**Raising prices by {p:g}%** (if you sell the same amount): about {chg} more profit a month — {yr} a year.",
+                 "**दाम {p:g}% बढ़ाने पर** (उतनी ही बिक्री रहे तो): हर महीने लगभग {chg} ज़्यादा मुनाफ़ा — साल में {yr}।"),
+    "wi.price_vol": ("**Prices {p:g}% and units sold {v:g}%**: profit changes by {chg} a month ({yr} a year).", "**दाम {p:g}% और बिक्री की मात्रा {v:g}%**: मुनाफ़े में हर महीने {chg} का बदलाव (साल में {yr})।"),
+    "wi.be": ("- You could sell up to {be:g}% fewer units before the price rise stops paying off.", "- {be:g}% तक कम माल बिके तब भी दाम बढ़ाना फ़ायदे में रहेगा।"),
+    "wi.base": ("- Based on your average month ({a} to {b}): sales {sales}, profit {profit}.", "- आपके औसत महीने ({a} से {b}) पर: बिक्री {sales}, मुनाफ़ा {profit}।"),
+    "wi.disc": ("**A {d:g}% discount for {w} weeks** with {u:g}% more sales changes profit by {chg} over the offer.", "**{w} हफ़्ते {d:g}% छूट**, {u:g}% ज़्यादा बिक्री के साथ: ऑफ़र में मुनाफ़े पर {chg} का असर।"),
+    "wi.disc_need": ("- To break even you'd need about {n:g}% more sales during the offer.", "- बराबरी के लिए ऑफ़र में लगभग {n:g}% ज़्यादा बिक्री चाहिए।"),
+    "wi.disc_tip": ("- Tell me how much more you expect to sell (e.g. *“10% discount, 20% more customers”*) for a fuller picture.", "- कितनी ज़्यादा बिक्री की उम्मीद है, बताइए (जैसे *“10% छूट, 20% ज़्यादा ग्राहक”*)।"),
+    "wi.hire_need": ("To check a hire I need the monthly salary — e.g. *“Should I hire a helper for ₹15,000 a month?”*", "भर्ती जाँचने के लिए महीने की तनख़्वाह बताइए — जैसे *“₹15,000 महीने पर हेल्पर रखूँ?”*"),
+    "wi.hire": ("**Hiring at {sal} a month** changes profit by {chg} a month{extra}.", "**{sal} महीने पर स्टाफ़ रखने से** मुनाफ़े में हर महीने {chg} का बदलाव{extra}।"),
+    "wi.hire_extra": (" (with {x} extra sales a month)", " ({x} ज़्यादा महीने की बिक्री के साथ)"),
+    "wi.hire_be": ("- They pay for themselves if they bring about {be} of extra sales a month.", "- अगर वे हर महीने लगभग {be} की ज़्यादा बिक्री लाएँ तो ख़र्च निकल जाएगा।"),
+    "wi.hire_cash": ("- Lowest bank balance over 6 months: {w} with the hire vs {wo} without.", "- 6 महीने में सबसे कम बैलेंस: भर्ती के साथ {w}, बिना {wo}।"),
+    "wi.note": ("\nA what-if on your past averages, not a prediction. Try other numbers on the Plan tab.", "\nयह पिछले औसत पर हिसाब है, भविष्यवाणी नहीं। अलग आंकड़े Plan टैब पर आज़माएँ।"),
+    "tax.not": ("You've marked the business as not GST-registered, so there's no GST to set aside.", "आपने व्यवसाय को GST में पंजीकृत नहीं बताया है, इसलिए GST अलग रखने की ज़रूरत नहीं।"),
+    "tax.head": ("**Set aside about {amt} for GST** for last month ({a} to {b}), at {r:g}% on sales minus {rp:g}% credit on purchases.",
+                 "**पिछले महीने ({a} से {b}) के GST के लिए लगभग {amt} अलग रखें** — बिक्री पर {r:g}%, ख़रीद पर {rp:g}% क्रेडिट घटाकर।"),
+    "tax.zero": ("**Little or no GST to set aside for last month ({a} to {b})** — estimated payable {amt}: the credit on your purchases ({rp:g}%) covers the GST on sales ({r:g}%).",
+                 "**पिछले महीने ({a} से {b}) का GST लगभग नहीं बनता** — अनुमानित {amt}: ख़रीद पर क्रेडिट ({rp:g}%) बिक्री के GST ({r:g}%) को पूरा कर देता है।"),
+    "tax.now": ("- This month so far: about {amt}.", "- इस महीने अब तक: लगभग {amt}।"),
+    "tax.paid": ("- GST already paid last month: {amt}.", "- पिछले महीने भरा GST: {amt}।"),
+    "tax.dates": ("Coming up:", "आने वाली तारीख़ें:"),
+    "tax.date": ("- {date}: {what}", "- {date}: {what}"),
+    "tax.note": ("\nAn estimate to help you save — not a GST return. Your CA's figures take precedence.", "\nयह बचत के लिए अनुमान है — GST रिटर्न नहीं। आपके CA के आंकड़े ही मान्य हैं।"),
+    "bg.head": ("**Budgets this month:** {spent} spent of {limit}.", "**इस महीने का बजट:** {limit} में से {spent} खर्च।"),
+    "bg.line": ("- {cat}: {spent} of {limit}{over}", "- {cat}: {limit} में से {spent}{over}"),
+    "bg.over": (" — over budget", " — बजट से ज़्यादा"),
+    "bg.none": ("You haven't set budgets yet. Based on the last 3 months, a starting point would be:", "अभी बजट तय नहीं है। पिछले 3 महीनों के आधार पर शुरुआत ऐसे कर सकते हैं:"),
+    "bg.sugg": ("- {cat}: {amt} a month", "- {cat}: {amt} महीना"),
+    "bg.goals": ("**Goals:**", "**लक्ष्य:**"),
+    "bg.goal": ("- {name}: {saved} saved of {target}{pm}", "- {name}: {target} में से {saved} जमा{pm}"),
+    "bg.pm": (" — save {amt} a month to make it", " — पूरा करने के लिए हर महीने {amt}"),
+    "bg.tip": ("\nSay e.g. *“set a rent budget of ₹50,000”* or *“save ₹60,000 for a fridge by March”* and I'll set it up for you to confirm.",
+               "\nकहिए, जैसे *“किराये का बजट ₹50,000 रखो”* या *“मार्च तक फ़्रिज के लिए ₹60,000 बचाने हैं”* — मैं तैयार कर दूँगा।"),
+    "draft.ready": ("**{summary}** — ready for you to confirm below. Nothing is saved until you tap Confirm.", "**{summary}** — नीचे पुष्टि के लिए तैयार है। Confirm दबाने तक कुछ सेव नहीं होगा।"),
+    "draft.settles": ("- It will clear: {items}.", "- इससे चुकता होगा: {items}।"),
+    "draft.more": ("- That's {amt} more than they owe; the extra is recorded as received.", "- यह बकाया से {amt} ज़्यादा है; अतिरिक्त राशि जमा मानी जाएगी।"),
+    "draft.goal": ("- You'd need to save {amt} a month for {m} month(s).", "- {m} महीने तक हर महीने {amt} बचाने होंगे।"),
+    "draft.budget": ("- Spent on {cat} so far this month: {amt}.", "- इस महीने {cat} पर अब तक खर्च: {amt}।"),
+    "draft.rem": ("**I've drafted a WhatsApp reminder to {name}** for {amt} overdue. Check it below and tap to open WhatsApp — nothing is sent automatically.",
+                  "**{name} के लिए WhatsApp याद-संदेश तैयार है** — {amt} बकाया। नीचे देखें और WhatsApp खोलने के लिए दबाएँ — अपने आप कुछ नहीं भेजा जाता।"),
+    "draft.rem_none": ("Nothing from {name} is overdue, so there's nothing to remind them about. 👍", "{name} का कुछ बकाया नहीं, याद दिलाने की ज़रूरत नहीं। 👍"),
+    "draft.need_amt": ("How much was it? For example *“sale of ₹500 cash”* or *“received ₹5,000 from Sharma ji”*.", "कितने का था? जैसे *“₹500 की नकद बिक्री”* या *“शर्मा जी से ₹5,000 मिले”*।"),
+    "draft.need_party": ("Whose name should this go under? For example *“udhaar ₹2,000 to Ramesh”*.", "किसके नाम पर लिखूँ? जैसे *“रमेश को ₹2,000 उधार”*।"),
+    "draft.bad": ("I couldn't prepare that: {msg}", "तैयार नहीं हो सका: {msg}"),
+    "goal.need": ("Tell me the amount and what it's for, e.g. *“save ₹60,000 for a fridge by March”*.", "रकम और किसलिए, बताइए — जैसे *“मार्च तक फ़्रिज के लिए ₹60,000”*।"),
+    "cat.head": ("**{cat}: {amt} over {a} to {b}** — about {avg} a month{share}.", "**{cat}: {a} से {b} में {amt}** — लगभग {avg} महीना{share}।"),
+    "cat.share": (", {p:g}% of your sales", ", आपकी बिक्री का {p:g}%"),
+    "cat.change": ("- Last month vs the month before: {dir} {chg}.", "- पिछला महीना उससे पहले वाले के मुकाबले: {chg} {dir}।"),
+    "cat.note": ("\nFinPilot has no industry benchmarks, so compare this with what similar shops near you pay.", "\nFinPilot के पास बाज़ार के मानक नहीं हैं — आस-पास की दुकानों से तुलना करें।"),
+    "cat.none": ("No spending found under {cat}.", "{cat} में कोई खर्च नहीं मिला।"),
+})
+
+CATEGORY_WORDS = {
+    "rent": "Rent", "kiraya": "Rent", "किराया": "Rent", "किराये": "Rent", "salary": "Salaries", "salaries": "Salaries", "wages": "Salaries", "tankhwah": "Salaries",
+    "तनख़्वाह": "Salaries", "वेतन": "Salaries", "electricity": "Electricity", "bijli": "Electricity", "बिजली": "Electricity", "power bill": "Electricity",
+    "packaging": "Packaging", "marketing": "Marketing", "advertising": "Marketing", "logistics": "Logistics", "transport": "Logistics", "delivery": "Logistics",
+    "raw material": "Raw materials", "raw materials": "Raw materials", "stock": "Raw materials", "maal": "Raw materials", "software": "Software",
+    "professional fees": "Professional Fees", "ca fees": "Professional Fees",
+}
+
+
+def _cat_in(q: str) -> str | None:
+    low = q.lower()
+    for w in sorted(CATEGORY_WORDS, key=len, reverse=True):
+        if re.search(rf"(?<!\w){re.escape(w)}(?!\w)", low):
+            return CATEGORY_WORDS[w]
+    return None
+
+
+def _briefing(q: str, call: ToolCaller, as_of) -> str:
+    lines = [tr("brief.head", date=str(as_of.date()))]
+    todo = []
+    ok, ppl = call("get_customers_and_suppliers", {"side": "customers", "sort_by": "overdue", "limit": 3})
+    od = [p for p in ppl.get("people", []) if p["overdue"] > 0] if ok and ppl.get("status") == "ok" else []
+    if od:
+        top = od[0]
+        todo.append(tr("brief.collect", name=top["name"], amt=_inr(top["overdue"]), days=top["oldest_days_late"]))
+        if len(od) > 1:
+            todo[-1] += " " + tr("brief.collect_more", rest=", ".join(f"{p['name']} {_inr(p['overdue'])}" for p in od[1:]))
+        call("draft_reminder", {"customer": top["name"]})
+    ok, up = call("get_upcoming_payments", {"days": 7})
+    if ok and up.get("status") == "ok":
+        if up.get("overdue_total"):
+            todo.append(tr("brief.bills_overdue", amt=_inr(up["overdue_total"])))
+        if up["upcoming"]:
+            todo.append(tr("brief.bills", amt=_inr(up["upcoming_total"]), n=len(up["upcoming"]), date=up["upcoming"][-1]["due_date"]))
+    ok, odd = call("find_unusual_transactions", {"lookback_days": 30})
+    if ok and odd.get("status") == "ok" and odd.get("flags"):
+        f = odd["flags"][0]
+        todo.append(tr("brief.odd", n=len(odd["flags"]), cat=f["category"], amt=_inr(f["amount"]), date=f["date"], id=", ".join(f["txn_ids"][:2])))
+    lines += [f"{i}. {t}" for i, t in enumerate(todo, 1)] or [tr("brief.calm")]
+    extra = []
+    ok, h = call("get_health_score", {})
+    if ok and h.get("status") == "ok":
+        weak = min(h["components"], key=lambda c: c["points"])
+        extra.append(tr("brief.health", score=h["score"], grade=tr(f"grade.{h['grade']}"), weak=tr(f"hs.{weak['key']}")))
+    ok, c = call("get_cash_position", {})
+    if ok and c.get("status") == "ok":
+        extra.append(tr("brief.cash", cash=_inr(c["cash_balance"])))
+    if extra:
+        lines.append("\n" + " ".join(extra))
+    return "\n".join(lines)
+
+
+def _greet(q: str, call: ToolCaller, as_of) -> str:
+    return tr("greet")
+
+
+def _side(q: str) -> str:
+    return "suppliers" if re.search(r"supplier|vendor|सप्लायर|vyapari", q, re.I) else "customers"
+
+
+def _best(q: str, call: ToolCaller, as_of) -> str:
+    if _side(q) == "suppliers":
+        return _suppliers(q, call, as_of)
+    ok, r = call("get_customers_and_suppliers", {"side": "customers", "sort_by": "paid", "limit": 5})
+    if r.get("status") != "ok":
+        return r.get("message", "")
+    lines = [tr("best.head", start=r["period"]["start"], end=r["period"]["end"])]
+    for i, p in enumerate([p for p in r["people"] if p["paid_in_period"] > 0], 1):
+        lines.append(tr("best.line", i=i, name=p["name"], amt=_inr(p["paid_in_period"]), owes=tr("best.owes", amt=_inr(p["outstanding"])) if p["outstanding"] else ""))
+    lines.append(tr("best.total", amt=_inr(r["total_paid_in_period"])))
+    return "\n".join(lines)
+
+
+def _late(q: str, call: ToolCaller, as_of) -> str:
+    ok, r = call("get_customers_and_suppliers", {"side": _side(q), "sort_by": "late", "limit": 5})
+    if r.get("status") != "ok":
+        return r.get("message", "")
+    rows = [p for p in r["people"] if p["reliability_avg_days_late"] is not None]
+    if not rows:
+        return tr("late.none")
+    lines = [tr("late.head")]
+    for p in rows:
+        lines.append(tr("late.line", name=p["name"], ontime=p["reliability_on_time_pct"], days=f"{p['reliability_avg_days_late']:g}",
+                        od=tr("late.od", amt=_inr(p["overdue"])) if p["overdue"] else ""))
+    return "\n".join(lines)
+
+
+def _suppliers(q: str, call: ToolCaller, as_of) -> str:
+    ok, r = call("get_customers_and_suppliers", {"side": "suppliers", "sort_by": "outstanding", "limit": 6})
+    if r.get("status") != "ok":
+        return r.get("message", "")
+    lines = [tr("sup.head", total=_inr(r["total_outstanding"]), overdue=_inr(r["total_overdue"]))]
+    for p in r["people"]:
+        lines.append(tr("sup.line", name=p["name"], amt=_inr(p["outstanding"]), od=tr("sup.od", amt=_inr(p["overdue"])) if p["overdue"] else "",
+                        paid=_inr(p["paid_to_them_in_period"])))
+    return "\n".join(lines)
+
+
+def _person_named(name: str) -> Callable:
+    def handler(q: str, call: ToolCaller, as_of) -> str:
+        ok, r = call("get_person_details", {"name": name})
+        if r.get("status") != "ok":
+            dym = tr("person.dym", names=", ".join(r.get("did_you_mean", []))) if r.get("did_you_mean") else ""
+            return tr("person.nf", dym=dym)
+        last = r["last_date"] or "—"
+        if r["type"] == "customer":
+            lines = [tr("person.cust", name=r["name"], amt=_inr(r["money_received_from_them"]), n=r["transactions"], last=last)]
+        else:
+            lines = [tr("person.sup", name=r["name"], amt=_inr(r["money_paid_to_them"]), n=r["transactions"], last=last)]
+        if r["open_items"]:
+            lines.append(tr("person.owes", amt=_inr(r["outstanding"])))
+            for i in r["open_items"][:5]:
+                lines.append(tr("person.item", id=i["id"], amt=_inr(i["amount"]), date=i["due_date"], late=tr("person.late", d=i["days_late"]) if i["days_late"] else ""))
+        else:
+            lines.append(tr("person.clear"))
+        if r["reliability_on_time_pct"] is not None:
+            lines.append(tr("person.rel", label=r["reliability_label"], ontime=r["reliability_on_time_pct"], days=f"{r['reliability_avg_days_late']:g}"))
+        if r["type"] == "customer" and any(i["days_late"] for i in r["open_items"]):
+            lines.append(tr("person.tip", name=r["name"].split()[0]))
+        return "\n".join(lines)
+    return handler
+
+
+def _health(q: str, call: ToolCaller, as_of) -> str:
+    ok, h = call("get_health_score", {})
+    if h.get("status") != "ok":
+        return h.get("message", "")
+    icon = {"good": "🟢", "caution": "🟡", "bad": "🔴", "unknown": "⚪"}
+    lines = [tr("health.head", score=h["score"], grade=tr(f"grade.{h['grade']}"))]
+    for c in h["components"]:
+        lines.append(tr("health.line", icon=icon.get(c["status"], "⚪"), label=tr(f"hs.{c['key']}"), pts=c["points"]))
+    if h["history"]:
+        lines.append(tr("health.hist", hist=", ".join(f"{x['month']} {x['score']}" for x in h["history"])))
+    return "\n".join(lines) + tr("health.note")
+
+
+def _week(q: str, call: ToolCaller, as_of) -> str:
+    ok, w = call("get_weekly_story", {"days": 7})
+    if w.get("status") != "ok":
+        return w.get("message", "")
+    t, p = w["this_period"], w["previous_period"]
+    lines = [tr("week.head", a=w["period"][0], b=w["period"][1], sales=_inr(t["sales"]), vs=tr("week.vs", prev=_inr(p["sales"])) if p["sales"] else "")]
+    if w["best_day"]:
+        lines.append(tr("week.best", day=w["best_day"]["weekday"], date=w["best_day"]["date"], amt=_inr(w["best_day"]["amount"])))
+    if w["top_customer"]:
+        lines.append(tr("week.top", name=w["top_customer"]["name"], amt=_inr(w["top_customer"]["amount"])))
+    if w["biggest_expense"]:
+        b = w["biggest_expense"]
+        lines.append(tr("week.spend", what=b["what"], party=b["party"], amt=_inr(b["amount"]), id=b["id"]))
+    lines.append(tr("week.inout", inn=_inr(t["money_in"]), out=_inr(t["money_out"])))
+    if w["udhaar_given"] or w["collected"]:
+        lines.append(tr("week.udhaar", given=_inr(w["udhaar_given"]), coll=_inr(w["collected"])))
+    return "\n".join(lines)
+
+
+def _pcts(q: str) -> list[float]:
+    return [float(x) for x in re.findall(r"(\d+(?:\.\d+)?)\s?%", q)]
+
+
+def _wi_base(r: dict) -> str:
+    b = r["baseline"]
+    return tr("wi.base", a=b["period"][0], b=b["period"][1], sales=_inr(b["sales"]), profit=_inr(b["profit"]))
+
+
+def _price(q: str, call: ToolCaller, as_of) -> str:
+    ps = _pcts(q)
+    price = ps[0] if ps else 5.0
+    if re.search(r"\b(lower|reduce|cut|kam|ghata)\w*|घटा|कम कर", q, re.I) and not re.search(r"\b(raise|increase|badha)\w*|बढ़ा", q, re.I):
+        price = -abs(price)
+    vol = -abs(ps[1]) if len(ps) > 1 and re.search(r"\b(lose|drop|fewer|less|kam)\b|कम", q, re.I) else (ps[1] if len(ps) > 1 else 0.0)
+    ok, r = call("run_what_if", {"kind": "price", "price_change_pct": price, "volume_change_pct": vol})
+    if r.get("status") != "ok":
+        return r.get("message", "")
+    if vol:
+        lines = [tr("wi.price_vol", p=price, v=vol, chg=_inr(r["monthly_change"]), yr=_inr(r["yearly_change"]))]
+    else:
+        lines = [tr("wi.price", p=price, chg=_inr(r["monthly_change"]), yr=_inr(r["yearly_change"]))]
+    if r.get("breakeven_volume_pct") is not None and price > 0:
+        lines.append(tr("wi.be", be=abs(r["breakeven_volume_pct"])))
+    lines.append(_wi_base(r))
+    return "\n".join(lines) + tr("wi.note")
+
+
+def _discount(q: str, call: ToolCaller, as_of) -> str:
+    ps = _pcts(q)
+    d = ps[0] if ps else 10.0
+    u = ps[1] if len(ps) > 1 else 0.0
+    m = re.search(r"(\d+)\s*(weeks?|hafte|हफ़्ते)", q, re.I)
+    weeks = int(m.group(1)) if m else 4
+    ok, r = call("run_what_if", {"kind": "discount", "discount_pct": d, "sales_uplift_pct": u, "weeks": weeks})
+    if r.get("status") != "ok":
+        return r.get("message", "")
+    lines = [tr("wi.disc", d=d, w=weeks, u=u, chg=_inr(r["profit_change"]))]
+    if r.get("uplift_needed_pct") is not None:
+        lines.append(tr("wi.disc_need", n=r["uplift_needed_pct"]))
+    if len(ps) < 2:
+        lines.append(tr("wi.disc_tip"))
+    lines.append(_wi_base(r))
+    return "\n".join(lines) + tr("wi.note")
+
+
+def _hire(q: str, call: ToolCaller, as_of) -> str:
+    amounts = _money(q)
+    if not amounts:
+        m = re.search(r"(\d{4,6})", q)
+        amounts = [float(m.group(1))] if m else []
+    if not amounts:
+        return tr("wi.hire_need")
+    args = {"kind": "hire", "monthly_salary": amounts[0]}
+    if len(amounts) > 1:
+        args["extra_monthly_sales"] = amounts[1]
+    ok, r = call("run_what_if", args)
+    if r.get("status") != "ok":
+        return r.get("message", "")
+    lines = [tr("wi.hire", sal=_inr(amounts[0]), chg=_inr(r["monthly_change"]), extra=tr("wi.hire_extra", x=_inr(amounts[1])) if len(amounts) > 1 else "")]
+    if r.get("breakeven_sales"):
+        lines.append(tr("wi.hire_be", be=_inr(r["breakeven_sales"])))
+    if r.get("cash"):
+        lines.append(tr("wi.hire_cash", w=_inr(r["cash"]["lowest_with"]), wo=_inr(r["cash"]["lowest_without"])))
+    lines.append(_wi_base(r))
+    return "\n".join(lines) + tr("wi.note")
+
+
+def _tax(q: str, call: ToolCaller, as_of) -> str:
+    ok, r = call("get_tax_calendar_and_gst", {"days": 45})
+    if r.get("status") != "ok":
+        return r.get("message", "")
+    lines = []
+    if not r["gst_registered"]:
+        lines.append(tr("tax.not"))
+    elif "gst_last_full_month" in r:
+        g, c = r["gst_last_full_month"], r["gst_this_month_so_far"]
+        key = "tax.head" if g["estimated_payable"] > 0 else "tax.zero"
+        lines.append(tr(key, amt=_inr(g["estimated_payable"]), a=g["period"][0], b=g["period"][1], r=r["gst_rate_sales_pct"], rp=r["gst_rate_purchases_pct"]))
+        lines.append(tr("tax.now", amt=_inr(c["estimated_payable"])))
+        if g["gst_paid_in_period"]:
+            lines.append(tr("tax.paid", amt=_inr(g["gst_paid_in_period"])))
+    if r["upcoming_due_dates"]:
+        lines.append(tr("tax.dates"))
+        lines += [tr("tax.date", date=d["date"], what=d["what"]) for d in r["upcoming_due_dates"][:5]]
+    return "\n".join(lines) + (tr("tax.note") if r["gst_registered"] else "")
+
+
+def _draft_reply(r: dict) -> str:
+    if r.get("status") != "needs_confirmation":
+        return tr("draft.bad", msg=r.get("message", ""))
+    lines = [tr("draft.ready", summary=r["summary"])]
+    pv = r.get("preview") or {}
+    if pv.get("would_settle"):
+        lines.append(tr("draft.settles", items=", ".join(f"{s['id']} ({_inr(s['amount'])})" for s in pv["would_settle"])))
+    if pv.get("more_than_due"):
+        lines.append(tr("draft.more", amt=_inr(pv["more_than_due"])))
+    if pv.get("per_month") and pv.get("months_left"):
+        lines.append(tr("draft.goal", amt=_inr(pv["per_month"]), m=pv["months_left"]))
+    if "spent_this_month" in pv:
+        lines.append(tr("draft.budget", cat=r["payload"]["category"], amt=_inr(pv["spent_this_month"])))
+    return "\n".join(lines)
+
+
+def _entry_with(parties: list[str]) -> Callable:
+    from finpilot.data.parse_entry import parse as parse_entry
+
+    def handler(q: str, call: ToolCaller, as_of) -> str:
+        e = parse_entry(q, as_of, parties)
+        if not e["amount"]:
+            return tr("draft.need_amt")
+        if "party" in e["missing"]:
+            return tr("draft.need_party")
+        args = {k: e[k] for k in ("kind", "amount", "party", "category", "mode", "date", "due_date") if e.get(k)}
+        ok, r = call("draft_entry", args)
+        return _draft_reply(r)
+    return handler
+
+
+def _remind_with(parties: list[str]) -> Callable:
+    def handler(q: str, call: ToolCaller, as_of) -> str:
+        name = _find_party(q, parties)
+        if not name:
+            ok, ppl = call("get_customers_and_suppliers", {"side": "customers", "sort_by": "overdue", "limit": 3})
+            od = [p for p in ppl.get("people", []) if p["overdue"] > 0] if ok else []
+            if not od:
+                return tr("brief.calm")
+            name = od[0]["name"]
+        ok, r = call("draft_reminder", {"customer": name})
+        if r.get("status") == "needs_confirmation":
+            return tr("draft.rem", name=r["payload"]["customer"], amt=_inr(r["preview"]["total"]))
+        if r.get("status") == "nothing_overdue":
+            return tr("draft.rem_none", name=r["customer"])
+        return tr("draft.bad", msg=r.get("message", ""))
+    return handler
+
+
+_MONTHS = {m: i for i, m in enumerate(["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"], 1)}
+
+
+def _budget_goal(q: str, call: ToolCaller, as_of) -> str:
+    amounts = _money(q)
+    cat = _cat_in(q)
+    if re.search(r"budget|बजट|limit", q, re.I) and amounts and cat:
+        ok, r = call("draft_budget", {"category": cat, "monthly_limit": amounts[0]})
+        return _draft_reply(r)
+    if re.search(r"\b(save|saving|goal|target|bachat|bachana|jama)\b|बचत|बचाने|लक्ष्य", q, re.I) and amounts:
+        m = re.search(r"\bfor (?:a |an |the |my |new )?([a-z][a-z ]{1,30}?)(?: by\b| in\b| till\b|[.?!,]|$)", q, re.I)
+        name = (m.group(1).strip().capitalize() if m else "My goal")[:60]
+        args = {"name": name, "target": amounts[0]}
+        dm = re.search(r"\bby\s+([a-z]{3})[a-z]*\s*(\d{4})?", q, re.I)
+        if dm and dm.group(1).lower() in _MONTHS:
+            mon = _MONTHS[dm.group(1).lower()]
+            year = int(dm.group(2)) if dm.group(2) else (as_of.year if mon > as_of.month else as_of.year + 1)
+            args["target_date"] = str((pd.Timestamp(year=year, month=mon, day=1) + pd.offsets.MonthEnd(0)).date())
+        ok, r = call("draft_goal", args)
+        return _draft_reply(r)
+    ok, r = call("get_budgets_and_goals", {})
+    lines = []
+    st = r.get("budget_month")
+    if st:
+        lines.append(tr("bg.head", spent=_inr(st["total_spent"]), limit=_inr(st["total_limit"])))
+        lines += [tr("bg.line", cat=x["category"], spent=_inr(x["spent"]), limit=_inr(x["limit"]), over=tr("bg.over") if x["state"] == "over" else "") for x in st["rows"][:6]]
+    elif r.get("suggested_monthly_budgets"):
+        lines.append(tr("bg.none"))
+        lines += [tr("bg.sugg", cat=c, amt=_inr(v)) for c, v in list(r["suggested_monthly_budgets"].items())[:6]]
+    if r.get("goals"):
+        lines.append(tr("bg.goals"))
+        lines += [tr("bg.goal", name=g["name"], saved=_inr(g["saved"]), target=_inr(g["target"]), pm=tr("bg.pm", amt=_inr(g["per_month"])) if g.get("per_month") and not g["done"] else "")
+                  for g in r["goals"][:5]]
+    return "\n".join(lines) + tr("bg.tip")
+
+
+def _category(q: str, call: ToolCaller, as_of) -> str:
+    from finpilot.engine.common import last_full_month
+
+    cat = _cat_in(q)
+    _, m_end = last_full_month(as_of)
+    start = (m_end - pd.DateOffset(months=2)).replace(day=1)
+    ok, s = call("get_financial_summary", {"start_date": str(start.date()), "end_date": str(m_end.date())})
+    if s.get("status") != "ok":
+        return s.get("message", "")
+    amt = s["expenses_by_category"].get(cat)
+    if not amt:
+        return tr("cat.none", cat=cat)
+    share = s.get("expense_share_of_sales_pct", {}).get(cat)
+    lines = [tr("cat.head", cat=cat, amt=_inr(amt), a=s["period"]["start"], b=s["period"]["end"], avg=_inr(s["expenses_by_category_monthly_average"][cat]),
+                share=tr("cat.share", p=share) if share is not None else "")]
+    ok, e = call("analyze_expense_changes", {"months": 1})
+    if ok and e.get("status") == "ok":
+        row = next((c for c in e["by_category"] if c["category"] == cat), None)
+        if row and row["change"]:
+            lines.append(tr("cat.change", dir=tr("up" if row["change"] > 0 else "down"), chg=_inr(abs(row["change"]))))
+    return "\n".join(lines) + tr("cat.note")
+
+
+_GENERIC = {"traders", "trader", "enterprises", "foods", "pvt", "ltd", "retail", "store", "stores", "shop", "suppliers", "supplier", "agro", "wholesale",
+            "and", "the", "india", "services", "company", "co", "mart", "customer", "walk-in", "bank", "sharma", "kumar"}
+
+
+def _find_party(q: str, parties: list[str]) -> str | None:
+    """A known customer/supplier named in the question: full name, or a distinctive first word (e.g. 'Metro')."""
+    low = q.lower()
+    full = [p for p in parties if p.lower() in low]
+    if full:
+        return max(full, key=len)
+    hits = []
+    for p in parties:
+        words = [w for w in re.findall(r"[a-z]+", p.lower()) if len(w) >= 4 and w not in _GENERIC]
+        if words and re.search(rf"\b{re.escape(words[0])}\b", low):
+            hits.append(p)
+    return hits[0] if len(hits) == 1 else None
+
+
+_Q_START = re.compile(r"^\s*(how|what|why|when|which|who|whom|is|are|was|were|can|could|should|do|does|did|will|kya|kitna|kitne|kab|kaun|kaise|क्या|कितना|कितने|कौन|कैसे)\b", re.I)
+_ENTRY_VERB = re.compile(r"\b(add|record|enter|note|log|likh\w*|daal\w*|jod\w*|darj)\b|जोड़|लिख|दर्ज", re.I)
+_ENTRY_KIND = re.compile(r"^\s*(sold|sale of|received|got|collected|paid|spent|bought|udhaar|udhar|gave|diya|diye|mila|mile|becha|bechi)\b"
+                         r"|\b(becha|bechi|beche|bika|udhaar|udhar|chukaya|chukaye|kharcha kiya|jama kiya|bheje|mile|mila)\b|बेचा|उधार दिया|चुकाया|मिले|मिला", re.I)
+EXCLUSIVE = {"records", "entry", "remind", "action", "purchase", "briefing", "greet", "price", "discount", "hire", "budget_goal"}
+
+BASE_INTENTS: list[tuple[str, re.Pattern, Callable | None]] = [
+    ("records", re.compile(r"\b(T\d{4}|U\d{5}|E\d{5}|INV-\d{3,}|BILL-[A-Z0-9-]+|SCH-\d{3,}|K-\d{4})\b"), _records),
+    ("greet", re.compile(r"^\s*(hi+|hello|hey|namaste|namaskar|good (?:morning|evening|afternoon)|thanks?|thank you|shukriya|dhanyavad|नमस्ते|नमस्कार|धन्यवाद|शुक्रिया)\b[\s!.?🙏]*\w{0,12}[\s!.?]*$", re.I), _greet),
+    ("remind", re.compile(r"\b(remind|reminder|yaad dila\w*|whatsapp)\b|याद दिला", re.I), None),
+    ("entry", re.compile(r"$^"), None),  # decided in code, see answer()
+    ("action", re.compile(r"\b(send|pay (?:the|this|bill)|file|submit|transfer)\b|भेज", re.I), _action),
+    ("purchase", re.compile(r"\b(afford|buy|purchase|invest in|should (?:i|we) get|kharid\w*|le sakte|le sakta)\b|ख़रीद|खरीद|ले सकता|ले सकते", re.I), _purchase),
+    ("budget_goal", re.compile(r"\b(budget|goal|savings? (?:goal|target)|save (?:₹|rs|up|for|\d)|bachat|lakshya)\b|बजट|लक्ष्य|बचत|बचाने", re.I), _budget_goal),
+    ("price", re.compile(r"\b(raise|increase|hike|lower|reduce|cut)\b.{0,20}\b(price|prices|rate|rates)\b|\bprice (?:rise|hike|increase)|\b(daam|dam|keemat|kimat)\b|दाम|कीमत", re.I), _price),
+    ("discount", re.compile(r"\b(discount|offer|chhoot|chhut)\b|छूट|ऑफ़र", re.I), _discount),
+    ("hire", re.compile(r"\b(hire|hiring|helper|employee|worker|staff|naukar|karigar|rakh\w*)\b|कर्मचारी|हेल्पर|रखूँ|रखना", re.I), _hire),
+    ("briefing", re.compile(r"\b(what should (?:i|we) (?:do|focus)|to ?do today|today'?s? (?:plan|tasks?|priorit\w*)|priorit\w*|what needs|anything (?:urgent|important)|brief\w*|aaj kya|kya karu\w*|kya karna)\b|आज क्या|क्या करूँ|क्या करना", re.I), _briefing),
+    ("forecast", re.compile(r"\b(forecast|next \d+ days|runway|run out|projection|cash flow|will (?:i|we) have|anuman|agle)\b|अनुमान|अगले", re.I), _forecast),
+    ("health", re.compile(r"\b(health|score|sehat|rating|how healthy)\b|सेहत|स्कोर", re.I), _health),
+    ("week", re.compile(r"\b(this week|last week|past week|last 7 days|weekly|week|hafte|hafta)\b|हफ़्ते|हफ्ते|सप्ताह", re.I), _week),
+    ("tax", re.compile(r"\b(gst|tds|tax|taxes|return|filing|itr)\b|जीएसटी|टैक्स", re.I), _tax),
+    ("best", re.compile(r"\b(best|top|biggest|largest|most valuable|loyal|regular)\b.{0,15}\b(customers?|clients?|buyers?|grahak)\b|\bwho buys? (?:the )?most\b|सबसे अच्छे ग्राहक|बड़े ग्राहक|grahak", re.I), _best),
+    ("late", re.compile(r"\b(pays?|paying|payers?)\b.{0,12}\b(late|slow|delay\w*)\b|\b(late|slow)\s+payers?\b|der se|देर से", re.I), _late),
+    ("suppliers", re.compile(r"\b(suppliers?|vendors?)\b|सप्लायर", re.I), _suppliers),
+    ("unusual", re.compile(r"\b(duplicate|unusual|anomal|suspicious|odd|strange|fraud|double|ajeeb|dohra)\w*|दोहरा|अजीब|असामान्य", re.I), _unusual),
+    ("category", re.compile(r"$^"), _category),  # decided in code
+    ("expenses", re.compile(r"\b(expense|expenses|cost|costs|spend|spending|spent|kharcha|kharch|kharche)\b|खर्च", re.I), _expenses),
+    ("owed", re.compile(r"\b(overdue|owe|owes|owed|receivable|payable|collect|pending|due|bills|upcoming|udhaar|udhar|baki|baaki)\b|उधार|बाकी|बकाया|देना|लेना", re.I), _owed),
+    ("cash", re.compile(r"\b(cash|balance|bank|paisa|paise)\b|कैश|बैलेंस|पैसा|पैसे|बैंक", re.I), _cash),
+    ("summary", re.compile(r"\b(profit\w*|revenue|sales|summary|margin|income|making money|earn\w*|kamai|kama|how (?:is|are|was) (?:the |my )?(?:business|shop|dukaan)|performance|munafa|munafe|bikri|dhanda|dhandha)\b|मुनाफ़ा|मुनाफा|बिक्री|कारोबार|धंधा|कमाई", re.I), _summary),
 ]
+INTENTS = [(p, h) for _, p, h in BASE_INTENTS if h is not None]  # kept for older callers
+
+
+def _entry_amount(q: str) -> float | None:
+    from finpilot.data.parse_entry import parse as parse_entry
+
+    return parse_entry(q, pd.Timestamp.today())["amount"]
+
+
+def plan(question: str, parties: list[str] | None = None) -> list[tuple[str, Callable]]:
+    """Which handlers answer this question, in order. Exclusive intents (actions, simulations) stand alone; up to three read-only ones combine."""
+    parties = parties or []
+    q = question.strip()
+    is_question = q.endswith("?") or bool(_Q_START.match(q))
+    found: list[tuple[str, Callable]] = []
+    person = _find_party(q, parties)
+    for key, pat, handler in BASE_INTENTS:
+        if key == "entry":
+            if _entry_amount(q) and not is_question and (_ENTRY_VERB.search(q) or _ENTRY_KIND.search(q)) and not re.search(r"budget|goal|बजट|लक्ष्य", q, re.I):
+                found.append((key, _entry_with(parties)))
+            continue
+        if key == "category":
+            if _cat_in(q) and not re.search(r"budget|बजट", q, re.I) and re.search(r"\b(too|high|much|kitna|zyada|jyada|spend|spent|paying|pay)\b|ज़्यादा|ज्यादा|कितना", q, re.I):
+                found.append((key, _category))
+            continue
+        if key == "remind":
+            if pat.search(q):
+                found.append((key, _remind_with(parties)))
+            continue
+        if pat.search(q):
+            found.append((key, handler))
+    if person and not any(k in EXCLUSIVE for k, _ in found):
+        found.insert(0, ("person", _person_named(person)))
+    for k, h in found:
+        if k in EXCLUSIVE:
+            return [(k, h)]
+    out, seen = [], set()
+    for k, h in found:
+        if k in seen:
+            continue
+        if k == "owed" and "person" in seen:  # "how much does Metro owe" is about that person
+            continue
+        if k == "expenses" and "category" in seen:
+            continue
+        seen.add(k)
+        out.append((k, h))
+    return out[:3]
+
 
 _SPAN = re.compile(r"(\d{4}-\d{2}-\d{2}) to (\d{4}-\d{2}-\d{2})")
 _ISO = re.compile(r"\b(\d{4})-(\d{2})-(\d{2})\b")
@@ -428,12 +973,13 @@ def _human_dates(text: str, lang: str = "en") -> str:
     return _ISO.sub(one, text)
 
 
-def answer(question: str, call: ToolCaller, as_of: pd.Timestamp, lang: str = "en") -> str:
+def answer(question: str, call: ToolCaller, as_of: pd.Timestamp, lang: str = "en", parties: list[str] | None = None) -> str:
     _LANG["v"] = "hi" if lang == "hi" else "en"
-    for pattern, handler in INTENTS:
-        if pattern.search(question):
-            return _human_dates(handler(question, call, as_of), _LANG["v"])
-    return tr("help")
+    steps = plan(question, parties)
+    if not steps:
+        return tr("help")
+    parts = [handler(question, call, as_of) for _, handler in steps]
+    return _human_dates("\n\n".join(p for p in parts if p), _LANG["v"])
 
 
 HELP = P["help"][0]

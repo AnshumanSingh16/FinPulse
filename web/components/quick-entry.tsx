@@ -259,7 +259,7 @@ function QuickEntry({ initial, onClose }: { initial: Draft; onClose: () => void 
             <p className="text-sm font-medium text-ink-2">{t("Paid with")}</p>
             <div className="mt-1.5 flex flex-wrap gap-2">
               {["cash", "upi", "bank", "card"].map((m) => (
-                <button key={m} onClick={() => set("mode", m)} className={cx("h-9 rounded-full border px-4 text-sm", f.mode === m ? "border-[#f4f2ee] bg-[#f4f2ee] text-black" : "border-line")}>
+                <button key={m} onClick={() => set("mode", m)} className={cx("h-9 rounded-full border px-4 text-sm", f.mode === m ? "border-brand bg-brand text-on-brand" : "border-line")}>
                   {t(m === "upi" ? "UPI" : m[0].toUpperCase() + m.slice(1))}
                 </button>
               ))}
@@ -270,7 +270,7 @@ function QuickEntry({ initial, onClose }: { initial: Draft; onClose: () => void 
         <input value={f.note ?? ""} onChange={(e) => set("note", e.target.value)} placeholder={t("Note")} className="h-11 w-full rounded-xl border border-line px-3 text-sm outline-none focus:border-brand" aria-label={t("Note")} />
 
         {err && <p className="rounded-xl bg-bad-50 p-3 text-sm text-bad">{err}</p>}
-        <button onClick={save} disabled={!valid || busy} className="neo h-13 w-full bg-[#f4f2ee] py-3.5 text-sm font-bold tracking-wider text-black uppercase [--neo-edge:#7d7a85] hover:bg-white disabled:opacity-40">
+        <button onClick={save} disabled={!valid || busy} className="h-13 w-full rounded-full bg-brand py-3.5 text-[0.95rem] font-semibold text-on-brand shadow-md shadow-brand/20 hover:bg-brand-600 disabled:opacity-40">
           {busy ? "…" : `${t("Save")} · ${t(k.label)}${amount ? " " + inr(amount) : ""}`}
         </button>
       </div>

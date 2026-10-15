@@ -25,6 +25,40 @@ def _load_dotenv() -> None:
 _load_dotenv()
 
 
+def env_path() -> Path:
+    return Path(os.environ.get("FINPILOT_ENV_FILE") or ROOT / ".env")
+
+
+def local_env() -> dict[str, str]:
+    """KEY=VALUE pairs in the project's local .env file (never committed; see .gitignore)."""
+    path = env_path()
+    out: dict[str, str] = {}
+    if path.exists():
+        for line in path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, v = line.split("=", 1)
+                out[k.strip()] = v.strip().strip('"').strip("'")
+    return out
+
+
+def save_local(key: str, value: str | None) -> None:
+    """Set (or with None, remove) one variable in the local .env file and in this process."""
+    path = env_path()
+    lines = path.read_text(encoding="utf-8").splitlines() if path.exists() else []
+    lines = [ln for ln in lines if not (ln.strip().split("=", 1)[0].strip() == key and "=" in ln)]
+    if value is not None:
+        lines.append(f"{key}={value}")
+        os.environ[key] = value
+    else:
+        os.environ.pop(key, None)
+    path.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
+    try:
+        path.chmod(0o600)  # the file can hold an API key: owner-only where the OS supports it
+    except OSError:
+        pass
+
+
 @dataclass(frozen=True)
 class Settings:
     anthropic_api_key: str | None

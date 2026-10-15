@@ -97,7 +97,10 @@ class TestTools:
 
     def test_every_tool_runs_on_demo_without_error(self, ctx):
         minimal = {"simulate_purchase": {"name": "x", "cost": 100000}, "get_supporting_records": {"record_ids": ["T0001"]},
-                   "propose_action": {"action": "a", "reason": "b"}}
+                   "propose_action": {"action": "a", "reason": "b"}, "get_person_details": {"name": "Metro"},
+                   "run_what_if": {"kind": "price", "price_change_pct": 5}, "draft_entry": {"kind": "sale", "amount": 500},
+                   "draft_reminder": {"customer": "Metro Foods"}, "draft_goal": {"name": "Fridge", "target": 60000},
+                   "draft_budget": {"category": "Rent", "monthly_limit": 50000}}
         for t in TOOLS:
             ok, r = run_tool(ctx, t.name, minimal.get(t.name, {}))
             assert ok, (t.name, r)
@@ -290,7 +293,9 @@ class TestOffline:
 
     def test_help_for_unrecognised_question(self, ctx):
         run = run_offline("hello", ctx)
-        assert not run.steps and "I can answer" in run.answer
+        assert not run.steps and "Namaste" in run.answer
+        run = run_offline("blah blah", ctx)
+        assert not run.steps and "I can help with" in run.answer
 
 
 class TestHindi:

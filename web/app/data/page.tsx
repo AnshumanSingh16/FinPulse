@@ -1,6 +1,7 @@
 "use client";
 
-import { CheckCircle2, FileSpreadsheet, Landmark, Lock, ReceiptText, RotateCcw, Rocket, Settings2, Store, Trash2, UploadCloud } from "lucide-react";
+import { Bot, CheckCircle2, FileSpreadsheet, Landmark, Lock, ReceiptText, RotateCcw, Rocket, Settings2, Store, Trash2, UploadCloud } from "lucide-react";
+import { AiSetupSheet } from "@/components/ai-setup";
 import { useContext, useEffect, useRef, useState } from "react";
 import { DataVersion } from "@/components/data-version";
 import { Button, Card, cx, Field, MoneyInput, Pill, SectionTitle } from "@/components/ui";
@@ -102,6 +103,7 @@ export default function DataPage() {
         onDone={refresh}
       />
 
+      <AiCard />
       <SettingsCard isDemo={state.is_demo} />
 
       {state.is_demo && (
@@ -408,7 +410,7 @@ function StartFresh({ onDone }: { onDone: () => void }) {
     }
   };
   return (
-    <div className="grad-hero rounded-[1.5rem] p-6 shadow-xl shadow-black/60">
+    <div className="grad-hero rounded-[1.5rem] p-6 shadow-xl shadow-black/10">
       <div className="flex items-center gap-2 text-sm text-white/85">
         <Rocket className="size-4" /> No files? No problem.
       </div>
@@ -423,6 +425,30 @@ function StartFresh({ onDone }: { onDone: () => void }) {
       </div>
       {err && <p className="mt-2 text-sm text-white">{err}</p>}
     </div>
+  );
+}
+
+function AiCard() {
+  const { t } = useT();
+  const { state } = useContext(DataVersion);
+  const [open, setOpen] = useState(false);
+  const on = !!state?.ai.enabled;
+  return (
+    <Card className="flex flex-wrap items-center gap-4">
+      <span className={cx("grid size-11 place-items-center rounded-2xl", on ? "grad-mint" : "grad-night")}>
+        <Bot className="size-5" aria-hidden />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="font-semibold">{t("AI agent")}</p>
+        <p className="text-sm text-ink-2">
+          {on ? t("On — Ask uses the AI agent with your own Anthropic key.") : t("Off — Ask uses built-in answers and nothing leaves this computer.")}
+        </p>
+      </div>
+      <Button variant={on ? "secondary" : "primary"} onClick={() => setOpen(true)}>
+        {on ? t("Manage") : t("Set up AI")}
+      </Button>
+      <AiSetupSheet open={open} onClose={() => setOpen(false)} />
+    </Card>
   );
 }
 

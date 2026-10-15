@@ -125,6 +125,28 @@ def check_tool_result(name: str, args: dict, result: dict, ledger: pd.DataFrame,
             ok = s["with_purchase"]["lowest_balance"] <= s["without_purchase"]["lowest_balance"] + TOL or p["monthly_benefit"] > 0
             out.append(Check(f"{s['label']}: purchase can't raise the low point without a benefit", ok, "consistency"))
 
+    elif name == "get_customers_and_suppliers":
+        kind = "receivable" if result["side"] == "customers" else "payable"
+        if obligations is not None and len(obligations):
+            pend = obligations[(obligations["kind"] == kind) & (obligations["status"] == "pending")]
+            out.append(Check(f"outstanding {result['side']} re-summed from invoices", close(pend["amount"].sum(), result["total_outstanding"]), "Σ rows"))
+        out.append(Check("each person's overdue ≤ outstanding", all(p["overdue"] <= p["outstanding"] + TOL for p in result["people"]), "consistency"))
+
+    elif name == "get_health_score":
+        out.append(Check("score = sum of the five checks", abs(round(sum(c["points"] for c in result["components"])) - result["score"]) <= 1, "Σ points"))
+
+    elif name == "run_what_if" and result.get("kind") == "price":
+        out.append(Check("monthly change = new profit − baseline profit", close(result["new_profit"] - result["baseline"]["profit"], result["monthly_change"]), "arithmetic"))
+
+    elif name == "run_what_if" and result.get("kind") == "loan":
+        out.append(Check("EMI re-computed", close(emi(float(args["loan_amount"]), float(args["interest_rate_pct"]), result["months"]), result["emi"]), "formula"))
+
+    elif name == "get_tax_calendar_and_gst":
+        for k in ("gst_last_full_month", "gst_this_month_so_far"):
+            if k in result:
+                g = result[k]
+                out.append(Check(f"{k}: payable = output − input credit", close(max(g["output_gst"] - g["input_credit"], 0), g["estimated_payable"]), "arithmetic"))
+
     elif name == "get_supporting_records":
         ids = set(args.get("record_ids", []))
         got = {r.get("txn_id") for r in result["transactions"]} | {r.get("item_id") for r in result["invoices_and_bills"]}

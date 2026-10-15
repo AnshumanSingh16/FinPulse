@@ -7,6 +7,47 @@ export type Lang = "en" | "hi";
 
 /** English → Hindi. Keys are the English text, so untranslated strings simply show in English. */
 const HI: Record<string, string> = {
+  // ask: the agent
+  "Ask FinPilot": "FinPilot से पूछें", "Your shop assistant": "आपकी दुकान का सहायक", "New chat": "नई बातचीत",
+  "What can I help with today?": "आज मैं क्या मदद करूँ?",
+  "I look through your khata, bank and bills, run the numbers with tested calculations, check every figure, and can prepare entries and reminders for you to confirm.":
+    "मैं आपका खाता, बैंक और बिल देखता हूँ, जाँचे-परखे हिसाब से आंकड़े निकालता हूँ, हर आंकड़ा दोबारा जाँचता हूँ, और एंट्री व याद-संदेश आपकी पुष्टि के लिए तैयार कर सकता हूँ।",
+  "Plan my day": "आज का काम", "Khata & udhaar": "खाता और उधारी", "Profit & costs": "मुनाफ़ा और खर्च", "What-ifs": "अगर ऐसा हो तो", "Do it for me": "मेरे लिए कर दो",
+  "What should I do today?": "आज मुझे क्या करना चाहिए?", "Who owes me money, and who pays late?": "किस पर उधारी बाकी है, और कौन देर से चुकाता है?",
+  "Am I making money? Why did costs go up last month?": "क्या मैं मुनाफ़ा कमा रहा हूँ? पिछले महीने खर्च क्यों बढ़ा?",
+  "Will I have enough cash for the next 3 months?": "क्या अगले 3 महीने के लिए कैश काफ़ी है?", "Can I raise prices by 5%?": "दाम 5% बढ़ाऊँ तो?", "Add a sale of ₹500 cash": "₹500 की नकद बिक्री जोड़ो",
+  "Answers now come from built-in rules": "अभी जवाब बिल्ट-इन नियमों से आ रहे हैं",
+  "They work offline for common questions. Turn on the AI agent to ask anything in your own words — it plans, uses 21 tools and checks every figure.":
+    "ये आम सवालों के लिए बिना इंटरनेट चलते हैं। अपने शब्दों में कुछ भी पूछने के लिए AI एजेंट चालू करें — वह योजना बनाता है, 21 टूल इस्तेमाल करता है और हर आंकड़ा जाँचता है।",
+  "Set up AI": "AI चालू करें", "Turn AI back on": "AI फिर चालू करें", "AI agent": "AI एजेंट", "AI agent on": "AI एजेंट चालू", "Built-in answers": "बिल्ट-इन जवाब",
+  "The AI agent is working…": "AI एजेंट काम कर रहा है…", "Working it out…": "हिसाब लगा रहा हूँ…", "Reading your question": "आपका सवाल पढ़ रहा हूँ",
+  "Ask anything…": "कुछ भी पूछें…", "Your question": "आपका सवाल", "Speak your question": "बोलकर पूछें", Send: "भेजें",
+  "AI agent: your question and the figures its tools work out are sent to Anthropic. Your files are not.": "AI एजेंट: आपका सवाल और टूल से निकले आंकड़े Anthropic को भेजे जाते हैं। आपकी फ़ाइलें नहीं।",
+  "Built-in answers: nothing leaves this computer.": "बिल्ट-इन जवाब: कुछ भी इस कंप्यूटर से बाहर नहीं जाता।", "Nothing is saved or sent until you confirm.": "आपकी पुष्टि के बिना कुछ सेव या भेजा नहीं जाता।",
+  "{n} steps · how I worked this out": "{n} क़दम · मैंने कैसे निकाला", "{n} checks passed": "{n} जाँच पास",
+  "Ready for you to confirm": "आपकी पुष्टि के लिए तैयार", Confirm: "पुष्टि करें", "Not now": "अभी नहीं", "Open WhatsApp": "WhatsApp खोलें",
+  "Cancelled — nothing was saved.": "रद्द — कुछ सेव नहीं हुआ।", Clears: "चुकता होगा", "{amt} more than they owe": "बकाया से {amt} ज़्यादा",
+  "Save {amt} a month for {m} months": "{m} महीने तक हर महीने {amt} बचाएँ", "Spent so far this month: {amt}": "इस महीने अब तक खर्च: {amt}", "oldest {d} days late": "सबसे पुराना {d} दिन देर",
+  "No phone number saved — WhatsApp will ask you to pick the contact.": "फ़ोन नंबर सेव नहीं — WhatsApp में संपर्क चुनना होगा।",
+  "Record a sale": "बिक्री दर्ज करें", "Record an expense": "खर्च दर्ज करें", "Give udhaar (sale on credit)": "उधार दें", "Record money received": "मिला पैसा दर्ज करें",
+  "Add a supplier bill": "सप्लायर बिल जोड़ें", "Record a payment to a supplier": "सप्लायर को भुगतान दर्ज करें", "Create a savings goal": "बचत का लक्ष्य बनाएँ", "Set a monthly budget": "महीने का बजट तय करें",
+  // AI setup
+  "The AI agent is on": "AI एजेंट चालू है", "The AI agent is paused": "AI एजेंट रुका हुआ है", "AI agent is on": "AI एजेंट चालू हो गया", "Key removed from this computer": "Key इस कंप्यूटर से हटा दी गई",
+  "Key {hint} is saved on this computer only.": "Key {hint} सिर्फ़ इसी कंप्यूटर पर सेव है।", "Using the key from your computer's settings ({hint}).": "आपके कंप्यूटर की सेटिंग वाली key ({hint}) इस्तेमाल हो रही है।",
+  "Model: {model}": "मॉडल: {model}", "Pause AI (use built-in answers)": "AI रोकें (बिल्ट-इन जवाब)", "Remove key": "Key हटाएँ",
+  "Without AI, Ask uses FinPilot's built-in rules — they work offline and cover common questions. With your own Anthropic API key, an AI agent plans each question, uses 21 tools on your records, checks every figure and can prepare entries, reminders, goals and budgets for you to confirm.":
+    "AI के बिना, FinPilot अपने बिल्ट-इन नियमों से जवाब देता है — ये बिना इंटरनेट आम सवालों के लिए चलते हैं। अपनी Anthropic API key से AI एजेंट हर सवाल की योजना बनाता है, आपके हिसाब पर 21 टूल चलाता है, हर आंकड़ा जाँचता है, और एंट्री, याद-संदेश, लक्ष्य व बजट आपकी पुष्टि के लिए तैयार कर सकता है।",
+  "Get a key from the Anthropic Console (usage is billed by Anthropic to your account).": "Anthropic Console से key लें (इस्तेमाल का बिल Anthropic आपके खाते में लगाता है)।",
+  "Paste it here:": "यहाँ पेस्ट करें:", "Anthropic API key": "Anthropic API key", "I understand what is sent to Anthropic when AI is on.": "मैं समझता हूँ कि AI चालू होने पर Anthropic को क्या भेजा जाता है।",
+  "Checking the key…": "Key जाँच रहे हैं…", "Check key and turn on AI": "Key जाँचें और AI चालू करें",
+  "The key is checked with a free call and saved in the .env file on this computer — never in the app's code.": "Key एक मुफ़्त कॉल से जाँची जाती है और इसी कंप्यूटर की .env फ़ाइल में सेव होती है — ऐप के कोड में कभी नहीं।",
+  "What leaves this computer when AI is on": "AI चालू होने पर क्या बाहर जाता है",
+  "Your question and the results of the tools the agent runs — amounts, dates, and customer and supplier names — are sent to Anthropic to write the answer. Your uploaded files and full records are not sent. With AI off, nothing leaves this computer.":
+    "आपका सवाल और एजेंट के टूल के नतीजे — रकम, तारीख़ें, और ग्राहकों व सप्लायरों के नाम — जवाब लिखने के लिए Anthropic को भेजे जाते हैं। आपकी अपलोड की गई फ़ाइलें और पूरा हिसाब नहीं भेजा जाता। AI बंद हो तो कुछ भी बाहर नहीं जाता।",
+  "On — Ask uses the AI agent with your own Anthropic key.": "चालू — 'पूछें' आपकी अपनी Anthropic key से AI एजेंट इस्तेमाल करता है।",
+  "Off — Ask uses built-in answers and nothing leaves this computer.": "बंद — 'पूछें' बिल्ट-इन जवाब देता है और कुछ भी बाहर नहीं जाता।", Manage: "बदलें",
+  // theme
+  Theme: "थीम", Light: "हल्की", Auto: "अपने आप", Dark: "गहरी",
   // navigation
   Home: "होम", Khata: "खाता", Money: "पैसा", Ask: "पूछें", Plan: "योजना", Calendar: "कैलेंडर", "Goals & budgets": "लक्ष्य और बजट",
   Reports: "रिपोर्ट", "Your data": "आपका डेटा", More: "और", "Health score": "हेल्थ स्कोर", "New entry": "नई एंट्री", Settings: "सेटिंग्स",

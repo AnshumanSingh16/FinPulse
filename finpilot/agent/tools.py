@@ -35,7 +35,10 @@ class ToolContext:
     obligations: pd.DataFrame | None
     balances: pd.DataFrame | None
     as_of: pd.Timestamp
-    db_path: Any = None  # where proposed actions are queued
+    db_path: Any = None  # the app's local database: approval queue, books (contacts, budgets, goals, settings)
+    book: str = "demo"
+    business: str = ""
+    lang: str = "en"
 
 
 # ---------------------------------------------------------------- validation helpers
@@ -127,6 +130,11 @@ def t_summary(ctx: ToolContext, a: dict) -> dict:
     r = financial_summary(ctx.ledger, start, end or str(ctx.as_of.date()), ctx.obligations, ctx.as_of)
     if r["status"] == "ok":
         r["evidence"] = _trim_evidence(r["evidence"])
+        n = max(len(r.get("monthly") or []), 1)
+        r["months_covered"] = n
+        r["expenses_by_category_monthly_average"] = {c: round(v / n, 2) for c, v in r["expenses_by_category"].items()}
+        if r["revenue"] > 0:
+            r["expense_share_of_sales_pct"] = {c: round(v / r["revenue"] * 100, 1) for c, v in r["expenses_by_category"].items()}
     return r
 
 
@@ -371,11 +379,15 @@ TOOLS: list[Tool] = [
     ),
     Tool(
         "propose_action",
-        "Put a suggested real-world action (e.g. 'send a payment reminder to Metro Foods', 'pay BILL-PKG-0926') into the human approval queue. This never performs the action. Use only when the user asks for something to be done.",
+        "Put a suggested real-world action that the app cannot do itself (e.g. 'pay BILL-PKG-0926', 'call the bank about the loan') on the owner's to-do list for approval. This never performs the action. For entries, reminders, goals and budgets use the draft_* tools instead.",
         _obj({"action": {"type": "string"}, "reason": {"type": "string"}, "details": {"type": "object"}}, ["action", "reason"]),
         t_propose,
     ),
 ]
+
+from finpilot.agent.shop_tools import SHOP_TOOLS  # noqa: E402  (they reuse the helpers above)
+
+TOOLS += SHOP_TOOLS
 TOOLS_BY_NAME = {t.name: t for t in TOOLS}
 
 

@@ -231,7 +231,7 @@ function Afford() {
               <Field label="Loan length">
                 <div className="flex flex-wrap gap-2">
                   {[1, 2, 3, 4, 5, 7].map((y) => (
-                    <button key={y} onClick={() => set("years", y)} className={cx("h-10 rounded-full border px-4 text-sm font-medium", f.years === y ? "border-[#f4f2ee] bg-[#f4f2ee] text-black" : "border-line bg-surface")}>
+                    <button key={y} onClick={() => set("years", y)} className={cx("h-10 rounded-full border px-4 text-sm font-medium", f.years === y ? "border-brand bg-brand text-on-brand" : "border-line bg-surface")}>
                       {y} {y === 1 ? "year" : "years"}
                     </button>
                   ))}
