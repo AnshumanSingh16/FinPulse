@@ -46,6 +46,17 @@ const HI: Record<string, string> = {
     "आपका सवाल और एजेंट के टूल के नतीजे — रकम, तारीख़ें, और ग्राहकों व सप्लायरों के नाम — जवाब लिखने के लिए Anthropic को भेजे जाते हैं। आपकी अपलोड की गई फ़ाइलें और पूरा हिसाब नहीं भेजा जाता। AI बंद हो तो कुछ भी बाहर नहीं जाता।",
   "On — Ask uses the AI agent with your own Anthropic key.": "चालू — 'पूछें' आपकी अपनी Anthropic key से AI एजेंट इस्तेमाल करता है।",
   "Off — Ask uses built-in answers and nothing leaves this computer.": "बंद — 'पूछें' बिल्ट-इन जवाब देता है और कुछ भी बाहर नहीं जाता।", Manage: "बदलें",
+  "Google Gemini (free)": "Google Gemini (मुफ़्त)", "Anthropic Claude": "Anthropic Claude", "API key": "API key", "{provider} · model {model}": "{provider} · मॉडल {model}",
+  "Get a free key from Google AI Studio: sign in with your Google account and click “Create API key”.": "Google AI Studio से मुफ़्त key लें: अपने Google खाते से साइन इन करें और “Create API key” दबाएँ।",
+  "I understand what is sent to Google when AI is on.": "मैं समझता हूँ कि AI चालू होने पर Google को क्या भेजा जाता है।",
+  "Without AI, Ask uses FinPilot's built-in rules — they work offline and cover common questions. With an API key, an AI agent plans each question, uses 21 tools on your records, checks every figure and can prepare entries, reminders, goals and budgets for you to confirm.":
+    "AI के बिना, FinPilot अपने बिल्ट-इन नियमों से जवाब देता है — ये बिना इंटरनेट आम सवालों के लिए चलते हैं। API key से AI एजेंट हर सवाल की योजना बनाता है, आपके हिसाब पर 21 टूल चलाता है, हर आंकड़ा जाँचता है, और एंट्री, याद-संदेश, लक्ष्य व बजट आपकी पुष्टि के लिए तैयार कर सकता है।",
+  "Your question and the results of the tools the agent runs — amounts, dates, and customer and supplier names — are sent to Google to write the answer. Your uploaded files and full records are not sent. With AI off, nothing leaves this computer.":
+    "आपका सवाल और एजेंट के टूल के नतीजे — रकम, तारीख़ें, और ग्राहकों व सप्लायरों के नाम — जवाब लिखने के लिए Google को भेजे जाते हैं। आपकी अपलोड की गई फ़ाइलें और पूरा हिसाब नहीं भेजा जाता। AI बंद हो तो कुछ भी बाहर नहीं जाता।",
+  "Free tier: Google's terms allow it to use what you send on the free tier to improve its products, and people may review it. Try it on the demo shop; for your real books, consider a paid (billing-enabled) key.":
+    "मुफ़्त टियर: Google की शर्तों के अनुसार मुफ़्त टियर पर भेजा गया डेटा उसके प्रोडक्ट सुधारने में इस्तेमाल हो सकता है और लोग इसे देख सकते हैं। डेमो दुकान पर आज़माएँ; असली हिसाब के लिए पेड (billing वाली) key बेहतर है।",
+  "AI agent: your question and the figures its tools work out are sent to the AI provider. Your files are not.": "AI एजेंट: आपका सवाल और टूल से निकले आंकड़े AI प्रदाता को भेजे जाते हैं। आपकी फ़ाइलें नहीं।",
+  "On — Ask uses the AI agent ({provider}).": "चालू — 'पूछें' AI एजेंट ({provider}) इस्तेमाल करता है।",
   // theme
   Theme: "थीम", Light: "हल्की", Auto: "अपने आप", Dark: "गहरी",
   // navigation

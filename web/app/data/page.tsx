@@ -441,7 +441,7 @@ function AiCard() {
       <div className="min-w-0 flex-1">
         <p className="font-semibold">{t("AI agent")}</p>
         <p className="text-sm text-ink-2">
-          {on ? t("On — Ask uses the AI agent with your own Anthropic key.") : t("Off — Ask uses built-in answers and nothing leaves this computer.")}
+          {on ? t("On — Ask uses the AI agent ({provider}).", { provider: state?.ai.provider_label ?? "" }) : t("Off — Ask uses built-in answers and nothing leaves this computer.")}
         </p>
       </div>
       <Button variant={on ? "secondary" : "primary"} onClick={() => setOpen(true)}>

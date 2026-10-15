@@ -66,10 +66,28 @@ class Settings:
     max_agent_steps: int
     db_path: Path
     ai_disabled: bool
+    gemini_api_key: str | None = None
+    gemini_model: str = "gemini-2.5-flash"
+    provider_choice: str = ""
+
+    @property
+    def provider(self) -> str:
+        """'gemini' or 'anthropic': FINPILOT_PROVIDER if set, else whichever key is present (Anthropic first, as before)."""
+        if self.provider_choice in ("gemini", "anthropic"):
+            return self.provider_choice
+        return "anthropic" if self.anthropic_api_key or not self.gemini_api_key else "gemini"
+
+    @property
+    def api_key(self) -> str | None:
+        return self.gemini_api_key if self.provider == "gemini" else self.anthropic_api_key
+
+    @property
+    def active_model(self) -> str:
+        return self.gemini_model if self.provider == "gemini" else self.model
 
     @property
     def ai_enabled(self) -> bool:
-        return bool(self.anthropic_api_key) and not self.ai_disabled
+        return bool(self.api_key) and not self.ai_disabled
 
 
 def settings() -> Settings:
@@ -79,4 +97,7 @@ def settings() -> Settings:
         max_agent_steps=int(os.environ.get("FINPILOT_MAX_STEPS", "8")),
         db_path=Path(os.environ.get("FINPILOT_DB", ROOT / "finpilot.db")),
         ai_disabled=os.environ.get("FINPILOT_AI", "").lower() == "off",
+        gemini_api_key=os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY") or None,
+        gemini_model=os.environ.get("FINPILOT_GEMINI_MODEL", "gemini-2.5-flash"),
+        provider_choice=os.environ.get("FINPILOT_PROVIDER", "").lower(),
     )

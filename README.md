@@ -59,22 +59,32 @@ Your browser opens at http://localhost:8000 on a **demo shop** with made-up numb
 
 Without a key, Ask answers with **built-in rules**: they work offline, cover the everyday questions (today's to-dos, khata, profit, costs, cash ahead, health score, the week, GST, what-ifs, adding entries, reminders, goals, budgets — including two-part questions), and use the same tools and figure-checking as the AI. Nothing leaves your computer.
 
-For questions in your own words, turn on the AI agent with your own Anthropic API key — **in the app:** *Ask → Built-in answers → Set up AI* (or *Your data → AI agent*). Paste the key, read what is sent, tick the box, and FinPilot checks the key with a free call and saves it in the local `.env` file (never in code, never committed). You can pause the AI or remove the key there too. Or set it by hand:
+For questions in your own words, turn on the AI agent with **Google Gemini (free key)** or **Anthropic Claude** — **in the app:** *Ask → Set up AI* (or *Your data → AI agent*):
+
+1. Pick **Google Gemini (free)** and get a key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey) (sign in with Google → *Create API key*; it starts with `AIza`). Or pick **Anthropic Claude** and use a key from the Anthropic Console.
+2. Paste the key, read what is sent, tick the box. FinPilot checks the key by listing the models it can use (nothing about your business is sent), picks a Gemini *flash* model, and saves the key in the local `.env` file — never in code, never committed. You can pause the AI or remove the key there too.
+
+> **Gemini free tier and privacy:** Google's terms let it use what you send on the free tier to improve its products, and people may review it. Fine for the demo shop; for your real books consider a paid (billing-enabled) key. The free tier also has per-minute limits — if one is hit, Ask answers with built-in rules and says so.
+
+Or set it by hand in `.env` and restart:
 
 ```bash
-cp .env.example .env      # Windows: copy .env.example .env
-# then set ANTHROPIC_API_KEY=sk-ant-... in .env and restart
+GEMINI_API_KEY=AIza...          # or ANTHROPIC_API_KEY=sk-ant-...
+FINPILOT_PROVIDER=gemini        # optional when only one key is set
 ```
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | (unset) | Turns on the AI agent. Without it, built-in answers are used. |
-| `FINPILOT_MODEL` | `claude-opus-5-5` | Model used by the agent. |
+| `GEMINI_API_KEY` | (unset) | Turns on the AI agent with Google Gemini (`GOOGLE_API_KEY` also works). |
+| `FINPILOT_GEMINI_MODEL` | `gemini-2.5-flash` | Gemini model (set automatically to one your key can use). |
+| `ANTHROPIC_API_KEY` | (unset) | Turns on the AI agent with Anthropic Claude. |
+| `FINPILOT_MODEL` | `claude-opus-5-5` | Claude model used by the agent. |
+| `FINPILOT_PROVIDER` | (auto) | `gemini` or `anthropic` when both keys are set. |
 | `FINPILOT_MAX_STEPS` | `8` | Maximum rounds of tool calls per question. |
 | `FINPILOT_DB` | `finpilot.db` | Local SQLite file holding your uploads and to-dos. |
 | `FINPILOT_AI` | (unset) | Set to `off` to force built-in answers (the in-app *Pause* sets this). |
 
-**What is sent to the AI.** In AI mode, your question and the outputs of the tools the agent runs (totals, dates, customer/supplier names, at most 25 record ids per result) are sent to Anthropic's API so it can write the answer. Your files and full records are never sent. If the main model is unavailable or declines, a server-side fallback model may answer; if the API can't be reached at all, the app answers with built-in rules and says why. Ask always shows which mode is on.
+**What is sent to the AI.** In AI mode, your question and the outputs of the tools the agent runs (totals, dates, customer/supplier names, at most 25 record ids per result) are sent to the provider you chose (Google or Anthropic) so it can write the answer. Your files and full records are never sent. With Claude, if the main model is unavailable or declines, a server-side fallback model may answer; if the API can't be reached at all, the app answers with built-in rules and says why. Ask always shows which mode is on.
 
 ---
 
@@ -188,7 +198,7 @@ The rule-based mode uses the same tools, validation and verification, with a sma
 ## Tests
 
 ```bash
-pytest            # 241 tests, about a minute
+pytest            # 251 tests, about a minute
 ```
 
 The tests cover:
@@ -209,7 +219,7 @@ The tests cover:
 
 - **The agentic layer:** the khata/health/GST/what-if tools against independent sums, drafts that never save, confirm/cancel/expiry of action cards, the rule-based planner on everyday English/Hinglish/Hindi questions, the live-progress stream, and in-app key setup (consent required, key never echoed back).
 
-  These use a scripted fake model, so no network or API key is needed. The live AI agent has not been tested against the real API in this repository's test suite.
+  These use a scripted fake model, so no network or API key is needed. Gemini runs through the same loop with a scripted fake of its REST API (tool declarations, thought-signature round trip, repair turn, step limit, key setup). The live AI agent (either provider) has not been tested against the real APIs in this repository's test suite.
 
 To regenerate the demo dataset (deterministic, so this should produce no diff):
 

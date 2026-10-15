@@ -301,7 +301,7 @@ function Ask() {
         </form>
         <p className="mt-2 text-center text-xs text-muted">
           {t(state?.ai.enabled
-            ? "AI agent: your question and the figures its tools work out are sent to Anthropic. Your files are not."
+            ? "AI agent: your question and the figures its tools work out are sent to the AI provider. Your files are not."
             : "Built-in answers: nothing leaves this computer.")}{" "}
           {t("Nothing is saved or sent until you confirm.")} {t("Not financial advice.")}
         </p>

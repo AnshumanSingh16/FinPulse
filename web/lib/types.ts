@@ -121,5 +121,7 @@ export interface AiStatus {
   paused: boolean;
   key_hint: string | null;
   source: "app" | "environment" | null;
+  provider: "gemini" | "anthropic";
+  provider_label: string;
   model: string;
 }

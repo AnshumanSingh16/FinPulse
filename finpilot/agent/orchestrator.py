@@ -308,6 +308,11 @@ def ask(
     if not settings.ai_enabled and client is None:
         return run_offline(question, ctx, lang=lang, on_event=on_event)
     try:
+        if getattr(settings, "provider", "anthropic") == "gemini" and not hasattr(client, "beta"):
+            from finpilot.agent.gemini import run_gemini
+
+            return run_gemini(question, ctx, settings.api_key, settings.active_model, business, history, prior_results, settings.max_agent_steps,
+                              lang=lang, on_event=on_event, preface=preface, post=client)
         client = client or make_client(settings.anthropic_api_key)
         return run_ai(question, ctx, client, settings.model, business, history, prior_results, settings.max_agent_steps, lang=lang, on_event=on_event, preface=preface)
     except Exception as e:  # API/network errors: fall back, and say so
@@ -326,7 +331,9 @@ def _why(e: Exception, lang: str = "en") -> str:
     if name == "PermissionDeniedError":
         return "इस key को अनुमति नहीं" if hi else "this key isn't allowed to use the model"
     if name == "RateLimitError":
-        return "बहुत सारे सवाल, थोड़ी देर बाद" if hi else "too many requests — try again in a minute"
+        return "मुफ़्त सीमा पूरी, एक मिनट बाद पूछें" if hi else "the free/rate limit was reached — try again in a minute"
+    if name == "OverloadedError":
+        return "AI अभी व्यस्त है" if hi else "the AI service is busy right now"
     if name in ("APIConnectionError", "APITimeoutError", "ConnectError"):
         return "इंटरनेट से कनेक्ट नहीं हो सका" if hi else "couldn't reach the internet"
     if name == "NotFoundError":
@@ -341,3 +348,13 @@ def check_key(api_key: str, lang: str = "en", client=None) -> tuple[bool, str]:
         return True, ""
     except Exception as e:
         return False, _why(e, lang)
+
+
+def check_gemini_key(api_key: str, lang: str = "en", preferred: str | None = None) -> tuple[bool, str, str | None]:
+    """Check a Gemini key by listing models (nothing about the business is sent). Returns (ok, reason, model to use)."""
+    from finpilot.agent import gemini
+
+    try:
+        return True, "", gemini.check_key(api_key, preferred or gemini.DEFAULT_MODEL)
+    except Exception as e:
+        return False, _why(e, lang), None

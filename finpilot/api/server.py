@@ -1,6 +1,6 @@
 """
 HTTP API for the FinPilot web app, plus the built front end. Runs locally; nothing is sent anywhere
-except, in AI mode, the question and tool outputs to Anthropic's API (see README).
+except, in AI mode, the question and tool outputs to the chosen AI provider (Anthropic or Google Gemini; see README).
 """
 
 from __future__ import annotations
@@ -219,10 +219,12 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
 
     def ai_status() -> dict:
         cfg = settings()
-        key = cfg.anthropic_api_key or ""
-        saved_here = "ANTHROPIC_API_KEY" in config.local_env()
+        key = cfg.api_key or ""
+        var = "GEMINI_API_KEY" if cfg.provider == "gemini" else "ANTHROPIC_API_KEY"
+        saved_here = var in config.local_env()
         return {"enabled": cfg.ai_enabled or client is not None, "has_key": bool(key) or client is not None, "paused": cfg.ai_disabled,
-                "key_hint": f"…{key[-4:]}" if len(key) > 8 else None, "source": "app" if saved_here else ("environment" if key else None), "model": cfg.model}
+                "key_hint": f"…{key[-4:]}" if len(key) > 8 else None, "source": "app" if saved_here else ("environment" if key else None),
+                "provider": cfg.provider, "provider_label": "Google Gemini" if cfg.provider == "gemini" else "Anthropic Claude", "model": cfg.active_model}
 
     def _chat(cid: str | None, d: dataset.Dataset) -> tuple[str, dict]:
         cid = cid or uuid.uuid4().hex
@@ -356,20 +358,37 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
     @app.post("/api/ai/key")
     def set_ai_key(body: dict = Body(...)):
         key = str(body.get("key") or "").strip()
+        provider = str(body.get("provider") or ("gemini" if key.startswith("AIza") else "anthropic"))
+        if provider not in ("gemini", "anthropic"):
+            raise HTTPException(400, "Choose Google Gemini or Anthropic Claude.")
         if not body.get("consent"):
-            raise HTTPException(400, "Please tick the box to confirm you understand what is sent to Anthropic.")
-        if not key.startswith("sk-ant-") or len(key) < 20 or any(c.isspace() for c in key):
-            raise HTTPException(400, "That doesn't look like an Anthropic API key (it starts with sk-ant-).")
-        ok, why = orchestrator.check_key(key, lg())
-        if not ok:
-            raise HTTPException(400, f"The key didn't work: {why}.")
-        config.save_local("ANTHROPIC_API_KEY", key)
+            raise HTTPException(400, "Please tick the box to confirm you understand what is sent when AI is on.")
+        if any(c.isspace() for c in key) or len(key) < 20:
+            raise HTTPException(400, "That doesn't look like an API key. Copy the whole key and try again.")
+        if provider == "gemini":
+            if not key.startswith("AIza"):
+                raise HTTPException(400, "That doesn't look like a Gemini API key (it starts with AIza). Get one free at aistudio.google.com/apikey.")
+            ok, why, model = orchestrator.check_gemini_key(key, lg(), settings().gemini_model)
+            if not ok:
+                raise HTTPException(400, f"The key didn't work: {why}.")
+            config.save_local("GEMINI_API_KEY", key)
+            config.save_local("FINPILOT_GEMINI_MODEL", model)
+        else:
+            if not key.startswith("sk-ant-"):
+                raise HTTPException(400, "That doesn't look like an Anthropic API key (it starts with sk-ant-).")
+            ok, why = orchestrator.check_key(key, lg())
+            if not ok:
+                raise HTTPException(400, f"The key didn't work: {why}.")
+            config.save_local("ANTHROPIC_API_KEY", key)
+        config.save_local("FINPILOT_PROVIDER", provider)
         config.save_local("FINPILOT_AI", None)
         return ai_status()
 
     @app.delete("/api/ai/key")
     def remove_ai_key():
-        config.save_local("ANTHROPIC_API_KEY", None)
+        for var in ("GEMINI_API_KEY", "FINPILOT_GEMINI_MODEL", "ANTHROPIC_API_KEY", "FINPILOT_PROVIDER"):
+            if var in config.local_env():
+                config.save_local(var, None)
         return ai_status()
 
     @app.post("/api/ai/pause")
