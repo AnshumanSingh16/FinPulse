@@ -6,6 +6,11 @@ import { DataVersion } from "@/components/data-version";
 // Same origin in production (the Python server serves this app). For `npm run dev`, point at the API.
 export const API = process.env.NEXT_PUBLIC_API ?? "";
 
+let LANG = "en";
+export function setApiLang(l: string) {
+  LANG = l;
+}
+
 export class ApiError extends Error {}
 
 async function handle<T>(res: Response): Promise<T> {
@@ -20,23 +25,25 @@ async function handle<T>(res: Response): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+const headers = () => ({ "X-Lang": LANG });
+
 export function get<T>(path: string): Promise<T> {
-  return fetch(API + path, { cache: "no-store" }).then((r) => handle<T>(r));
+  return fetch(API + path, { cache: "no-store", headers: headers() }).then((r) => handle<T>(r));
 }
 
 export function post<T>(path: string, body: unknown): Promise<T> {
-  return fetch(API + path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then((r) => handle<T>(r));
+  return fetch(API + path, { method: "POST", headers: { ...headers(), "Content-Type": "application/json" }, body: JSON.stringify(body) }).then((r) => handle<T>(r));
 }
 
 export function postForm<T>(path: string, form: FormData): Promise<T> {
-  return fetch(API + path, { method: "POST", body: form }).then((r) => handle<T>(r));
+  return fetch(API + path, { method: "POST", body: form, headers: headers() }).then((r) => handle<T>(r));
 }
 
 export function del<T>(path: string): Promise<T> {
-  return fetch(API + path, { method: "DELETE" }).then((r) => handle<T>(r));
+  return fetch(API + path, { method: "DELETE", headers: headers() }).then((r) => handle<T>(r));
 }
 
-/** Fetch JSON and re-fetch whenever the active dataset changes. */
+/** Fetch JSON and re-fetch whenever the active data or language changes. */
 export function useApi<T>(path: string | null) {
   const { version } = useContext(DataVersion);
   const [data, setData] = useState<T | null>(null);

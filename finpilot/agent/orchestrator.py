@@ -71,7 +71,7 @@ class AgentRun:
 # ---------------------------------------------------------------- prompt
 
 
-def system_prompt(ctx: ToolContext, business: str) -> str:
+def system_prompt(ctx: ToolContext, business: str, lang: str = "en") -> str:
     led = ctx.ledger
     have_bal = ctx.balances is not None and len(ctx.balances) > 0
     have_obl = ctx.obligations is not None and len(ctx.obligations) > 0
@@ -95,7 +95,9 @@ How to work
 Answer format
 - Write for a busy shop owner, not an accountant: plain everyday words, no jargon. Say "running costs" not "operating expenses", "money customers owe you" not "receivables". Write dates like 4 Oct 2026 and amounts like ₹4,15,800 or ₹4.2 lakh.
 - Lead with a one or two sentence direct answer in bold, then a few short bullets with the supporting figures, the record ids behind them where useful (e.g. T0412, INV-0231), and the main assumption or limitation.
-- Be concise: usually under 180 words. No tables unless asked. No headings."""
+- Be concise: usually under 180 words. No tables unless asked. No headings.""" + (
+        "\n- Reply in simple Hindi (Devanagari script), as a shopkeeper speaks it; keep amounts as ₹ with Western digits (₹4,15,800), and record ids as they are."
+        if lang == "hi" else "")
 
 
 # ---------------------------------------------------------------- helpers
@@ -145,11 +147,11 @@ def _verify(run: AgentRun, ctx: ToolContext, answer: str, prior_results: list) -
 # ---------------------------------------------------------------- modes
 
 
-def run_offline(question: str, ctx: ToolContext, note: str | None = None) -> AgentRun:
+def run_offline(question: str, ctx: ToolContext, note: str | None = None, lang: str = "en") -> AgentRun:
     run = AgentRun(question=question, mode="rule-based")
     if note:
         run.warnings.append(note)
-    run.answer = offline.answer(question, lambda n, a: _execute(ctx, run, n, a), ctx.as_of)
+    run.answer = offline.answer(question, lambda n, a: _execute(ctx, run, n, a), ctx.as_of, lang)
     if not run.steps:  # help text: no financial claims to verify
         return run
     run.verification = _verify(run, ctx, run.answer, [])
@@ -168,12 +170,13 @@ def run_ai(
     prior_results: list | None = None,
     max_steps: int = 8,
     effort: str = "medium",
+    lang: str = "en",
 ) -> AgentRun:
     run = AgentRun(question=question, mode="ai")
     messages = list(history or []) + [{"role": "user", "content": question}]
     prior_results = prior_results or []
     tools = anthropic_tool_specs()
-    system = system_prompt(ctx, business)
+    system = system_prompt(ctx, business, lang)
     tool_rounds = 0
     repairs_left = 1
     force_answer = False
@@ -264,12 +267,14 @@ def ask(
     client=None,
     history: list | None = None,
     prior_results: list | None = None,
+    lang: str = "en",
 ) -> AgentRun:
     """Entry point for the UI: AI mode when configured, rule-based otherwise or on API failure."""
     if not settings.ai_enabled and client is None:
-        return run_offline(question, ctx)
+        return run_offline(question, ctx, lang=lang)
     try:
         client = client or make_client(settings.anthropic_api_key)
-        return run_ai(question, ctx, client, settings.model, business, history, prior_results, settings.max_agent_steps)
+        return run_ai(question, ctx, client, settings.model, business, history, prior_results, settings.max_agent_steps, lang=lang)
     except Exception as e:  # API/network errors: fall back, and say so
-        return run_offline(question, ctx, note=f"AI unavailable ({type(e).__name__}); answered by the rule-based engine instead.")
+        note = f"AI उपलब्ध नहीं ({type(e).__name__}); जवाब बिल्ट-इन नियमों से दिया गया।" if lang == "hi" else f"AI unavailable ({type(e).__name__}); answered by the rule-based engine instead."
+        return run_offline(question, ctx, note=note, lang=lang)

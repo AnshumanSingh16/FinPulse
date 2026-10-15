@@ -1,24 +1,21 @@
 import "@fontsource-variable/inter";
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
-import { DataProvider } from "@/components/data-version";
-import { Shell } from "@/components/shell";
+import { Providers } from "@/components/providers";
 
 export const metadata: Metadata = {
   title: "FinPilot — your business, in plain words",
-  description: "See your cash, chase what you're owed, and check big decisions before you make them.",
+  description: "Your khata, cash, udhaar and big decisions — in English or Hindi.",
   icons: { icon: "/icon.svg" },
 };
 
-export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#ffffff" };
+export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#5b34f2" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en-IN">
       <body>
-        <DataProvider>
-          <Shell>{children}</Shell>
-        </DataProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

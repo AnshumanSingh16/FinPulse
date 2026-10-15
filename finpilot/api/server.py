@@ -7,19 +7,22 @@ from __future__ import annotations
 
 import json
 import uuid
+from contextvars import ContextVar
 from pathlib import Path
 
 import pandas as pd
-from fastapi import Body, FastAPI, File, Form, HTTPException, Query, UploadFile
+from fastapi import Body, FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from finpilot.agent import orchestrator
 from finpilot.agent.tools import ToolContext
 from finpilot.config import settings
-from finpilot.data import loader, store
+from finpilot.data import books, khata, loader, store
+from finpilot.data.parse_entry import parse as parse_entry
+from finpilot.engine.categorize import categorize_ledger
 
-from . import dataset, views
+from . import dataset, i18n, khata_views, smart_views, views
 
 STATIC = Path(__file__).resolve().parents[1] / "web"
 MAX_UPLOAD = 25 * 1024 * 1024
@@ -39,6 +42,27 @@ STEP_LABEL = {
     "get_supporting_records": "Pulled up the exact records",
     "propose_action": "Added a to-do for you to approve",
 }
+STEP_LABEL_HI = {
+    "get_financial_summary": "बिक्री, खर्च और मुनाफ़ा निकाला",
+    "analyze_expense_changes": "महीने-दर-महीने खर्च की तुलना की",
+    "find_unusual_transactions": "असामान्य या दोहरे भुगतान खोजे",
+    "get_cash_position": "बैंक बैलेंस जाँचा",
+    "get_receivables_and_payables": "उधारी और बकाया जाँचा",
+    "get_upcoming_payments": "आने वाले बिल देखे",
+    "forecast_cash_flow": "आगे का कैश अनुमान लगाया",
+    "simulate_purchase": "ख़रीद को आपके कैश पर परखा",
+    "get_supporting_records": "सही रिकॉर्ड निकाले",
+    "propose_action": "आपकी मंज़ूरी के लिए काम जोड़ा",
+}
+_LANG: ContextVar[str] = ContextVar("lang", default="en")
+
+
+def lg() -> str:
+    return _LANG.get()
+
+
+def step_label(tool: str) -> str:
+    return (STEP_LABEL_HI if lg() == "hi" else STEP_LABEL).get(tool, tool)
 
 
 def create_app(db: Path | None = None, client=None, static_dir: Path | None = STATIC) -> FastAPI:
@@ -47,6 +71,14 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
     app = FastAPI(title="FinPilot API", docs_url="/api/docs", openapi_url="/api/openapi.json")
     app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"], allow_methods=["*"], allow_headers=["*"])
     chats: dict[str, dict] = {}
+
+    @app.middleware("http")
+    async def language(request: Request, call_next):
+        token = _LANG.set(i18n.norm(request.headers.get("x-lang") or request.query_params.get("lang")))
+        try:
+            return await call_next(request)
+        finally:
+            _LANG.reset(token)
 
     def ds() -> dataset.Dataset:
         return dataset.current(db)
@@ -62,13 +94,13 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
             "source": d.source,
             "is_demo": d.is_demo,
             "as_of": str(d.as_of.date()),
-            "as_of_label": views.day_full(d.as_of),
+            "as_of_label": views.day_full(d.as_of, lg()),
             "upload": {
                 "name": up["name"],
                 "bank_rows": 0 if up["ledger"] is None else int(len(up["ledger"])),
                 "invoice_rows": 0 if up["obligations"] is None else int(len(up["obligations"])),
                 "balance_rows": 0 if up["balances"] is None else int(len(up["balances"])),
-                "ready": up["ledger"] is not None and len(up["ledger"]) > 0,
+                "ready": dataset.uploaded(db) is not None,
             },
             "ai": {"enabled": cfg.ai_enabled or client is not None, "model": cfg.model},
         }
@@ -88,19 +120,19 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
 
     @app.get("/api/home")
     def home():
-        return views.home(ds())
+        return views.home(ds(), db, lg())
 
     @app.get("/api/transactions")
     def transactions(q: str = "", direction: str = "", category: str = "", ids: str = "", limit: int = Query(100, le=500), offset: int = 0):
-        return views.transactions(ds(), q, direction, category, [i for i in ids.split(",") if i], limit, offset)
+        return views.transactions(ds(), q, direction, category, [i for i in ids.split(",") if i], limit, offset, lg())
 
     @app.get("/api/owed")
     def owed():
-        return views.owed(ds())
+        return views.owed(ds(), lg())
 
     @app.get("/api/report")
     def report():
-        return views.monthly_report(ds())
+        return views.monthly_report(ds(), lg())
 
     @app.get("/api/records")
     def records(ids: str = ""):
@@ -108,16 +140,19 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
 
     @app.post("/api/reminder")
     def reminder(body: dict = Body(...)):
-        return views.reminder(ds(), str(body.get("customer", "")))
+        r = khata_views.reminders(ds(), db, str(body.get("lang") or lg()), str(body.get("customer", "")))
+        if not r:
+            return {"status": "missing", "message": f"Nothing overdue from {body.get('customer', '')}."}
+        return {"status": "ok", **r[0]}
 
     @app.get("/api/forecast")
     def forecast(days: int = Query(90, ge=14, le=365), late_days: int = Query(0, ge=0, le=120), collect_pct: float = Query(100, ge=0, le=100),
                  count_overdue: bool = False, typical: bool = True, cushion: float | None = Query(None, ge=0)):
-        return views.forecast(ds(), days, late_days, collect_pct, count_overdue, typical, cushion)
+        return views.forecast(ds(), days, late_days, collect_pct, count_overdue, typical, cushion, lg())
 
     @app.post("/api/afford")
     def afford(body: dict = Body(...)):
-        return views.afford(ds(), body)
+        return views.afford(ds(), body, lg())
 
     # ------------------------------------------------------------ ask
 
@@ -134,7 +169,7 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
         if chat["source"] != d.source:
             chat.update(messages=[], results=[], source=d.source)
         ctx = ToolContext(d.ledger, d.obligations, d.balances, d.as_of, db)
-        run = orchestrator.ask(question, ctx, d.name, cfg, client=client, history=chat["messages"], prior_results=chat["results"])
+        run = orchestrator.ask(question, ctx, d.name, cfg, client=client, history=chat["messages"], prior_results=chat["results"], lang=lg())
         if run.mode == "ai" and run.messages:
             chat["messages"] = run.messages
             chat["results"] += [s.result for s in run.steps]
@@ -143,7 +178,7 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
         for tool, e in run.evidence:
             if tool not in seen:
                 seen.add(tool)
-                ev.append(views.evidence(e, STEP_LABEL.get(tool, tool)))
+                ev.append(views.evidence(e, step_label(tool)))
         return {
             "conversation_id": cid,
             "answer": run.answer,
@@ -151,7 +186,7 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
             "verified": run.verified,
             "has_figures": bool(run.steps),
             "warnings": run.warnings,
-            "steps": [{"label": STEP_LABEL.get(s.tool, s.tool), "ok": s.ok and s.checks_ok, "checks": len(s.checks)} for s in run.steps],
+            "steps": [{"label": step_label(s.tool), "ok": s.ok and s.checks_ok, "checks": len(s.checks)} for s in run.steps],
             "evidence": ev,
         }
 
@@ -235,11 +270,14 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
         notes = []
         if table == "ledger":
             df, rep = loader.build_ledger(raw, m, drop_exact_duplicates=drop_duplicates)
-            if not m.get("category") and incoming_is_sales and len(df):
-                mask = (df["direction"] == "in") & (df["category"] == "Uncategorised")
-                df.loc[mask, "category"] = "Sales"
-                if mask.any():
-                    notes.append(f"{int(mask.sum())} incoming payments were counted as sales (your file has no category column). Untick this if some are loans or transfers.")
+            if not m.get("category") and len(df):
+                df, counts = categorize_ledger(df, books.rules(db, "upload"))
+                if not incoming_is_sales:
+                    guessed = (df["direction"] == "in") & df["reference"].astype(str).str.contains("auto:guess")
+                    df.loc[guessed, "category"] = "Uncategorised"
+                sure = counts["high"] + counts["learned"]
+                notes.append(f"Sorted {sure} of {len(df)} transactions into categories automatically."
+                             + (f" {counts['guess'] + counts['unknown']} need a quick look — open Money → Sort transactions." if counts["guess"] + counts["unknown"] else ""))
         elif table == "obligations":
             dk = {"customers": "receivable", "suppliers": "payable"}.get(invoice_kind)
             df, rep = loader.build_obligations(raw, m, default_kind=dk, default_status="pending" if not m.get("status") else None)
@@ -293,8 +331,256 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
     @app.delete("/api/upload")
     def clear():
         store.clear_dataset(db)
+        books.reset_book(db, "upload")
+        with store.connect(db) as con:
+            con.execute("DELETE FROM meta WHERE key LIKE 'upload:%'")
         dataset.set_source(db, "demo")
         return state()
+
+    @app.post("/api/start")
+    def start(body: dict = Body(...)):
+        """Start your own book with no files: a name and today's balance."""
+        if dataset.uploaded(db) is not None and not body.get("replace"):
+            raise HTTPException(409, "You already have your own data. Delete it first to start fresh.")
+        bal = body.get("balance")
+        amount = None
+        if bal not in (None, ""):
+            amount, _ = loader.parse_amount(bal)
+            if amount is None:
+                raise HTTPException(400, "Enter the balance as a number.")
+        dataset.start_fresh(db, str(body.get("name") or "My business")[:80], amount, str(dataset.today().date()))
+        return state()
+
+    @app.post("/api/demo/reset")
+    def reset_demo():
+        dataset.reset_demo(db)
+        return state()
+
+    # ------------------------------------------------------------ khata: quick entries
+
+    def _known_parties(d: dataset.Dataset) -> list[str]:
+        names = set(d.ledger["counterparty"].dropna().astype(str))
+        if d.obligations is not None and len(d.obligations):
+            names |= set(d.obligations["counterparty"].dropna().astype(str))
+        return sorted(n for n in names if n and n != "Unknown")
+
+    @app.post("/api/entries/parse")
+    def parse_text(body: dict = Body(...)):
+        d = ds()
+        return parse_entry(str(body.get("text", ""))[:300], d.as_of, _known_parties(d))
+
+    @app.get("/api/entries")
+    def recent_entries():
+        d = ds()
+        return {"entries": books.entries(db, d.book), "parties": _known_parties(d), "categories": khata_views.categories(d),
+                "today": str(d.as_of.date())}
+
+    @app.post("/api/entries")
+    def add_entry(body: dict = Body(...)):
+        d = ds()
+        try:
+            res = khata.record(d.tables(), str(body.get("kind")), body.get("amount"), body.get("date") or d.as_of,
+                               party=str(body.get("party") or ""), category=str(body.get("category") or ""), mode=str(body.get("mode") or "cash"),
+                               note=str(body.get("note") or ""), due_date=body.get("due_date") or None, as_of=d.as_of)
+        except khata.EntryError as e:
+            raise HTTPException(400, str(e)) from e
+        dataset.save(db, d, res.tables)
+        books.log_entry(db, d.book, res.entry_id, str(body.get("kind")), res.summary, res.undo)
+        remaining = None
+        if body.get("kind") in ("payment_in", "payment_out") and body.get("party"):
+            remaining = khata_views.person(dataset.current(db), db, str(body["party"]))["outstanding"]
+            if remaining <= 0 and body.get("kind") == "payment_in":
+                books.clear_promise(db, d.book, str(body["party"]))
+        msg = res.summary
+        if res.settled:
+            msg += " · cleared " + ", ".join(f"{s['item_id']}" + ("" if s["full"] else " (part)") for s in res.settled)
+        if res.unapplied and body.get("kind") in ("payment_in", "payment_out") and res.settled:
+            msg += f" · {views.short(res.unapplied)} more than was due"
+        return {"id": res.entry_id, "message": msg, "settled": res.settled, "remaining": remaining,
+                "cleared_all": bool(res.settled) and remaining is not None and remaining <= 0}
+
+    @app.post("/api/entries/{entry_id}/undo")
+    def undo_entry(entry_id: str):
+        d = ds()
+        rec = books.pop_entry(db, d.book, entry_id)
+        if rec is None:
+            raise HTTPException(404, "Nothing to undo.")
+        dataset.save(db, d, khata.undo(d.tables(), rec))
+        return {"ok": True}
+
+    # ------------------------------------------------------------ khata: customers & suppliers
+
+    @app.get("/api/people")
+    def people(side: str = "customers"):
+        if side not in khata_views.SIDES:
+            raise HTTPException(400, "side must be customers or suppliers")
+        return khata_views.people(ds(), db, side, lg())
+
+    @app.get("/api/person")
+    def person(name: str):
+        return khata_views.person(ds(), db, name, lg())
+
+    @app.post("/api/person/contact")
+    def contact(body: dict = Body(...)):
+        books.set_contact(db, ds().book, str(body["name"]), str(body.get("phone", "")))
+        return {"ok": True}
+
+    @app.post("/api/person/promise")
+    def promise(body: dict = Body(...)):
+        d = ds()
+        if body.get("clear"):
+            books.clear_promise(db, d.book, str(body["name"]))
+        else:
+            try:
+                when = str(pd.Timestamp(body["date"]).date())
+                amt = float(body.get("amount") or 0)
+            except (KeyError, ValueError) as e:
+                raise HTTPException(400, "Enter a date and amount.") from e
+            books.add_promise(db, d.book, str(body["name"]), amt, when, str(body.get("note", ""))[:200])
+        return {"ok": True}
+
+    @app.get("/api/reminders")
+    def bulk_reminders(customer: str | None = None):
+        return khata_views.reminders(ds(), db, lg(), customer)
+
+    # ------------------------------------------------------------ categories
+
+    @app.get("/api/categories")
+    def categories():
+        return khata_views.categories(ds())
+
+    @app.get("/api/categorise/review")
+    def review():
+        return khata_views.review(ds(), db)
+
+    @app.post("/api/categorise")
+    def recategorise(body: dict = Body(...)):
+        """Set the category for some transactions; optionally remember it for this party."""
+        d = ds()
+        ids = [str(i) for i in body.get("ids", [])]
+        cat = str(body.get("category", "")).strip()[:60]
+        if not ids or not cat:
+            raise HTTPException(400, "Choose transactions and a category.")
+        led = d.ledger.copy()
+        mask = led["txn_id"].isin(ids)
+        led.loc[mask, "category"] = cat
+        led.loc[mask, "reference"] = led.loc[mask, "reference"].astype(str).str.replace("auto:guess", "", regex=False).str.strip()
+        n = int(mask.sum())
+        if body.get("remember") and body.get("party"):
+            books.set_rule(db, d.book, str(body["party"]), cat)
+            same = (led["counterparty"].str.lower() == str(body["party"]).lower()) & ~mask & led["category"].isin(["Uncategorised", "Sales"]) & led["reference"].astype(str).str.contains("auto:guess")
+            led.loc[same, "category"] = cat
+            led.loc[same, "reference"] = led.loc[same, "reference"].astype(str).str.replace("auto:guess", "", regex=False).str.strip()
+            n += int(same.sum())
+        dataset.save(db, d, khata.Tables(led, d.obligations, d.balances))
+        return {"updated": n}
+
+    # ------------------------------------------------------------ smart features
+
+    @app.get("/api/health")
+    def health():
+        return smart_views.health(ds(), lg())
+
+    @app.get("/api/story")
+    def story():
+        return smart_views.story(ds(), lg())
+
+    @app.get("/api/budgets")
+    def get_budgets():
+        return smart_views.budgets(ds(), db, lg())
+
+    @app.post("/api/budgets")
+    def set_budgets(body: dict = Body(...)):
+        d = ds()
+        for cat, limit in (body.get("limits") or {}).items():
+            try:
+                books.set_budget(db, d.book, str(cat)[:60], float(limit) if limit not in (None, "") else None)
+            except ValueError as e:
+                raise HTTPException(400, "Budgets must be numbers.") from e
+        return smart_views.budgets(ds(), db, lg())
+
+    @app.get("/api/goals")
+    def get_goals():
+        return smart_views.goals(ds(), db)
+
+    @app.post("/api/goals")
+    def add_goal(body: dict = Body(...)):
+        try:
+            target = float(body["target"])
+        except (KeyError, ValueError) as e:
+            raise HTTPException(400, "Enter a target amount.") from e
+        if target <= 0:
+            raise HTTPException(400, "Enter a target amount.")
+        books.add_goal(db, ds().book, str(body.get("name") or "My goal")[:60], target, body.get("target_date") or None,
+                       str(body.get("icon") or "target")[:20], float(body.get("saved") or 0))
+        return smart_views.goals(ds(), db)
+
+    @app.post("/api/goals/{goal_id}")
+    def update_goal(goal_id: int, body: dict = Body(...)):
+        try:
+            add = float(body["add"]) if body.get("add") not in (None, "") else None
+        except ValueError as e:
+            raise HTTPException(400, "Enter an amount.") from e
+        books.update_goal(db, ds().book, goal_id, add=add, delete=bool(body.get("delete")))
+        return smart_views.goals(ds(), db)
+
+    @app.get("/api/calendar")
+    def calendar(year: int | None = None, month: int | None = None):
+        d = ds()
+        y, m = year or d.as_of.year, month or d.as_of.month
+        if not (1 <= m <= 12 and 2000 <= y <= 2100):
+            raise HTTPException(400, "Bad month.")
+        return smart_views.calendar(d, db, y, m, lg())
+
+    @app.get("/api/settings")
+    def get_settings():
+        return books.settings(db, ds().book)
+
+    @app.post("/api/settings")
+    def save_settings(body: dict = Body(...)):
+        d = ds()
+        clean = {}
+        for k, v in body.items():
+            if k in ("gst_rate_sales", "gst_rate_purchases"):
+                try:
+                    x = float(v)
+                except ValueError as e:
+                    raise HTTPException(400, "GST rate must be a number.") from e
+                if not 0 <= x <= 28:
+                    raise HTTPException(400, "GST rate must be between 0 and 28%.")
+                clean[k] = x
+            elif k == "gst_filing" and v in ("monthly", "qrmp"):
+                clean[k] = v
+            elif k == "gst_registered" and v in ("yes", "no"):
+                clean[k] = v
+            elif k == "language" and v in i18n.LANGS:
+                clean[k] = v
+        books.set_settings(db, d.book, clean)
+        if body.get("business_name") and not d.is_demo:
+            raw = dataset.raw_upload_tables(db)
+            store.save_dataset(db, str(body["business_name"])[:80], {k: raw[k] for k in store.TABLES}, raw["as_of"] or str(d.as_of.date()), book="upload")
+        return books.settings(db, d.book)
+
+    @app.get("/api/whatif/{kind}")
+    def what_if(kind: str, request: Request):
+        return smart_views.whatifs(ds(), kind, dict(request.query_params), lg())
+
+    @app.get("/api/reports/months")
+    def report_months():
+        return smart_views.months_available(ds(), lg())
+
+    @app.get("/api/reports/monthly")
+    def report_monthly(month: str = ""):
+        d = ds()
+        try:
+            p = pd.Period(month or str(d.as_of.to_period("M")), "M")
+        except ValueError as e:
+            raise HTTPException(400, "Month must be YYYY-MM.") from e
+        return smart_views.report_monthly(d, db, p.year, p.month, lg())
+
+    @app.get("/api/reports/loan")
+    def report_loan():
+        return smart_views.report_loan(ds(), lg())
 
     if static_dir is not None and Path(static_dir).exists():
         app.mount("/", StaticFiles(directory=static_dir, html=True), name="web")

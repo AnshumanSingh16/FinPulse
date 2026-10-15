@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, Banknote, ChevronDown, Landmark, ShoppingBag, TrendingUp } from "lucide-react";
+import { ArrowLeft, ArrowRight, Banknote, ChevronDown, Landmark, Percent, ShoppingBag, Tags, TrendingUp, UserPlus } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { ForecastChart, PurchaseChart } from "@/components/charts";
@@ -8,9 +8,19 @@ import { EvidenceButton } from "@/components/evidence";
 import { Button, Card, cx, ErrorNote, Field, Loading, MoneyInput, Segmented, SectionTitle, Stat, toneBg, ToneIcon, toneText } from "@/components/ui";
 import { post, useApi } from "@/lib/api";
 import { day, inr, short, words } from "@/lib/format";
+import { useT } from "@/lib/i18n";
 import type { Evidence, Tone } from "@/lib/types";
 
-type Tab = "afford" | "cash";
+type Tab = "afford" | "cash" | "price" | "discount" | "hire" | "loan";
+
+const TOOLS: { key: Tab; label: string; sub: string; grad: string; I: React.ElementType }[] = [
+  { key: "afford", label: "Can I afford it?", sub: "Machine, van, stock…", grad: "grad-hero", I: ShoppingBag },
+  { key: "cash", label: "Cash ahead", sub: "Next 30–180 days", grad: "grad-ocean", I: TrendingUp },
+  { key: "price", label: "Raise prices?", sub: "Profit if prices change", grad: "grad-mint", I: Tags },
+  { key: "discount", label: "Run a discount?", sub: "Festival offers", grad: "grad-sunset", I: Percent },
+  { key: "hire", label: "Hire someone?", sub: "Salary vs extra sales", grad: "grad-berry", I: UserPlus },
+  { key: "loan", label: "Take a loan?", sub: "EMI and cash impact", grad: "grad-night", I: Landmark },
+];
 
 export default function PlanPage() {
   return (
@@ -21,28 +31,36 @@ export default function PlanPage() {
 }
 
 function Plan() {
+  const { t } = useT();
   const params = useSearchParams();
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>((params.get("tab") as Tab) || "afford");
-  const change = (t: Tab) => {
-    setTab(t);
-    router.replace(t === "afford" ? "/plan/" : "/plan/?tab=cash", { scroll: false });
-  };
+  const tab = ((params.get("tab") as Tab) || "afford") as Tab;
+  const change = (x: Tab) => router.replace(x === "afford" ? "/plan/" : `/plan/?tab=${x}`, { scroll: false });
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Plan ahead</h1>
-        <p className="text-ink-2">Check a big decision against your real cash before you commit.</p>
+        <h1 className="text-2xl font-bold tracking-tight">{t("Plan ahead")}</h1>
+        <p className="text-ink-2">Try a decision on your real numbers before you commit.</p>
       </div>
-      <Segmented<Tab>
-        value={tab}
-        onChange={change}
-        options={[
-          { value: "afford", label: "Can I afford it?" },
-          { value: "cash", label: "Cash ahead" },
-        ]}
-      />
-      {tab === "afford" ? <Afford /> : <CashAhead />}
+      <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-3 sm:px-0 lg:grid-cols-6">
+        {TOOLS.map(({ key, label, sub, grad, I }) => (
+          <button
+            key={key}
+            onClick={() => change(key)}
+            aria-pressed={tab === key}
+            className={cx("flex min-w-[9.5rem] flex-col gap-2 rounded-3xl p-4 text-left transition", tab === key ? `${grad} shadow-xl` : "card hover:-translate-y-0.5")}
+          >
+            <span className={cx("grid size-10 place-items-center rounded-2xl", tab === key ? "glass" : grad)}>
+              <I className="size-5" aria-hidden />
+            </span>
+            <span className="text-sm leading-tight font-semibold">{t(label)}</span>
+            <span className={cx("text-xs", tab === key ? "text-white/80" : "text-muted")}>{sub}</span>
+          </button>
+        ))}
+      </div>
+      {tab === "afford" && <Afford />}
+      {tab === "cash" && <CashAhead />}
+      {(tab === "price" || tab === "discount" || tab === "hire" || tab === "loan") && <WhatIf kind={tab} />}
     </div>
   );
 }
@@ -505,5 +523,187 @@ function Toggle({ checked, onChange, label, hint }: { checked: boolean; onChange
         <span className={cx("absolute top-0.5 size-5 rounded-full bg-white shadow transition", checked ? "left-[1.375rem]" : "left-0.5")} />
       </button>
     </label>
+  );
+}
+
+
+// ---------------------------------------------------------------- what-if simulators
+
+interface Baseline {
+  sales: number;
+  variable: number;
+  fixed: number;
+  profit: number;
+  contribution_pct: number | null;
+}
+interface CashFx {
+  lowest_without: number;
+  lowest_with: number;
+  lowest_date: string;
+  end_without: number;
+  end_with: number;
+  cushion: number;
+  below_cushion: string | null;
+  negative: string | null;
+  series: { date: string; with: number; without: number }[];
+}
+interface WhatIfResp {
+  status: string;
+  message?: string;
+  baseline?: Baseline;
+  new_profit?: number;
+  monthly_change?: number;
+  yearly_change?: number;
+  breakeven_volume_pct?: number | null;
+  profit_change?: number;
+  period_sales_change?: number;
+  uplift_needed_pct?: number | null;
+  breakeven_sales?: number | null;
+  emi?: number;
+  months?: number;
+  total_interest?: number;
+  emi_share_of_profit_pct?: number | null;
+  profit_cover?: number | null;
+  cash?: CashFx | null;
+  evidence: Evidence;
+}
+
+const SLIDERS: Record<string, { key: string; label: string; min: number; max: number; step: number; def: number; fmt: (v: number) => string }[]> = {
+  price: [
+    { key: "price_pct", label: "Change prices by", min: -20, max: 30, step: 1, def: 5, fmt: (v) => `${v > 0 ? "+" : ""}${v}%` },
+    { key: "volume_pct", label: "Customers buy (units)", min: -40, max: 20, step: 1, def: -3, fmt: (v) => `${v > 0 ? "+" : ""}${v}%` },
+  ],
+  discount: [
+    { key: "discount_pct", label: "Discount", min: 0, max: 40, step: 1, def: 10, fmt: (v) => `${v}%` },
+    { key: "uplift_pct", label: "Extra sales volume expected", min: 0, max: 100, step: 5, def: 15, fmt: (v) => `+${v}%` },
+    { key: "weeks", label: "For how long", min: 1, max: 12, step: 1, def: 4, fmt: (v) => `${v} weeks` },
+  ],
+  hire: [
+    { key: "salary", label: "Monthly salary", min: 5000, max: 60000, step: 1000, def: 15000, fmt: (v) => inr(v) },
+    { key: "extra_sales", label: "Extra sales they bring each month", min: 0, max: 200000, step: 5000, def: 40000, fmt: (v) => inr(v) },
+    { key: "start_months", label: "Sales start after", min: 0, max: 6, step: 1, def: 1, fmt: (v) => `${v} month${v === 1 ? "" : "s"}` },
+  ],
+  loan: [
+    { key: "amount", label: "Loan amount", min: 50000, max: 2500000, step: 25000, def: 500000, fmt: (v) => short(v) },
+    { key: "rate", label: "Interest rate (from your lender)", min: 6, max: 30, step: 0.5, def: 12, fmt: (v) => `${v}%` },
+    { key: "years", label: "Years", min: 1, max: 7, step: 1, def: 3, fmt: (v) => `${v} yr` },
+  ],
+};
+
+function WhatIf({ kind }: { kind: "price" | "discount" | "hire" | "loan" }) {
+  const { t } = useT();
+  const [vals, setVals] = useState<Record<string, number>>(() => Object.fromEntries(SLIDERS[kind].map((s) => [s.key, s.def])));
+  const [q, setQ] = useState("");
+  useEffect(() => setVals(Object.fromEntries(SLIDERS[kind].map((s) => [s.key, s.def]))), [kind]);
+  useEffect(() => {
+    const x = setTimeout(() => setQ(new URLSearchParams(Object.fromEntries(Object.entries(vals).map(([k, v]) => [k, String(v)]))).toString()), 200);
+    return () => clearTimeout(x);
+  }, [vals]);
+  const { data, loading } = useApi<WhatIfResp>(q ? `/api/whatif/${kind}?${q}` : null);
+
+  let tone: Tone = "neutral";
+  let head = "";
+  let sub = "";
+  if (data && data.status === "ok") {
+    if (kind === "price") {
+      const ch = data.monthly_change ?? 0;
+      tone = ch >= 0 ? "good" : "bad";
+      head = `${ch >= 0 ? "+" : "−"}${short(Math.abs(ch))} profit a month`;
+      sub = `${short(Math.abs(data.yearly_change ?? 0))} a year. ` + (data.breakeven_volume_pct != null ? `You can lose up to ${Math.abs(data.breakeven_volume_pct).toFixed(1)}% of units sold before profit drops.` : "");
+    } else if (kind === "discount") {
+      const ch = data.profit_change ?? 0;
+      tone = ch >= 0 ? "good" : "caution";
+      head = `${ch >= 0 ? "+" : "−"}${short(Math.abs(ch))} profit over the offer`;
+      sub = data.uplift_needed_pct != null ? `To break even you need about ${data.uplift_needed_pct.toFixed(0)}% more volume.` : "";
+    } else if (kind === "hire") {
+      const ch = data.monthly_change ?? 0;
+      tone = ch >= 0 ? "good" : "caution";
+      head = `${ch >= 0 ? "+" : "−"}${short(Math.abs(ch))} profit a month`;
+      sub = data.breakeven_sales ? `They pay for themselves if they bring ${short(data.breakeven_sales)} of extra sales a month.` : "";
+    } else {
+      tone = (data.profit_cover ?? 0) >= 1.25 ? "good" : (data.profit_cover ?? 0) >= 1 ? "caution" : "bad";
+      head = `EMI ${inr(data.emi ?? 0)} for ${data.months} months`;
+      sub = `Total interest ${short(data.total_interest ?? 0)}. ` + (data.profit_cover != null ? `Your average profit covers the EMI ${data.profit_cover.toFixed(2)}× (lenders like 1.25× or more).` : "");
+    }
+  }
+  return (
+    <div className={cx("grid gap-5 lg:grid-cols-[1fr_21rem]", loading && "opacity-80 transition")}>
+      <div className="space-y-5">
+        {data && data.status !== "ok" ? (
+          <Card className="text-ink-2">{data.message}</Card>
+        ) : data ? (
+          <>
+            <Card className={cx("p-6", toneBg[tone])}>
+              <div className="flex items-start gap-3">
+                <ToneIcon tone={tone} className="size-8 shrink-0" />
+                <div>
+                  <h2 className={cx("text-2xl font-bold tracking-tight", toneText[tone])}>{head}</h2>
+                  <p className="mt-1 text-ink-2">{sub}</p>
+                </div>
+              </div>
+            </Card>
+            {data.baseline && (
+              <div className="grid grid-cols-3 gap-3">
+                <Card className="p-4">
+                  <Stat label="Avg monthly sales" value={short(data.baseline.sales)} />
+                </Card>
+                <Card className="p-4">
+                  <Stat label="Stock & delivery costs" value={short(data.baseline.variable)} sub="move with sales" />
+                </Card>
+                <Card className="p-4">
+                  <Stat label="Avg monthly profit" value={short(data.baseline.profit)} tone={data.baseline.profit < 0 ? "bad" : undefined} />
+                </Card>
+              </div>
+            )}
+            {kind === "price" && data.baseline && (
+              <Card>
+                <SectionTitle>Monthly profit</SectionTitle>
+                <div className="space-y-3">
+                  {[
+                    { l: "Today", v: data.baseline.profit, c: "bg-muted" },
+                    { l: "With the change", v: data.new_profit ?? 0, c: (data.new_profit ?? 0) >= data.baseline.profit ? "bg-good" : "bg-bad" },
+                  ].map((r) => {
+                    const m = Math.max(Math.abs(data.baseline!.profit), Math.abs(data.new_profit ?? 0), 1);
+                    return (
+                      <div key={r.l}>
+                        <div className="mb-1 flex justify-between text-sm">
+                          <span>{r.l}</span>
+                          <span className="num font-semibold">{inr(r.v)}</span>
+                        </div>
+                        <div className="h-3 rounded-full bg-canvas">
+                          <div className={cx("h-3 rounded-full transition-all", r.c)} style={{ width: `${(Math.abs(r.v) / m) * 100}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Card>
+            )}
+            {data.cash && (
+              <Card>
+                <SectionTitle>Your bank balance, next 6 months</SectionTitle>
+                <PurchaseChart series={data.cash.series} cushion={data.cash.cushion} />
+                <p className="mt-2 text-sm">
+                  Lowest balance: <span className="num font-semibold">{short(data.cash.lowest_with)}</span> on {day(data.cash.lowest_date)}{" "}
+                  <span className="text-ink-2">(vs {short(data.cash.lowest_without)} without)</span>
+                </p>
+              </Card>
+            )}
+            <EvidenceButton evidence={data.evidence} />
+          </>
+        ) : (
+          <Loading />
+        )}
+      </div>
+      <Card className="h-fit space-y-5 lg:sticky lg:top-6">
+        <h3 className="font-semibold">What if…</h3>
+        {SLIDERS[kind].map((s) => (
+          <Field key={s.key} label={`${s.label}: ${s.fmt(vals[s.key] ?? s.def)}`}>
+            <input type="range" min={s.min} max={s.max} step={s.step} value={vals[s.key] ?? s.def} onChange={(e) => setVals((v) => ({ ...v, [s.key]: Number(e.target.value) }))} className="w-full" aria-label={s.label} />
+          </Field>
+        ))}
+        <p className="text-xs text-muted">Based on your last 3 full months. {t("Not financial advice.")}</p>
+      </Card>
+    </div>
   );
 }

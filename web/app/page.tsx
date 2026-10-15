@@ -1,36 +1,52 @@
 "use client";
 
-import { ArrowDownRight, ArrowRight, ArrowUpRight, Bell, CalendarClock, Check, ChevronRight, Copy, Landmark, ReceiptText, Sparkles, TrendingDown, UserRound, X } from "lucide-react";
+import {
+  ArrowDownLeft, ArrowDownRight, ArrowRight, ArrowUpRight, Bell, CalendarClock, Check, ChevronRight, Copy, HandCoins, Landmark, MessageCircle,
+  Play, ReceiptText, ShieldCheck, Sparkles, Store, Tag, TrendingDown, Undo2, UserRound, Wallet, X,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { CashChart, SalesCostsChart } from "@/components/charts";
+import { useContext, useEffect, useState } from "react";
+import { CatIcon } from "@/components/cat";
+import { HeroCashChart, SalesCostsChart } from "@/components/charts";
+import { DataVersion } from "@/components/data-version";
 import { EvidenceButton } from "@/components/evidence";
-import { ReminderSheet } from "@/components/reminder";
-import { Button, Card, cx, ErrorNote, Loading, Pill, SectionTitle, toneBg, ToneIcon, toneText } from "@/components/ui";
+import { CountUp, useToast } from "@/components/fx";
+import { Gauge } from "@/components/gauge";
+import { useQuickEntry } from "@/components/quick-entry";
+import { BulkReminders, ReminderSheet } from "@/components/reminder";
+import { StoryViewer, type StoryCard } from "@/components/story";
+import { Button, Card, cx, ErrorNote, Loading, SectionTitle, toneBg, toneText } from "@/components/ui";
 import { post, useApi } from "@/lib/api";
 import { inr, pct, short } from "@/lib/format";
+import { useT } from "@/lib/i18n";
 import type { AttentionItem, Home, Todo } from "@/lib/types";
 
-const ICONS: Record<string, React.ElementType> = {
-  customer: UserRound,
-  bill: ReceiptText,
-  copy: Copy,
-  spark: Sparkles,
-  trend: TrendingDown,
-  bank: Landmark,
-  alert: Bell,
-};
+const ICONS: Record<string, React.ElementType> = { customer: UserRound, bill: ReceiptText, copy: Copy, spark: Sparkles, trend: TrendingDown, bank: Landmark, alert: Bell, wallet: Wallet, tag: Tag };
 
-function greeting() {
-  const h = new Date().getHours();
-  return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+interface Health {
+  status: string;
+  score: number;
+  grade: string;
+  change: number | null;
+  focus: { label: string; tip: string; href: string } | null;
+}
+interface Story {
+  status: string;
+  title: string;
+  range: string;
+  cards: StoryCard[];
+  this?: { sales: number };
 }
 
 export default function HomePage() {
+  const { t } = useT();
   const { data, error, loading, reload } = useApi<Home>("/api/home");
   const [hello, setHello] = useState("Hello");
-  useEffect(() => setHello(greeting()), []);
+  useEffect(() => {
+    const h = new Date().getHours();
+    setHello(h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening");
+  }, []);
 
   if (error) return <ErrorNote message={error} retry={reload} />;
   if (loading && !data) return <Loading />;
@@ -38,13 +54,19 @@ export default function HomePage() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <p className="text-sm text-ink-2">{hello}</p>
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-[1.75rem]">{data.business.replace(" (fictional)", "")}</h1>
-        <p className="text-sm text-muted">Based on your records up to {data.as_of_label}</p>
+      <header className="rise">
+        <p className="text-sm font-medium text-brand">{t(hello)} 👋</p>
+        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{data.business.replace(" (fictional)", "")}</h1>
+        <p className="text-sm text-muted">{t("Based on your records up to {date}", { date: data.as_of_label })}</p>
       </header>
 
       <Hero home={data} />
+      <QuickActions />
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <HealthCard />
+        <StoryCardTile />
+      </div>
 
       {data.attention.length > 0 && <Attention items={data.attention} onChange={reload} />}
 
@@ -55,7 +77,7 @@ export default function HomePage() {
 
       {data.trend.length > 1 && (
         <Card>
-          <SectionTitle>Sales and running costs, month by month</SectionTitle>
+          <SectionTitle>{t("Sales and running costs, month by month")}</SectionTitle>
           <SalesCostsChart data={data.trend} />
         </Card>
       )}
@@ -63,68 +85,146 @@ export default function HomePage() {
       <div className="grid gap-6 lg:grid-cols-2">
         {data.upcoming.length > 0 && <Upcoming home={data} />}
         <Todos />
+        <RecentEntries />
       </div>
     </div>
   );
 }
 
 function Hero({ home }: { home: Home }) {
+  const { t } = useT();
   const { status, cash } = home;
+  const grad = status.tone === "bad" ? "grad-hero-bad" : status.tone === "caution" ? "grad-hero-caution" : "grad-hero";
   return (
-    <Card className="overflow-hidden p-0">
-      <div className={cx("flex items-start gap-3 px-5 py-4 sm:px-6", toneBg[status.tone])}>
-        <ToneIcon tone={status.tone} className="mt-0.5 size-6 shrink-0" />
-        <div>
-          <p className={cx("text-lg font-semibold leading-snug", status.tone === "neutral" ? "text-ink" : toneText[status.tone])}>{status.headline}</p>
-          <p className="mt-0.5 text-[0.95rem] text-ink-2">{status.detail}</p>
+    <section className={cx("rise rise-1 overflow-hidden rounded-[1.75rem] p-5 shadow-xl shadow-violet-300/40 sm:p-7", grad)}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="max-w-xl">
+          <p className="text-lg font-semibold leading-snug sm:text-xl">{status.headline}</p>
+          <p className="mt-1 text-sm text-white/80">{status.detail}</p>
         </div>
+        {cash.reconciled && (
+          <span className="glass inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium">
+            <ShieldCheck className="size-3.5" /> {t("Matches your bank statement")}
+          </span>
+        )}
       </div>
       {cash.known ? (
-        <div className="grid gap-4 p-5 sm:p-6 md:grid-cols-[minmax(0,17rem)_1fr] md:items-center">
+        <div className="mt-5 grid gap-4 md:grid-cols-[minmax(0,16rem)_1fr] md:items-end">
           <div>
-            <p className="text-sm text-ink-2">Money in the bank today</p>
-            <p className="num mt-1 text-4xl font-semibold tracking-tight" title={cash.exact}>
-              {cash.label}
+            <p className="text-sm text-white/75">{t("Money in the bank today")}</p>
+            <p className="num mt-1 text-5xl font-bold tracking-tight" title={cash.exact}>
+              <CountUp value={cash.amount ?? 0} format={short} />
             </p>
-            {cash.reconciled && (
-              <Pill tone="good" className="mt-2">
-                <Check className="size-3.5" /> Matches your bank statement
-              </Pill>
-            )}
-            <dl className="mt-4 space-y-1.5 text-sm">
-              {cash.months_of_costs != null && (
-                <div className="flex justify-between gap-4">
-                  <dt className="text-ink-2">Covers running costs for</dt>
-                  <dd className="num font-medium">{cash.months_of_costs} months</dd>
-                </div>
-              )}
+            <div className="mt-3 flex flex-wrap gap-2">
+              {cash.months_of_costs != null && <span className="glass rounded-full px-3 py-1 text-xs font-medium">{t("Covers {n} months of costs", { n: cash.months_of_costs })}</span>}
               {cash.in_90_days != null && (
-                <div className="flex justify-between gap-4">
-                  <dt className="text-ink-2">Expected in 90 days</dt>
-                  <dd className="num font-medium">{short(cash.in_90_days)}</dd>
-                </div>
+                <span className="glass rounded-full px-3 py-1 text-xs font-medium">
+                  {t("Expected in 90 days")}: {short(cash.in_90_days)}
+                </span>
               )}
-            </dl>
-            <EvidenceButton evidence={cash.evidence} className="mt-4" />
+            </div>
+            <EvidenceButton evidence={cash.evidence} label={t("How do we know?")} className="mt-4 !text-white/90" />
           </div>
           <div className="-mx-2">
-            <CashChart history={cash.history ?? []} outlook={cash.outlook ?? []} cushion={cash.cushion} />
-            <p className="px-2 text-xs text-muted">Solid: your actual balance. Dashed: expected, from bills, invoices and your usual spending — not a guarantee.</p>
+            <HeroCashChart history={cash.history ?? []} outlook={cash.outlook ?? []} />
+            <p className="px-2 text-[0.7rem] text-white/65">{t("Solid: your actual balance. Dashed: expected — not a guarantee.")}</p>
           </div>
         </div>
       ) : (
-        <div className="flex flex-wrap items-center justify-between gap-4 p-5 sm:p-6">
-          <p className="max-w-lg text-ink-2">Type in the closing balance from your bank statement or banking app — it takes ten seconds. Then you&apos;ll see your cash, how long it lasts and warnings before it runs low.</p>
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
+          <p className="max-w-lg text-white/85">{t("Type in the closing balance from your bank statement or banking app — it takes ten seconds.")}</p>
           <Link href="/data/#balance">
-            <Button>Add bank balance</Button>
+            <Button className="!bg-white !text-brand">{t("Add bank balance")}</Button>
           </Link>
         </div>
       )}
-    </Card>
+    </section>
+  );
+}
+
+function QuickActions() {
+  const { t } = useT();
+  const qe = useQuickEntry();
+  const [bulk, setBulk] = useState(false);
+  const items = [
+    { label: "Add sale", I: Store, grad: "grad-mint", go: () => qe.open({ kind: "sale" }) },
+    { label: "Add expense", I: ArrowUpRight, grad: "grad-sunset", go: () => qe.open({ kind: "expense" }) },
+    { label: "Gave udhaar", I: HandCoins, grad: "grad-violet", go: () => qe.open({ kind: "credit_sale" }) },
+    { label: "Got payment", I: ArrowDownLeft, grad: "grad-ocean", go: () => qe.open({ kind: "payment_in" }) },
+    { label: "Remind all", I: MessageCircle, grad: "grad-berry", go: () => setBulk(true) },
+  ];
+  return (
+    <>
+      <div className="rise rise-2 no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-5 sm:px-0">
+        {items.map(({ label, I, grad, go }) => (
+          <button key={label} onClick={go} className="card flex min-w-[6.5rem] flex-col items-center gap-2 p-3 text-center text-sm font-medium transition hover:-translate-y-0.5 hover:shadow-lg">
+            <span className={cx("grid size-12 place-items-center rounded-2xl shadow-md", grad)}>
+              <I className="size-6" aria-hidden />
+            </span>
+            {t(label)}
+          </button>
+        ))}
+      </div>
+      {bulk && <BulkReminders onClose={() => setBulk(false)} />}
+    </>
+  );
+}
+
+function HealthCard() {
+  const { t } = useT();
+  const { data } = useApi<Health>("/api/health");
+  if (!data || data.status !== "ok") return <Card className="h-44 animate-pulse" />;
+  return (
+    <Link href="/health/" className="card rise rise-3 group flex items-center gap-4 p-5 transition hover:shadow-lg">
+      <div className="text-ink">
+        <Gauge score={data.score} size={150} label={t("Health score")} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm text-ink-2">{t("Health score")}</p>
+        <p className="text-xl font-bold">{data.grade}</p>
+        {data.change != null && data.change !== 0 && (
+          <p className={cx("text-sm font-medium", data.change > 0 ? "text-good" : "text-bad")}>
+            {data.change > 0 ? "▲" : "▼"} {Math.abs(data.change)} {t("since last month")}
+          </p>
+        )}
+        {data.focus && <p className="mt-1 line-clamp-2 text-xs text-ink-2">{data.focus.label}: {data.focus.tip}</p>}
+        <span className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-brand group-hover:underline">
+          {t("Health score")} <ChevronRight className="size-4" />
+        </span>
+      </div>
+    </Link>
+  );
+}
+
+function StoryCardTile() {
+  const { t } = useT();
+  const { data } = useApi<Story>("/api/story");
+  const [open, setOpen] = useState(false);
+  if (!data) return <Card className="h-44 animate-pulse" />;
+  return (
+    <>
+      <button onClick={() => setOpen(true)} className="rise rise-4 grad-sunset relative flex items-center gap-4 overflow-hidden rounded-[1.5rem] p-5 text-left shadow-lg shadow-orange-200 transition hover:brightness-105">
+        <div className="flex -space-x-3">
+          {["grad-hero", "grad-ocean", "grad-mint"].map((g, i) => (
+            <span key={g} className={cx("grid size-14 place-items-center rounded-full ring-4 ring-white/30", g)} style={{ zIndex: 3 - i }}>
+              {i === 0 && <Play className="size-6 fill-white" />}
+            </span>
+          ))}
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm text-white/80">{data.range}</p>
+          <p className="text-xl font-bold">{data.title ?? t("Your week")}</p>
+          <p className="truncate text-sm text-white/90">{data.cards[0]?.title}</p>
+          <span className="mt-1 inline-block text-xs font-semibold text-white/90 underline underline-offset-2">{t("Tap to see your week")}</span>
+        </div>
+      </button>
+      {open && <StoryViewer cards={data.cards} title={data.title ?? t("Your week")} range={data.range} onClose={() => setOpen(false)} />}
+    </>
   );
 }
 
 function Attention({ items, onChange }: { items: AttentionItem[]; onChange: () => void }) {
+  const { t } = useT();
   const router = useRouter();
   const [remind, setRemind] = useState<string | null>(null);
   const [added, setAdded] = useState<Record<string, boolean>>({});
@@ -145,25 +245,25 @@ function Attention({ items, onChange }: { items: AttentionItem[]; onChange: () =
       onChange();
     }
   };
-
-  if (!visible.length) return null;
+  if (!remaining.length) return null;
   return (
     <section>
       <SectionTitle>
-        Needs your attention <span className="ml-1 text-ink-2 font-normal">({remaining.length})</span>
+        {t("Needs your attention")} <span className="ml-1 rounded-full bg-bad px-2 py-0.5 text-xs font-bold text-white">{remaining.length}</span>
       </SectionTitle>
       <div className="grid gap-3 md:grid-cols-2">
         {visible.map((i) => {
           const I = ICONS[i.icon] ?? Bell;
           return (
-            <Card key={i.id} className="flex gap-3.5 p-4">
-              <span className={cx("grid size-10 shrink-0 place-items-center rounded-full", toneBg[i.tone])}>
+            <Card key={i.id} className={cx("relative flex gap-3.5 overflow-hidden p-4 pl-5")}>
+              <span className={cx("absolute inset-y-0 left-0 w-1.5", i.tone === "bad" ? "bg-bad" : i.tone === "caution" ? "bg-[#f59e0b]" : i.tone === "info" ? "bg-info" : "bg-good")} />
+              <span className={cx("grid size-11 shrink-0 place-items-center rounded-2xl", toneBg[i.tone])}>
                 <I className={cx("size-5", toneText[i.tone])} aria-hidden />
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex items-start justify-between gap-2">
                   <p className="font-semibold leading-snug">{i.title}</p>
-                  <button onClick={() => setHidden((h) => ({ ...h, [i.id]: true }))} className="-mr-1 -mt-1 rounded-full p-1 text-muted hover:bg-canvas hover:text-ink" aria-label="Hide for now">
+                  <button onClick={() => setHidden((h) => ({ ...h, [i.id]: true }))} className="-mr-1 -mt-1 rounded-full p-1 text-muted hover:bg-canvas hover:text-ink" aria-label={t("Hide for now")}>
                     <X className="size-4" />
                   </button>
                 </div>
@@ -171,7 +271,7 @@ function Attention({ items, onChange }: { items: AttentionItem[]; onChange: () =
                 <Button size="sm" variant={added[i.id] ? "secondary" : "primary"} className="mt-3" onClick={() => act(i)} disabled={added[i.id]}>
                   {added[i.id] ? (
                     <>
-                      <Check className="size-4" /> Added to to-dos
+                      <Check className="size-4" /> {t("Added to to-dos")}
                     </>
                   ) : (
                     <>
@@ -186,7 +286,7 @@ function Attention({ items, onChange }: { items: AttentionItem[]; onChange: () =
       </div>
       {remaining.length > visible.length && (
         <Button variant="ghost" className="mt-2" onClick={() => setAll(true)}>
-          Show {remaining.length - visible.length} more
+          {t("Show {n} more", { n: remaining.length - visible.length })}
         </Button>
       )}
       <ReminderSheet customer={remind} onClose={() => setRemind(null)} />
@@ -200,7 +300,7 @@ function Change({ value, good }: { value: number | null | undefined; good: "up" 
   const isGood = (up && good === "up") || (!up && good === "down");
   const I = up ? ArrowUpRight : ArrowDownRight;
   return (
-    <span className={cx("inline-flex items-center text-xs font-medium", value === 0 ? "text-muted" : isGood ? "text-good" : "text-bad")}>
+    <span className={cx("inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-semibold", isGood ? "bg-good-50 text-good" : "bg-bad-50 text-bad")}>
       <I className="size-3.5" aria-hidden />
       {pct(value)}
     </span>
@@ -208,51 +308,51 @@ function Change({ value, good }: { value: number | null | undefined; good: "up" 
 }
 
 function MonthCard({ home }: { home: Home }) {
+  const { t } = useT();
   const m = home.month!;
   const prev = m.previous;
   const rows = [
-    { label: "Sales received", value: m.sales, change: m.change?.sales, good: "up" as const },
-    { label: "Running costs paid", value: m.costs, change: m.change?.costs, good: "down" as const },
+    { label: "Sales received", value: m.sales, change: m.change?.sales, good: "up" as const, grad: "grad-mint", I: Store },
+    { label: "Running costs paid", value: m.costs, change: m.change?.costs, good: "down" as const, grad: "grad-sunset", I: ArrowUpRight },
   ];
   return (
     <Card>
-      <SectionTitle action={prev && <span className="text-xs text-muted">vs {prev.label.split(" ")[0]}</span>}>{m.label}</SectionTitle>
+      <SectionTitle action={prev && <span className="text-xs text-muted">{t("vs {month}", { month: (prev as { short_label?: string }).short_label ?? prev.label })}</span>}>{m.label}</SectionTitle>
       <div className="space-y-3">
         {rows.map((r) => (
-          <div key={r.label} className="flex items-baseline justify-between gap-3">
-            <span className="text-ink-2">{r.label}</span>
-            <span className="flex items-baseline gap-2">
-              <span className="num text-lg font-medium">{short(r.value)}</span>
-              <span className="w-12 text-right">
-                <Change value={r.change} good={r.good} />
-              </span>
+          <div key={r.label} className="flex items-center gap-3">
+            <span className={cx("grid size-10 place-items-center rounded-2xl", r.grad)}>
+              <r.I className="size-5" aria-hidden />
+            </span>
+            <span className="flex-1 text-ink-2">{t(r.label)}</span>
+            <span className="num text-lg font-semibold">{short(r.value)}</span>
+            <span className="w-16 text-right">
+              <Change value={r.change} good={r.good} />
             </span>
           </div>
         ))}
-        <div className="flex items-baseline justify-between gap-3 border-t border-line pt-3">
+        <div className={cx("flex items-center justify-between gap-3 rounded-2xl p-4", m.profit >= 0 ? "bg-good-50" : "bg-bad-50")}>
           <span>
-            <span className="font-medium">{m.profit >= 0 ? "Profit" : "Loss"}</span> <span className="text-xs text-muted">(estimate)</span>
+            <span className="font-semibold">{t(m.profit >= 0 ? "Profit" : "Loss")}</span> <span className="text-xs text-muted">{t("(estimate)")}</span>
           </span>
-          <span className="flex items-baseline gap-2">
-            <span className={cx("num text-xl font-semibold", m.profit < 0 && "text-bad")}>{short(m.profit)}</span>
-            <span className="w-12 text-right">
-              <Change value={m.change?.profit} good="up" />
-            </span>
+          <span className="flex items-center gap-2">
+            <span className={cx("num text-2xl font-bold", m.profit < 0 ? "text-bad" : "text-good")}>{short(m.profit)}</span>
+            <Change value={m.change?.profit} good="up" />
           </span>
         </div>
       </div>
       {home.insight && (
-        <div className={cx("mt-4 rounded-2xl p-3.5 text-sm", toneBg[home.insight.tone])}>
+        <div className={cx("mt-4 rounded-2xl p-4 text-sm", toneBg[home.insight.tone])}>
           <p className="text-ink">{home.insight.text}</p>
-          <Link href={`/ask/?q=${encodeURIComponent(home.insight.ask)}`} className="mt-1.5 inline-flex items-center gap-1 font-medium text-brand hover:underline">
-            Ask FinPilot why <ChevronRight className="size-4" />
+          <Link href={`/ask/?q=${encodeURIComponent(home.insight.ask)}`} className="mt-2 inline-flex items-center gap-1 font-semibold text-brand hover:underline">
+            <Sparkles className="size-4" /> {t("Ask FinPilot why")} <ChevronRight className="size-4" />
           </Link>
         </div>
       )}
       <div className="mt-4 flex items-center justify-between">
-        <EvidenceButton evidence={m.evidence} label="How is profit worked out?" />
+        <EvidenceButton evidence={m.evidence} label={t("How is profit worked out?")} />
         <Link href="/money/?tab=profit" className="text-sm font-medium text-ink-2 hover:text-ink">
-          All months →
+          {t("All months")} →
         </Link>
       </div>
     </Card>
@@ -260,43 +360,48 @@ function MonthCard({ home }: { home: Home }) {
 }
 
 function Spending({ home }: { home: Home }) {
+  const { t } = useT();
   const max = Math.max(...home.spending.map((s) => s.amount));
   return (
     <Card>
-      <SectionTitle action={<span className="text-xs text-muted">{home.month?.label}</span>}>Where your money went</SectionTitle>
-      <ul className="space-y-3">
+      <SectionTitle action={<span className="text-xs text-muted">{home.month?.label}</span>}>{t("Where your money went")}</SectionTitle>
+      <ul className="space-y-3.5">
         {home.spending.map((s) => (
-          <li key={s.category}>
-            <div className="mb-1 flex items-baseline justify-between gap-3 text-sm">
-              <span className="font-medium">{s.category}</span>
-              <span className="flex items-baseline gap-2">
-                <span className="num">{inr(s.amount)}</span>
-                <span className="w-12 text-right">
+          <li key={s.category} className="flex items-center gap-3">
+            <CatIcon category={s.category} />
+            <div className="min-w-0 flex-1">
+              <div className="mb-1 flex items-baseline justify-between gap-3 text-sm">
+                <span className="truncate font-medium">{s.category}</span>
+                <span className="num font-semibold">{inr(s.amount)}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="h-2 flex-1 rounded-full bg-canvas">
+                  <div className="h-2 rounded-full bg-out" style={{ width: `${Math.max(3, (s.amount / max) * 100)}%` }} />
+                </div>
+                <span className="w-14 text-right">
                   <Change value={s.change_pct} good="down" />
                 </span>
-              </span>
-            </div>
-            <div className="h-2 rounded-full bg-canvas" title={`${s.category}: ${inr(s.amount)}`}>
-              <div className="h-2 rounded-full bg-out" style={{ width: `${Math.max(2, (s.amount / max) * 100)}%` }} />
+              </div>
             </div>
           </li>
         ))}
       </ul>
       <Link href="/money/?dir=out" className="mt-4 inline-block text-sm font-medium text-ink-2 hover:text-ink">
-        See all payments →
+        {t("See all payments")} →
       </Link>
     </Card>
   );
 }
 
 function Upcoming({ home }: { home: Home }) {
+  const { t } = useT();
   return (
     <Card>
-      <SectionTitle action={home.upcoming_total != null && <span className="num text-sm font-medium">{inr(home.upcoming_total)}</span>}>Bills in the next 14 days</SectionTitle>
+      <SectionTitle action={home.upcoming_total != null && <span className="num text-sm font-semibold">{inr(home.upcoming_total)}</span>}>{t("Bills in the next 14 days")}</SectionTitle>
       <ul className="divide-y divide-line">
         {home.upcoming.map((u) => (
           <li key={u.date + u.name + u.amount} className="flex items-center gap-3 py-2.5">
-            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-canvas text-center text-[0.7rem] leading-tight font-medium text-ink-2">
+            <span className="grad-violet grid size-11 shrink-0 place-items-center rounded-2xl text-center text-[0.7rem] leading-tight font-semibold">
               {u.day.split(" ").map((p) => (
                 <span key={p} className="block">
                   {p}
@@ -307,7 +412,7 @@ function Upcoming({ home }: { home: Home }) {
               <p className="truncate font-medium">{u.what || u.name}</p>
               <p className="truncate text-xs text-muted">{u.name}</p>
             </div>
-            <span className="num font-medium">{inr(u.amount)}</span>
+            <span className="num font-semibold">{inr(u.amount)}</span>
           </li>
         ))}
       </ul>
@@ -316,38 +421,36 @@ function Upcoming({ home }: { home: Home }) {
 }
 
 function Todos() {
+  const { t } = useT();
   const { data, reload } = useApi<Todo[]>("/api/todos");
-  const open = (data ?? []).filter((t) => t.status === "open");
+  const open = (data ?? []).filter((x) => x.status === "open");
   const decide = async (id: number, status: "done" | "dismissed") => {
     await post(`/api/todos/${id}`, { status });
     reload();
   };
-  useEffect(() => {
-    const h = () => reload();
-    window.addEventListener("focus", h);
-    return () => window.removeEventListener("focus", h);
-  }, [reload]);
   return (
     <Card>
       <SectionTitle>
         <span className="inline-flex items-center gap-2">
-          <CalendarClock className="size-5 text-ink-2" aria-hidden /> Your to-dos
+          <CalendarClock className="size-5 text-brand" aria-hidden /> {t("Your to-dos")}
         </span>
       </SectionTitle>
       {open.length === 0 ? (
-        <p className="text-sm text-ink-2">Nothing pending. When you or FinPilot suggest an action — like paying a bill — it lands here for you to approve. FinPilot never pays or sends anything itself.</p>
+        <p className="text-sm text-ink-2">
+          {t("Nothing pending. When you or FinPilot suggest an action — like paying a bill — it lands here for you to approve. FinPilot never pays or sends anything itself.")}
+        </p>
       ) : (
         <ul className="divide-y divide-line">
-          {open.map((t) => (
-            <li key={t.id} className="flex items-center gap-3 py-2.5">
+          {open.map((x) => (
+            <li key={x.id} className="flex items-center gap-3 py-2.5">
               <div className="min-w-0 flex-1">
-                <p className="font-medium">{t.text}</p>
-                {t.reason && <p className="truncate text-xs text-muted">{t.reason}</p>}
+                <p className="font-medium">{x.text}</p>
+                {x.reason && <p className="truncate text-xs text-muted">{x.reason}</p>}
               </div>
-              <Button size="sm" variant="secondary" onClick={() => decide(t.id, "done")} aria-label={`Mark done: ${t.text}`}>
-                <Check className="size-4" /> Done
+              <Button size="sm" variant="secondary" onClick={() => decide(x.id, "done")}>
+                <Check className="size-4" /> {t("Done")}
               </Button>
-              <button onClick={() => decide(t.id, "dismissed")} className="rounded-full p-1.5 text-muted hover:bg-canvas" aria-label={`Dismiss: ${t.text}`}>
+              <button onClick={() => decide(x.id, "dismissed")} className="rounded-full p-1.5 text-muted hover:bg-canvas" aria-label="Dismiss">
                 <X className="size-4" />
               </button>
             </li>
@@ -358,3 +461,33 @@ function Todos() {
   );
 }
 
+function RecentEntries() {
+  const { t } = useT();
+  const { refresh } = useContext(DataVersion);
+  const toast = useToast();
+  const { data } = useApi<{ entries: { id: string; kind: string; summary: string; undone: number; at: string }[] }>("/api/entries");
+  const list = (data?.entries ?? []).filter((e) => !e.undone).slice(0, 6);
+  if (!list.length) return null;
+  const undo = async (id: string) => {
+    await post(`/api/entries/${id}/undo`, {});
+    refresh();
+    toast.show({ text: t("Undone") });
+  };
+  const KIND_GRAD: Record<string, string> = { sale: "grad-mint", payment_in: "grad-ocean", credit_sale: "grad-violet", expense: "grad-sunset", bill: "grad-berry", payment_out: "grad-night" };
+  return (
+    <Card>
+      <SectionTitle>{t("Recent entries")}</SectionTitle>
+      <ul className="divide-y divide-line">
+        {list.map((e) => (
+          <li key={e.id} className="flex items-center gap-3 py-2.5">
+            <span className={cx("size-2.5 shrink-0 rounded-full", KIND_GRAD[e.kind] ?? "grad-violet")} />
+            <p className="min-w-0 flex-1 truncate text-sm">{e.summary}</p>
+            <button onClick={() => undo(e.id)} className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium text-ink-2 hover:bg-canvas">
+              <Undo2 className="size-3.5" /> {t("Undo")}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}

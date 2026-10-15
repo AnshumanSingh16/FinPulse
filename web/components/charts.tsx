@@ -139,3 +139,50 @@ export function ForecastChart({ series, cushion }: { series: { date: string; bal
     </ResponsiveContainer>
   );
 }
+
+/** White-on-gradient cash line for the home hero: actual (solid) then expected (dashed). */
+export function HeroCashChart({ history, outlook, height = 150 }: { history: { date: string; balance: number }[]; outlook: { date: string; balance: number }[]; height?: number }) {
+  const today = history[history.length - 1]?.date;
+  const data = [
+    ...history.map((h) => ({ date: h.date, actual: h.balance, ahead: h.date === today ? h.balance : null })),
+    ...outlook.filter((o) => o.date !== today).map((o) => ({ date: o.date, actual: null, ahead: o.balance })),
+  ];
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <AreaChart data={data} margin={{ top: 6, right: 6, bottom: 0, left: 6 }}>
+        <defs>
+          <linearGradient id="heroFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity={0.35} />
+            <stop offset="100%" stopColor="#ffffff" stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <XAxis dataKey="date" hide />
+        <YAxis hide domain={["dataMin - 100000", "dataMax + 50000"]} />
+        {today && <ReferenceLine x={today} stroke="rgba(255,255,255,0.5)" strokeDasharray="2 3" label={{ value: "Today", position: "insideTopRight", fontSize: 10, fill: "rgba(255,255,255,0.85)" }} />}
+        <Tooltip
+          cursor={{ stroke: "rgba(255,255,255,0.4)" }}
+          content={({ active, payload, label }) => {
+            if (!active || !payload?.length) return null;
+            const p = payload[0].payload as { actual: number | null; ahead: number | null };
+            return <TipBox title={day(String(label))} rows={[{ label: p.actual != null ? "Balance" : "Expected", value: inr(p.actual ?? p.ahead) }]} />;
+          }}
+        />
+        <Area type="monotone" dataKey="actual" stroke="#ffffff" strokeWidth={2.5} fill="url(#heroFill)" connectNulls={false} isAnimationActive />
+        <Area type="monotone" dataKey="ahead" stroke="#ffffff" strokeOpacity={0.8} strokeWidth={2} strokeDasharray="5 5" fill="none" connectNulls={false} isAnimationActive />
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+}
+
+export function ScoreHistory({ data }: { data: { label: string; score: number }[] }) {
+  return (
+    <ResponsiveContainer width="100%" height={160}>
+      <BarChart data={data} margin={{ top: 16, right: 4, bottom: 0, left: 4 }}>
+        <XAxis dataKey="label" tick={AXIS} axisLine={false} tickLine={false} />
+        <YAxis hide domain={[0, 100]} />
+        <Tooltip cursor={{ fill: "#f2f0f8" }} content={({ active, payload, label }) => (active && payload?.length ? <TipBox title={String(label)} rows={[{ label: "Score", value: String(payload[0].value) }]} /> : null)} />
+        <Bar dataKey="score" fill="#6a44ff" radius={[6, 6, 0, 0]} label={{ position: "top", fontSize: 11, fill: "#555068" }} isAnimationActive />
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}

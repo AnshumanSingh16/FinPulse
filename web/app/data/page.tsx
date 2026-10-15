@@ -1,10 +1,11 @@
 "use client";
 
-import { CheckCircle2, FileSpreadsheet, Landmark, Lock, ReceiptText, Store, Trash2, UploadCloud } from "lucide-react";
-import { useContext, useRef, useState } from "react";
+import { CheckCircle2, FileSpreadsheet, Landmark, Lock, ReceiptText, RotateCcw, Rocket, Settings2, Store, Trash2, UploadCloud } from "lucide-react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { DataVersion } from "@/components/data-version";
 import { Button, Card, cx, Field, MoneyInput, Pill, SectionTitle } from "@/components/ui";
-import { del, post, postForm } from "@/lib/api";
+import { del, get, post, postForm } from "@/lib/api";
+import { useT } from "@/lib/i18n";
 import { inr } from "@/lib/format";
 import type { AppState } from "@/lib/types";
 
@@ -79,6 +80,8 @@ export default function DataPage() {
         </div>
       </Card>
 
+      {!up.ready && <StartFresh onDone={refresh} />}
+
       <Upload
         kind="bank"
         n={1}
@@ -98,6 +101,26 @@ export default function DataPage() {
         done={up.invoice_rows ? `${up.invoice_rows} invoices & bills added` : null}
         onDone={refresh}
       />
+
+      <SettingsCard isDemo={state.is_demo} />
+
+      {state.is_demo && (
+        <Card className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="font-medium">Reset the demo shop</p>
+            <p className="text-sm text-ink-2">Undo every entry, payment and goal you tried on the demo.</p>
+          </div>
+          <Button
+            variant="secondary"
+            onClick={async () => {
+              await post("/api/demo/reset", {});
+              refresh();
+            }}
+          >
+            <RotateCcw className="size-4" /> Reset demo
+          </Button>
+        </Card>
+      )}
 
       {up.ready && (
         <Card className="flex flex-wrap items-center justify-between gap-3">
@@ -368,5 +391,100 @@ function Balance({ done, onDone, state }: { done: string | null; onDone: () => v
       </div>
       {msg && <p className="mt-2 text-sm text-ink-2">{msg}</p>}
     </Step>
+  );
+}
+
+
+function StartFresh({ onDone }: { onDone: () => void }) {
+  const [name, setName] = useState("");
+  const [bal, setBal] = useState("");
+  const [err, setErr] = useState<string | null>(null);
+  const go = async () => {
+    try {
+      await post("/api/start", { name, balance: bal });
+      onDone();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    }
+  };
+  return (
+    <div className="grad-hero rounded-[1.5rem] p-6 shadow-xl shadow-violet-300/40">
+      <div className="flex items-center gap-2 text-sm text-white/85">
+        <Rocket className="size-4" /> No files? No problem.
+      </div>
+      <h2 className="mt-1 text-xl font-bold">Start your khata today</h2>
+      <p className="mt-1 text-sm text-white/80">Just your shop&apos;s name and today&apos;s bank + cash balance. Then add sales, expenses and udhaar with the + button.</p>
+      <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_12rem_auto]">
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Shop name, e.g. Sharma General Store" className="h-12 rounded-2xl bg-white px-4 text-ink outline-none" aria-label="Shop name" />
+        <input value={bal} onChange={(e) => setBal(e.target.value.replace(/[^\d.]/g, ""))} placeholder="₹ balance today" inputMode="numeric" className="h-12 rounded-2xl bg-white px-4 text-ink outline-none" aria-label="Balance today" />
+        <Button size="lg" className="!bg-ink" onClick={go} disabled={!name.trim()}>
+          Start
+        </Button>
+      </div>
+      {err && <p className="mt-2 text-sm text-white">{err}</p>}
+    </div>
+  );
+}
+
+function SettingsCard({ isDemo }: { isDemo: boolean }) {
+  const { lang, setLang } = useT();
+  const [st, setSt] = useState<Record<string, string> | null>(null);
+  const [saved, setSaved] = useState(false);
+  useEffect(() => {
+    get<Record<string, string>>("/api/settings").then(setSt);
+  }, [isDemo]);
+  if (!st) return null;
+  const save = async (patch: Record<string, string>) => {
+    const r = await post<Record<string, string>>("/api/settings", patch);
+    setSt(r);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 1500);
+  };
+  return (
+    <Card id="settings" className="scroll-mt-20 space-y-4">
+      <div className="flex items-center gap-2">
+        <Settings2 className="size-5 text-brand" />
+        <h2 className="text-lg font-semibold">Settings</h2>
+        {saved && <Pill tone="good">Saved</Pill>}
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Language / भाषा">
+          <div className="flex gap-2">
+            {(["en", "hi"] as const).map((l) => (
+              <button key={l} onClick={() => setLang(l)} className={cx("h-10 flex-1 rounded-xl border text-sm font-medium", lang === l ? "border-brand bg-brand-50 text-brand" : "border-line")}>
+                {l === "en" ? "English" : "हिंदी"}
+              </button>
+            ))}
+          </div>
+        </Field>
+        <Field label="GST registered?">
+          <div className="flex gap-2">
+            {["yes", "no"].map((v) => (
+              <button key={v} onClick={() => save({ gst_registered: v })} className={cx("h-10 flex-1 rounded-xl border text-sm font-medium capitalize", st.gst_registered === v ? "border-brand bg-brand-50 text-brand" : "border-line")}>
+                {v}
+              </button>
+            ))}
+          </div>
+        </Field>
+        <Field label="GST rate on your sales (%)" hint="Used only for the set-aside estimate">
+          <input defaultValue={st.gst_rate_sales} onBlur={(e) => save({ gst_rate_sales: e.target.value })} inputMode="decimal" className="h-10 w-full rounded-xl border border-line px-3" />
+        </Field>
+        <Field label="GST rate on your purchases (%)">
+          <input defaultValue={st.gst_rate_purchases} onBlur={(e) => save({ gst_rate_purchases: e.target.value })} inputMode="decimal" className="h-10 w-full rounded-xl border border-line px-3" />
+        </Field>
+        <Field label="GST filing">
+          <div className="flex gap-2">
+            {[
+              ["monthly", "Monthly"],
+              ["qrmp", "Quarterly (QRMP)"],
+            ].map(([v, l]) => (
+              <button key={v} onClick={() => save({ gst_filing: v })} className={cx("h-10 flex-1 rounded-xl border text-sm font-medium", st.gst_filing === v ? "border-brand bg-brand-50 text-brand" : "border-line")}>
+                {l}
+              </button>
+            ))}
+          </div>
+        </Field>
+      </div>
+    </Card>
   );
 }

@@ -21,6 +21,9 @@ def client(tmp_path, monkeypatch):
 
     if hasattr(config.settings, "cache_clear"):
         config.settings.cache_clear()
+    from finpilot.api import dataset
+
+    monkeypatch.setattr(dataset, "today", lambda: pd.Timestamp("2026-09-30"))
     return TestClient(create_app(tmp_path / "t.db", static_dir=None))
 
 
@@ -97,7 +100,7 @@ class TestMoney:
 
     def test_report(self, client):
         r = client.get("/api/report").json()
-        assert r["status"] == "ok" and len(r["months"]) == 12 and r["months"][0]["month"] == "Sep 2026"
+        assert r["status"] == "ok" and len(r["months"]) == 12 and r["months"][0]["month"] == "September 2026"
 
 
 class TestPlan:
@@ -167,7 +170,7 @@ class TestUpload:
         csv = "Txn Date,Narration,Withdrawal,Deposit\n01/09/2026,UPI from Ravi,,12000\n03/09/2026,Rent,15000,\n05/09/2026,UPI from Asha,,8000\n"
         r = client.post("/api/upload/import", data={"kind": "bank"}, files={"file": ("stmt.csv", csv.encode())})
         assert r.status_code == 200, r.text
-        assert "counted as sales" in r.json()["notes"][0]
+        assert "Sorted 1 of 3" in r.json()["notes"][0]  # rent is sure; the two UPI receipts are guessed as sales
         h = client.get("/api/home").json()
         assert not h["cash"]["known"] and h["status"]["tone"] == "neutral"
         client.post("/api/balance", json={"date": "2026-09-05", "amount": "₹50,000"})

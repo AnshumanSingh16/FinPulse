@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, ArrowUp, Check, ChevronDown, ShieldCheck, Sparkles } from "lucide-react";
+import { AlertTriangle, ArrowUp, Check, ChevronDown, Mic, ShieldCheck, Sparkles } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useContext, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
@@ -8,6 +8,7 @@ import { DataVersion } from "@/components/data-version";
 import { EvidenceSheet } from "@/components/evidence";
 import { cx, Pill } from "@/components/ui";
 import { post } from "@/lib/api";
+import { useT } from "@/lib/i18n";
 import type { Evidence } from "@/lib/types";
 
 interface Answer {
@@ -32,6 +33,15 @@ const SUGGESTIONS = [
   "Can I afford a ₹12 lakh machine on a loan at 11% for 3 years? It would save ₹45,000 a month.",
 ];
 
+const SUGGESTIONS_HI = [
+  "मेरा धंधा कैसा चल रहा है?",
+  "पिछले महीने खर्च क्यों बढ़ा?",
+  "किस पर उधारी बाकी है?",
+  "अगले 90 दिन का कैश अनुमान बताओ",
+  "कोई दोहरा या अजीब भुगतान?",
+  "क्या मैं ₹12 लाख की मशीन 11% पर 3 साल के लोन पर ले सकता हूँ? हर महीने ₹45,000 बचेंगे",
+];
+
 const THINKING = ["Reading your records", "Running the numbers", "Double-checking every figure"];
 
 export default function AskPage() {
@@ -43,6 +53,8 @@ export default function AskPage() {
 }
 
 function Ask() {
+  const { t, lang } = useT();
+  const [listening, setListening] = useState(false);
   const params = useSearchParams();
   const { state, version } = useContext(DataVersion);
   const [msgs, setMsgs] = useState<Msg[]>([]);
@@ -101,10 +113,10 @@ function Ask() {
             <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-brand-50 text-brand">
               <Sparkles className="size-7" aria-hidden />
             </span>
-            <h1 className="mt-4 text-2xl font-semibold tracking-tight">Ask anything about your business</h1>
-            <p className="mt-2 text-ink-2">Answers come straight from your records, and every figure is double-checked before you see it.</p>
+            <h1 className="mt-4 text-2xl font-bold tracking-tight">{t("Ask anything about your business")}</h1>
+            <p className="mt-2 text-ink-2">{t("Answers come straight from your records, and every figure is double-checked before you see it.")}</p>
             <div className="mt-6 flex flex-wrap justify-center gap-2">
-              {SUGGESTIONS.map((s) => (
+              {(lang === "hi" ? SUGGESTIONS_HI : SUGGESTIONS).map((s) => (
                 <button key={s} onClick={() => send(s)} className="rounded-full border border-line bg-surface px-4 py-2 text-left text-sm text-ink shadow-sm transition hover:border-brand hover:text-brand">
                   {s}
                 </button>
@@ -132,7 +144,7 @@ function Ask() {
               <span className="dot size-1.5 rounded-full bg-brand" />
               <span className="dot size-1.5 rounded-full bg-brand" />
             </span>
-            {THINKING[phase]}…
+            {t(THINKING[phase])}…
           </div>
         )}
         <div ref={end} />
@@ -156,19 +168,37 @@ function Ask() {
               }
             }}
             rows={1}
-            placeholder="Ask about sales, costs, cash, customers, a purchase…"
+            placeholder={t("Ask about sales, costs, cash, customers, a purchase…")}
             className="max-h-36 min-h-10 flex-1 resize-none bg-transparent py-2.5 outline-none placeholder:text-muted"
             aria-label="Your question"
           />
+          <button
+            type="button"
+            onClick={() => {
+              const W = window as unknown as { SpeechRecognition?: new () => any; webkitSpeechRecognition?: new () => any }; // eslint-disable-line @typescript-eslint/no-explicit-any
+              const SR = W.SpeechRecognition ?? W.webkitSpeechRecognition;
+              if (!SR) return;
+              const r = new SR();
+              r.lang = lang === "hi" ? "hi-IN" : "en-IN";
+              r.onresult = (e: { results: { [i: number]: { [j: number]: { transcript: string } } } }) => send(e.results[0][0].transcript);
+              r.onend = () => setListening(false);
+              setListening(true);
+              r.start();
+            }}
+            className={cx("grid size-10 shrink-0 place-items-center rounded-full transition", listening ? "animate-pulse bg-bad text-white" : "text-ink-2 hover:bg-canvas")}
+            aria-label="Speak your question"
+          >
+            <Mic className="size-5" />
+          </button>
           <button type="submit" disabled={!input.trim() || busy} className="grid size-10 shrink-0 place-items-center rounded-full bg-brand text-white transition disabled:opacity-40" aria-label="Send">
             <ArrowUp className="size-5" />
           </button>
         </form>
         <p className="mt-2 text-center text-xs text-muted">
-          {state?.ai.enabled
+          {t(state?.ai.enabled
             ? "AI mode: your question and the relevant figures are sent to Anthropic to write the answer. Your files are not."
-            : "Offline mode: answers come from FinPilot's built-in rules. Nothing leaves this computer."}{" "}
-          Not financial advice.
+            : "Offline mode: answers come from FinPilot's built-in rules. Nothing leaves this computer.")}{" "}
+          {t("Not financial advice.")}
         </p>
       </div>
     </div>
@@ -176,6 +206,7 @@ function Ask() {
 }
 
 function AnswerCard({ a }: { a: Answer }) {
+  const { t } = useT();
   const [open, setOpen] = useState(false);
   const [ev, setEv] = useState<Evidence | null>(null);
   return (
@@ -197,17 +228,17 @@ function AnswerCard({ a }: { a: Answer }) {
           {a.has_figures &&
             (a.verified ? (
               <Pill tone="good">
-                <ShieldCheck className="size-3.5" /> Every figure checked against your records
+                <ShieldCheck className="size-3.5" /> {t("Every figure checked against your records")}
               </Pill>
             ) : (
               <Pill tone="caution">
-                <AlertTriangle className="size-3.5" /> Some figures couldn&apos;t be checked
+                <AlertTriangle className="size-3.5" /> {t("Some figures couldn't be checked")}
               </Pill>
             ))}
-          {a.mode === "rule-based" && <Pill>Built-in answer (no AI)</Pill>}
+          {a.mode === "rule-based" && <Pill>{t("Built-in answer (no AI)")}</Pill>}
           {a.steps.length > 0 && (
             <button onClick={() => setOpen((o) => !o)} className="ml-auto inline-flex items-center gap-1 text-sm font-medium text-ink-2 hover:text-ink" aria-expanded={open}>
-              How I worked this out <ChevronDown className={cx("size-4 transition", open && "rotate-180")} />
+              {t("How I worked this out")} <ChevronDown className={cx("size-4 transition", open && "rotate-180")} />
             </button>
           )}
         </div>

@@ -1,15 +1,25 @@
 # FinPilot AI
 
-A money copilot for small business owners in India. In plain words it tells you:
+A colourful, bilingual (English / हिंदी) money app for small shop owners in India — a digital khata plus a copilot that tells you, in plain words, how your business is doing and what to do next.
 
-- **How you're doing.** How much cash you have, how long it lasts, and whether it's about to get tight.
-- **What needs doing.** Customers to chase (with a ready-to-send WhatsApp reminder), late bills, and possible double payments.
-- **Answers to your questions.** Ask about your sales, costs or cash and get answers checked against your records.
-- **Whether you can afford something.** Three quick questions, then "Yes", "Yes — but it's tight" or "Not right now", with sliders to try other numbers.
+**Every day**
+- **Quick entry (+):** record a sale, expense, udhaar given, payment received or supplier bill in two taps — or just type/say *“Ravi ko 3000 udhaar”* / *“sold masala to Ravi 2500 cash”*. Every entry can be undone.
+- **Khata:** customer and supplier ledgers — who owes what, how late, a *pays on time / often late* badge, promise-to-pay dates, and one-tap WhatsApp reminders (drafts you send yourself), including “remind all”.
+- **Home:** your cash, how long it lasts, a 90-day outlook, and the few things that need attention right now.
 
-All financial figures are calculated by tested Python code, never by the AI. Every number has a **"How do we know?"** link showing the method, the assumptions and the exact records behind it.
+**Smart**
+- **Health score (0–100)** from five simple checks, with a tip and a “fix this” link for each, and the score month by month.
+- **Your week** — an Instagram-style story of the last 7 days: sales, best day, top customer, collections, biggest spend.
+- **Plan:** *Can I afford it?*, *Cash ahead*, *Raise prices?*, *Run a discount?*, *Hire someone?*, *Take a loan?* — live sliders on your real numbers.
+- **Goals & budgets:** monthly limits per category with alerts, and savings goals (GST set-aside, Diwali stock…) with progress rings.
+- **Calendar:** money in/out by day, invoices and bills due, regular payments, and typical GST/TDS dates, plus a GST set-aside estimate.
+- **Auto-categorise** bank statement lines (UPI/NEFT narrations → Sales, Electricity, Rent…) and learn from your corrections.
+- **Reports:** a monthly report for your CA and a loan-readiness summary for a bank — print or save as PDF.
+- **Ask FinPilot:** questions in English, Hindi or Hinglish; every figure in an answer is checked against your records.
 
-> Decision support, not financial advice. FinPilot never makes payments, sends messages or files returns. Suggested actions go to your to-do list, and reminders are drafts you send yourself.
+All financial figures are calculated by tested Python code, never by the AI. Every number has a **“How do we know?”** link showing the method, assumptions and the exact records behind it.
+
+> Decision support, not financial advice. FinPilot never makes payments, sends messages or files returns. Suggested actions go to your to-do list; reminders are drafts you send yourself; goals are plans, not money movements.
 
 ---
 
@@ -67,16 +77,14 @@ cp .env.example .env      # Windows: copy .env.example .env
 
 ## A 3-minute tour (demo shop)
 
-1. **Home.** It opens with "Your business is in good shape — ₹14.85 L in the bank, about 2.2 months of running costs", plus the cash chart (actual and expected).
-   - Under *Needs your attention*, tap **Draft a reminder** on Metro Foods (₹2.94 L overdue) to get an editable WhatsApp message.
-   - Tap **Review payments** on the possible double payment to see both transactions.
-   - September shows a loss. Tap **Ask FinPilot why**.
-2. **Ask.** Try *"Who owes me money?"* or *"Can I buy a ₹8 lakh van on a loan?"*. For the van, it asks for the loan terms instead of guessing them. Every answer shows a badge confirming its figures were checked, and *How I worked this out* lists the steps.
-3. **Plan → Can I afford it?** Pick *Packing machine · ₹12 L*, then choose **Loan**, 11% and 3 years, and enter ₹45,000 a month in savings. The verdict is "Yes — but it's tight if business slows". Switch between Tough months, Most likely and Goes well, and drag the price slider.
-4. **Plan → Cash ahead.** Slide "Customers pay late" to 30 days and watch the 30/60/90-day balances change.
-5. **Your data.** Upload `data/demo/ledger.csv`, or any bank statement. Check the matched columns, import, then add today's balance.
-
----
+1. **Home** — “Your business is in good shape”, ₹14.85 L in the bank. Tap **Your week** for the story, and the **health score** (54, *Fair* — sales are slowing and Metro Foods owes ₹2.94 L).
+2. Press **+** and type *“Metro Foods se 1 lakh mila neft”* → **Fill from text** → Save. The oldest invoices are cleared, cash goes up, and you can Undo.
+3. **Khata** → Metro Foods: timeline, reliability badge, set a promise date, **Send reminder** (WhatsApp).
+4. **Plan** → *Raise prices?* drag to +5% and −3% customers; *Take a loan?* see the EMI and whether profit covers it.
+5. **Goals & budgets** → start “Diwali stock fund”; **Suggest from my spending** to set budgets.
+6. **Calendar** → October bills, customer dues and GST dates. **Reports** → print the monthly report.
+7. Switch the language to **हिं** (top right) — everything, including Ask answers, turns Hindi.
+8. **Your data** → *Start your khata today* with no files, or upload a bank statement. *Reset demo* undoes everything you tried.
 
 ## Your own data
 
@@ -176,7 +184,7 @@ The rule-based mode uses the same tools, validation and verification. If the API
 ## Tests
 
 ```bash
-pytest            # 139 tests, about 25 s
+pytest            # 197 tests, about 40 s
 ```
 
 The tests cover:

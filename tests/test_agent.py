@@ -291,3 +291,29 @@ class TestOffline:
     def test_help_for_unrecognised_question(self, ctx):
         run = run_offline("hello", ctx)
         assert not run.steps and "I can answer" in run.answer
+
+
+class TestHindi:
+    def test_hindi_amounts_and_tenure(self, ctx):
+        q = "क्या मैं ₹12 लाख की मशीन 11% पर 3 साल के लोन पर ले सकता हूँ? हर महीने ₹45,000 बचेंगे"
+        run = run_offline(q, ctx, lang="hi")
+        args = next(s.args for s in run.steps if s.tool == "simulate_purchase")
+        assert args["cost"] == 1_200_000 and args["tenure_months"] == 36 and args["loan_rate_pct"] == 11
+        assert args["monthly_benefit"] == 45_000
+        assert run.verified and "EMI" in run.answer and "₹31,429" in run.answer
+
+    @pytest.mark.parametrize("q,tool", [
+        ("बैंक में कितना पैसा है?", "get_cash_position"),
+        ("किस पर उधारी बाकी है?", "get_receivables_and_payables"),
+        ("pichle mahine kharcha kyun badha?", "analyze_expense_changes"),
+        ("अगले 60 दिन का अनुमान", "forecast_cash_flow"),
+        ("कोई दोहरा भुगतान?", "find_unusual_transactions"),
+    ])
+    def test_hindi_questions_route_and_verify(self, ctx, q, tool):
+        run = run_offline(q, ctx, lang="hi")
+        assert tool in [s.tool for s in run.steps] and run.verified, run.warnings
+        assert any("ऀ" <= ch <= "ॿ" for ch in run.answer)  # answered in Devanagari
+
+    def test_verifier_reads_lakh_in_hindi(self):
+        assert verify_answer("लगभग ₹14.9 लाख", [1485414.0], "", set()).ok
+        assert not verify_answer("लगभग ₹19 लाख", [1485414.0], "", set()).ok

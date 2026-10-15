@@ -135,12 +135,12 @@ def check_tool_result(name: str, args: dict, result: dict, ledger: pd.DataFrame,
 # ---------------------------------------------------------------- answer checks
 
 _NUM = r"\d{1,3}(?:,\d{2,3})*(?:\.\d+)?|\d+(?:\.\d+)?"
-_INR = re.compile(rf"(?:₹|rs\.?\s?|inr\s?)\s?(−|-)?({_NUM})\s*(lakh|lakhs|lac|crore|cr|k)?\b", re.I)
+_INR = re.compile(rf"(?:₹|rs\.?\s?|inr\s?)\s?(−|-)?({_NUM})\s*(लाख|करोड़|करोड|हज़ार|हजार|lakh|lakhs|lac|crore|cr|k)?(?!\w)", re.I)
 _PCT = re.compile(rf"(−|-)?({_NUM})\s?%")
 _BARE = re.compile(r"(?<![\w₹.,-])(\d{1,3}(?:,\d{2,3}){1,})(?![\d,])")
 _ISO = re.compile(r"\b(\d{4}-\d{2}-\d{2})\b")
-_IDS = re.compile(r"\b(T\d{4}|U\d{5}|INV-\d{3,}|BILL-[A-Z0-9][A-Z0-9-]*[A-Z0-9]|SCH-\d{3,})\b")
-UNITS = {"lakh": 1e5, "lakhs": 1e5, "lac": 1e5, "crore": 1e7, "cr": 1e7, "k": 1e3}
+_IDS = re.compile(r"\b(T\d{4}|U\d{5}|E\d{5}|INV-\d{3,}(?:-P\d+)?|BILL-[A-Z0-9][A-Z0-9-]*[A-Z0-9]|SCH-\d{3,}|K-\d{4}(?:-P\d+)?)\b")
+UNITS = {"lakh": 1e5, "lakhs": 1e5, "lac": 1e5, "crore": 1e7, "cr": 1e7, "k": 1e3, "लाख": 1e5, "करोड़": 1e7, "करोड": 1e7, "हज़ार": 1e3, "हजार": 1e3}
 
 
 def collect_numbers(obj, out: list[float] | None = None) -> list[float]:
@@ -181,7 +181,7 @@ def collect_strings(obj, out: list[str] | None = None) -> list[str]:
     return out
 
 
-_UNIT_AMT = re.compile(rf"({_NUM})\s*(lakh|lakhs|lac|crore|k)\b", re.I)
+_UNIT_AMT = re.compile(rf"({_NUM})\s*(लाख|करोड़|करोड|हज़ार|हजार|lakh|lakhs|lac|crore|k)(?!\w)", re.I)
 
 
 def _unit_amounts(text: str) -> list[float]:
