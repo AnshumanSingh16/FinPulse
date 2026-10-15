@@ -1,9 +1,0 @@
-HOME LOAN QUOTATION — ILLUSTRATIVE SAMPLE (FICTIONAL LENDER, NOT A REAL OFFER)
-Lender: Example Housing Finance (fictional)
-Applicant: Demo User
-Loan Amount: Rs. 60,00,000
-Rate of Interest: 8.75% p.a. (floating, linked to lender benchmark)
-Tenure: 240 months
-EMI: Rs. 53,023
-Processing Fee: Rs. 10,000 + GST
-This quotation is indicative and subject to credit appraisal.

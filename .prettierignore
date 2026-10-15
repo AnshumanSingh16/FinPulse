@@ -1,5 +1,0 @@
-# Docs keep their hand-aligned tables
-*.md
-node_modules/
-.next/
-package-lock.json

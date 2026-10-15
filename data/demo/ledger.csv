@@ -1,0 +1,385 @@
+txn_id,date,description,counterparty,category,direction,amount,payment_mode,reference
+T0001,2025-10-01,Staff salaries (8),Staff payroll,Salaries,out,185000.0,NEFT,
+T0002,2025-10-02,Receipt against INV-0003,Metro Foods Pvt Ltd,Sales - B2B,in,94000.0,NEFT,INV-0003
+T0003,2025-10-03,Receipt against INV-0004,Shree Ganesh Traders,Sales - B2B,in,62100.0,NEFT,INV-0004
+T0004,2025-10-03,Receipt against INV-0005,Om Sai Distributors,Sales - B2B,in,69900.0,NEFT,INV-0005
+T0005,2025-10-03,Zoho Books subscription,Zoho,Software,out,2950.0,Card,
+T0006,2025-10-04,Freight — dispatches,VRL Logistics,Logistics,out,11821.0,UPI,
+T0007,2025-10-05,Factory rent,Hadapsar Industrial Estate,Rent,out,55000.0,NEFT,
+T0008,2025-10-05,Receipt against INV-0001,FreshMart Retail,Sales - B2B,in,59500.0,NEFT,INV-0001
+T0009,2025-10-06,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,15417.0,NEFT,
+T0010,2025-10-07,Loan EMI,HDFC Bank Business Loan,Loan EMI,out,32500.0,Auto-debit,
+T0011,2025-10-09,Receipt against INV-0006,Metro Foods Pvt Ltd,Sales - B2B,in,96500.0,NEFT,INV-0006
+T0012,2025-10-11,Freight — dispatches,VRL Logistics,Logistics,out,8803.0,UPI,
+T0013,2025-10-12,Electricity bill,MSEDCL,Electricity,out,23196.0,Auto-debit,
+T0014,2025-10-13,Receipt against INV-0008,Metro Foods Pvt Ltd,Sales - B2B,in,36300.0,NEFT,INV-0008
+T0015,2025-10-13,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,19017.0,NEFT,
+T0016,2025-10-15,CA fees — quarterly,Joshi & Associates,Professional Fees,out,15000.0,NEFT,
+T0017,2025-10-17,Payment for BILL-0001,Rajasthan Spice Co,Raw materials,out,51200.0,NEFT,BILL-0001
+T0018,2025-10-18,Freight — dispatches,VRL Logistics,Logistics,out,12007.0,UPI,
+T0019,2025-10-18,Packaging material,PackWell Industries,Packaging,out,24319.0,NEFT,
+T0020,2025-10-18,Payment for BILL-0005,Rajasthan Spice Co,Raw materials,out,48800.0,NEFT,BILL-0005
+T0021,2025-10-20,GST payment,GSTN,GST Payment,out,33945.0,Net banking,
+T0022,2025-10-20,Receipt against INV-0009,Shree Ganesh Traders,Sales - B2B,in,90500.0,NEFT,INV-0009
+T0023,2025-10-20,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,23086.0,NEFT,
+T0024,2025-10-24,Receipt against INV-0007,Kumar Wholesale,Sales - B2B,in,96500.0,NEFT,INV-0007
+T0025,2025-10-25,Freight — dispatches,VRL Logistics,Logistics,out,11736.0,UPI,
+T0026,2025-10-25,Owner withdrawal,Proprietor,Owner Drawings,out,40000.0,Transfer,
+T0027,2025-10-26,Payment for BILL-0003,Rajasthan Spice Co,Raw materials,out,45900.0,NEFT,BILL-0003
+T0028,2025-10-27,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,15824.0,NEFT,
+T0029,2025-10-28,Bank charges,HDFC Bank,Bank Charges,out,538.0,Auto-debit,
+T0030,2025-10-29,Receipt against INV-0002,Shree Ganesh Traders,Sales - B2B,in,68900.0,NEFT,INV-0002
+T0031,2025-10-31,Payment for BILL-0004,Deccan Chillies,Raw materials,out,43600.0,NEFT,BILL-0004
+T0032,2025-11-01,Staff salaries (8),Staff payroll,Salaries,out,185000.0,NEFT,
+T0033,2025-11-03,Zoho Books subscription,Zoho,Software,out,2950.0,Card,
+T0034,2025-11-04,Freight — dispatches,VRL Logistics,Logistics,out,11071.0,UPI,
+T0035,2025-11-05,Factory rent,Hadapsar Industrial Estate,Rent,out,55000.0,NEFT,
+T0036,2025-11-06,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,24333.0,NEFT,
+T0037,2025-11-07,Loan EMI,HDFC Bank Business Loan,Loan EMI,out,32500.0,Auto-debit,
+T0038,2025-11-09,Payment for BILL-0002,Kisan Agro Suppliers,Raw materials,out,43200.0,NEFT,BILL-0002
+T0039,2025-11-09,Receipt against INV-0018,Metro Foods Pvt Ltd,Sales - B2B,in,68200.0,NEFT,INV-0018
+T0040,2025-11-10,Trade fair stall / digital ads,Spice India Expo,Marketing,out,25209.0,Card,
+T0041,2025-11-11,Freight — dispatches,VRL Logistics,Logistics,out,10660.0,UPI,
+T0042,2025-11-11,Receipt against INV-0019,Kumar Wholesale,Sales - B2B,in,52300.0,NEFT,INV-0019
+T0043,2025-11-12,Electricity bill,MSEDCL,Electricity,out,20189.0,Auto-debit,
+T0044,2025-11-13,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,16431.0,NEFT,
+T0045,2025-11-14,Receipt against INV-0016,Metro Foods Pvt Ltd,Sales - B2B,in,57200.0,NEFT,INV-0016
+T0046,2025-11-15,Receipt against INV-0015,Metro Foods Pvt Ltd,Sales - B2B,in,85100.0,NEFT,INV-0015
+T0047,2025-11-17,Receipt against INV-0010,Om Sai Distributors,Sales - B2B,in,40900.0,NEFT,INV-0010
+T0048,2025-11-18,Freight — dispatches,VRL Logistics,Logistics,out,9595.0,UPI,
+T0049,2025-11-18,Packaging material,PackWell Industries,Packaging,out,24115.0,NEFT,
+T0050,2025-11-18,Receipt against INV-0012,Metro Foods Pvt Ltd,Sales - B2B,in,75800.0,NEFT,INV-0012
+T0051,2025-11-19,Receipt against INV-0017,Om Sai Distributors,Sales - B2B,in,85200.0,NEFT,INV-0017
+T0052,2025-11-20,GST payment,GSTN,GST Payment,out,29968.0,Net banking,
+T0053,2025-11-20,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,17644.0,NEFT,
+T0054,2025-11-22,Receipt against INV-0013,Shree Ganesh Traders,Sales - B2B,in,80700.0,NEFT,INV-0013
+T0055,2025-11-23,Receipt against INV-0011,Metro Foods Pvt Ltd,Sales - B2B,in,78700.0,NEFT,INV-0011
+T0056,2025-11-25,Freight — dispatches,VRL Logistics,Logistics,out,13625.0,UPI,
+T0057,2025-11-25,Owner withdrawal,Proprietor,Owner Drawings,out,40000.0,Transfer,
+T0058,2025-11-27,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,15984.0,NEFT,
+T0059,2025-11-28,Bank charges,HDFC Bank,Bank Charges,out,288.0,Auto-debit,
+T0060,2025-11-28,Receipt against INV-0014,Shree Ganesh Traders,Sales - B2B,in,46800.0,NEFT,INV-0014
+T0061,2025-11-30,Payment for BILL-0009,Kisan Agro Suppliers,Raw materials,out,50700.0,NEFT,BILL-0009
+T0062,2025-12-01,Staff salaries (8),Staff payroll,Salaries,out,185000.0,NEFT,
+T0063,2025-12-03,Zoho Books subscription,Zoho,Software,out,2950.0,Card,
+T0064,2025-12-04,Freight — dispatches,VRL Logistics,Logistics,out,13146.0,UPI,
+T0065,2025-12-04,Payment for BILL-0006,Deccan Chillies,Raw materials,out,38900.0,NEFT,BILL-0006
+T0066,2025-12-05,Factory rent,Hadapsar Industrial Estate,Rent,out,55000.0,NEFT,
+T0067,2025-12-05,Receipt against INV-0028,Om Sai Distributors,Sales - B2B,in,39100.0,NEFT,INV-0028
+T0068,2025-12-06,Payment for BILL-0008,Deccan Chillies,Raw materials,out,46200.0,NEFT,BILL-0008
+T0069,2025-12-06,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,18891.0,NEFT,
+T0070,2025-12-07,Loan EMI,HDFC Bank Business Loan,Loan EMI,out,32500.0,Auto-debit,
+T0071,2025-12-07,Receipt against INV-0023,FreshMart Retail,Sales - B2B,in,83700.0,NEFT,INV-0023
+T0072,2025-12-08,Payment for BILL-0007,Kisan Agro Suppliers,Raw materials,out,49900.0,NEFT,BILL-0007
+T0073,2025-12-11,Freight — dispatches,VRL Logistics,Logistics,out,12906.0,UPI,
+T0074,2025-12-11,Payment for BILL-0010,Deccan Chillies,Raw materials,out,43800.0,NEFT,BILL-0010
+T0075,2025-12-12,Electricity bill,MSEDCL,Electricity,out,22463.0,Auto-debit,
+T0076,2025-12-13,Receipt against INV-0020,Kumar Wholesale,Sales - B2B,in,93800.0,NEFT,INV-0020
+T0077,2025-12-13,Receipt against INV-0025,Patil Kirana Stores,Sales - B2B,in,70900.0,NEFT,INV-0025
+T0078,2025-12-13,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,22949.0,NEFT,
+T0079,2025-12-14,Receipt against INV-0027,Patil Kirana Stores,Sales - B2B,in,79900.0,NEFT,INV-0027
+T0080,2025-12-18,Freight — dispatches,VRL Logistics,Logistics,out,12969.0,UPI,
+T0081,2025-12-18,Packaging material,PackWell Industries,Packaging,out,28731.0,NEFT,
+T0082,2025-12-18,Payment for BILL-0011,Deccan Chillies,Raw materials,out,47300.0,NEFT,BILL-0011
+T0083,2025-12-20,GST payment,GSTN,GST Payment,out,28648.0,Net banking,
+T0084,2025-12-20,Receipt against INV-0021,Shree Ganesh Traders,Sales - B2B,in,57700.0,NEFT,INV-0021
+T0085,2025-12-20,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,25719.0,NEFT,
+T0086,2025-12-24,Receipt against INV-0029,Om Sai Distributors,Sales - B2B,in,49400.0,NEFT,INV-0029
+T0087,2025-12-25,Freight — dispatches,VRL Logistics,Logistics,out,12565.0,UPI,
+T0088,2025-12-25,Owner withdrawal,Proprietor,Owner Drawings,out,40000.0,Transfer,
+T0089,2025-12-27,Payment for BILL-0013,Kisan Agro Suppliers,Raw materials,out,48900.0,NEFT,BILL-0013
+T0090,2025-12-27,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,23791.0,NEFT,
+T0091,2025-12-28,Bank charges,HDFC Bank,Bank Charges,out,431.0,Auto-debit,
+T0092,2025-12-28,Receipt against INV-0024,Patil Kirana Stores,Sales - B2B,in,67300.0,NEFT,INV-0024
+T0093,2025-12-30,Receipt against INV-0022,Shree Ganesh Traders,Sales - B2B,in,37500.0,NEFT,INV-0022
+T0094,2026-01-01,Payment for BILL-0012,Rajasthan Spice Co,Raw materials,out,40500.0,NEFT,BILL-0012
+T0095,2026-01-01,Staff salaries (8),Staff payroll,Salaries,out,185000.0,NEFT,
+T0096,2026-01-02,Payment for BILL-0014,Deccan Chillies,Raw materials,out,49000.0,NEFT,BILL-0014
+T0097,2026-01-03,Zoho Books subscription,Zoho,Software,out,2950.0,Card,
+T0098,2026-01-04,Freight — dispatches,VRL Logistics,Logistics,out,8994.0,UPI,
+T0099,2026-01-05,Factory rent,Hadapsar Industrial Estate,Rent,out,55000.0,NEFT,
+T0100,2026-01-05,Payment for BILL-0015,Rajasthan Spice Co,Raw materials,out,37600.0,NEFT,BILL-0015
+T0101,2026-01-05,Receipt against INV-0034,Shree Ganesh Traders,Sales - B2B,in,92600.0,NEFT,INV-0034
+T0102,2026-01-06,Receipt against INV-0026,Patil Kirana Stores,Sales - B2B,in,70900.0,NEFT,INV-0026
+T0103,2026-01-06,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,18800.0,NEFT,
+T0104,2026-01-07,Loan EMI,HDFC Bank Business Loan,Loan EMI,out,32500.0,Auto-debit,
+T0105,2026-01-11,Freight — dispatches,VRL Logistics,Logistics,out,13059.0,UPI,
+T0106,2026-01-11,Receipt against INV-0038,Shree Ganesh Traders,Sales - B2B,in,99600.0,NEFT,INV-0038
+T0107,2026-01-12,Electricity bill,MSEDCL,Electricity,out,18858.0,Auto-debit,
+T0108,2026-01-12,Term loan disbursed,HDFC Bank Business Loan,Loan Received,in,500000.0,NEFT,
+T0109,2026-01-13,Receipt against INV-0033,FreshMart Retail,Sales - B2B,in,75600.0,NEFT,INV-0033
+T0110,2026-01-13,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,24672.0,NEFT,
+T0111,2026-01-15,CA fees — quarterly,Joshi & Associates,Professional Fees,out,15000.0,NEFT,
+T0112,2026-01-15,Receipt against INV-0030,Shree Ganesh Traders,Sales - B2B,in,44400.0,NEFT,INV-0030
+T0113,2026-01-15,Receipt against INV-0035,Patil Kirana Stores,Sales - B2B,in,55500.0,NEFT,INV-0035
+T0114,2026-01-18,Freight — dispatches,VRL Logistics,Logistics,out,12678.0,UPI,
+T0115,2026-01-18,Packaging material,PackWell Industries,Packaging,out,25956.0,NEFT,
+T0116,2026-01-18,Payment for BILL-0016,Deccan Chillies,Raw materials,out,48600.0,NEFT,BILL-0016
+T0117,2026-01-20,GST payment,GSTN,GST Payment,out,33436.0,Net banking,
+T0118,2026-01-20,Payment for BILL-0017,Kisan Agro Suppliers,Raw materials,out,34000.0,NEFT,BILL-0017
+T0119,2026-01-20,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,26815.0,NEFT,
+T0120,2026-01-23,Receipt against INV-0036,Shree Ganesh Traders,Sales - B2B,in,57600.0,NEFT,INV-0036
+T0121,2026-01-25,Freight — dispatches,VRL Logistics,Logistics,out,9419.0,UPI,
+T0122,2026-01-25,Owner withdrawal,Proprietor,Owner Drawings,out,40000.0,Transfer,
+T0123,2026-01-27,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,19594.0,NEFT,
+T0124,2026-01-28,Bank charges,HDFC Bank,Bank Charges,out,299.0,Auto-debit,
+T0125,2026-01-28,Receipt against INV-0032,Om Sai Distributors,Sales - B2B,in,60000.0,NEFT,INV-0032
+T0126,2026-01-30,Payment for BILL-0018,Deccan Chillies,Raw materials,out,50300.0,NEFT,BILL-0018
+T0127,2026-01-30,Receipt against INV-0046,Kumar Wholesale,Sales - B2B,in,92900.0,NEFT,INV-0046
+T0128,2026-01-31,Receipt against INV-0037,Patil Kirana Stores,Sales - B2B,in,81700.0,NEFT,INV-0037
+T0129,2026-02-01,Staff salaries (8),Staff payroll,Salaries,out,185000.0,NEFT,
+T0130,2026-02-02,Receipt against INV-0031,FreshMart Retail,Sales - B2B,in,35700.0,NEFT,INV-0031
+T0131,2026-02-03,Grinding machine (2 HP pulveriser),Laxmi Engineering Works,Machinery,out,420000.0,RTGS,
+T0132,2026-02-03,Zoho Books subscription,Zoho,Software,out,2950.0,Card,
+T0133,2026-02-04,Freight — dispatches,VRL Logistics,Logistics,out,11359.0,UPI,
+T0134,2026-02-04,Payment for BILL-0019,Kisan Agro Suppliers,Raw materials,out,50700.0,NEFT,BILL-0019
+T0135,2026-02-05,Factory rent,Hadapsar Industrial Estate,Rent,out,55000.0,NEFT,
+T0136,2026-02-06,Payment for BILL-0020,Rajasthan Spice Co,Raw materials,out,53000.0,NEFT,BILL-0020
+T0137,2026-02-06,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,17032.0,NEFT,
+T0138,2026-02-07,Loan EMI,HDFC Bank Business Loan,Loan EMI,out,32500.0,Auto-debit,
+T0139,2026-02-08,Receipt against INV-0042,FreshMart Retail,Sales - B2B,in,40100.0,NEFT,INV-0042
+T0140,2026-02-10,Trade fair stall / digital ads,Spice India Expo,Marketing,out,24399.0,Card,
+T0141,2026-02-11,Freight — dispatches,VRL Logistics,Logistics,out,12256.0,UPI,
+T0142,2026-02-12,Electricity bill,MSEDCL,Electricity,out,22180.0,Auto-debit,
+T0143,2026-02-13,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,20863.0,NEFT,
+T0144,2026-02-14,Receipt against INV-0039,Kumar Wholesale,Sales - B2B,in,103800.0,NEFT,INV-0039
+T0145,2026-02-14,Receipt against INV-0048,Patil Kirana Stores,Sales - B2B,in,64900.0,NEFT,INV-0048
+T0146,2026-02-15,Receipt against INV-0043,Om Sai Distributors,Sales - B2B,in,48300.0,NEFT,INV-0043
+T0147,2026-02-15,Receipt against INV-0045,Shree Ganesh Traders,Sales - B2B,in,98100.0,NEFT,INV-0045
+T0148,2026-02-17,Payment for BILL-0023,Deccan Chillies,Raw materials,out,39200.0,NEFT,BILL-0023
+T0149,2026-02-17,Payment for BILL-0024,Rajasthan Spice Co,Raw materials,out,50300.0,NEFT,BILL-0024
+T0150,2026-02-18,Freight — dispatches,VRL Logistics,Logistics,out,11689.0,UPI,
+T0151,2026-02-18,Packaging material,PackWell Industries,Packaging,out,29031.0,NEFT,
+T0152,2026-02-20,GST payment,GSTN,GST Payment,out,33434.0,Net banking,
+T0153,2026-02-20,Receipt against INV-0041,Metro Foods Pvt Ltd,Sales - B2B,in,65800.0,NEFT,INV-0041
+T0154,2026-02-20,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,24064.0,NEFT,
+T0155,2026-02-24,Receipt against INV-0040,FreshMart Retail,Sales - B2B,in,52600.0,NEFT,INV-0040
+T0156,2026-02-24,Receipt against INV-0044,Patil Kirana Stores,Sales - B2B,in,103500.0,NEFT,INV-0044
+T0157,2026-02-25,Freight — dispatches,VRL Logistics,Logistics,out,11724.0,UPI,
+T0158,2026-02-25,Owner withdrawal,Proprietor,Owner Drawings,out,40000.0,Transfer,
+T0159,2026-02-25,Receipt against INV-0047,Patil Kirana Stores,Sales - B2B,in,84300.0,NEFT,INV-0047
+T0160,2026-02-27,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,21918.0,NEFT,
+T0161,2026-02-28,Bank charges,HDFC Bank,Bank Charges,out,408.0,Auto-debit,
+T0162,2026-03-01,Staff salaries (8),Staff payroll,Salaries,out,185000.0,NEFT,
+T0163,2026-03-02,Payment for BILL-0025,Deccan Chillies,Raw materials,out,45800.0,NEFT,BILL-0025
+T0164,2026-03-03,Receipt against INV-0049,Om Sai Distributors,Sales - B2B,in,52900.0,NEFT,INV-0049
+T0165,2026-03-03,Receipt against INV-0057,Metro Foods Pvt Ltd,Sales - B2B,in,90100.0,NEFT,INV-0057
+T0166,2026-03-03,Zoho Books subscription,Zoho,Software,out,2950.0,Card,
+T0167,2026-03-04,Freight — dispatches,VRL Logistics,Logistics,out,10113.0,UPI,
+T0168,2026-03-04,Payment for BILL-0021,Deccan Chillies,Raw materials,out,45200.0,NEFT,BILL-0021
+T0169,2026-03-05,Factory rent,Hadapsar Industrial Estate,Rent,out,55000.0,NEFT,
+T0170,2026-03-06,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,20259.0,NEFT,
+T0171,2026-03-07,Loan EMI,HDFC Bank Business Loan,Loan EMI,out,32500.0,Auto-debit,
+T0172,2026-03-10,Receipt against INV-0050,Metro Foods Pvt Ltd,Sales - B2B,in,89200.0,NEFT,INV-0050
+T0173,2026-03-11,Freight — dispatches,VRL Logistics,Logistics,out,13200.0,UPI,
+T0174,2026-03-12,Electricity bill,MSEDCL,Electricity,out,19496.0,Auto-debit,
+T0175,2026-03-13,Payment for BILL-0022,Rajasthan Spice Co,Raw materials,out,50400.0,NEFT,BILL-0022
+T0176,2026-03-13,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,20484.0,NEFT,
+T0177,2026-03-18,Freight — dispatches,VRL Logistics,Logistics,out,13544.0,UPI,
+T0178,2026-03-18,Packaging material,PackWell Industries,Packaging,out,29392.0,NEFT,
+T0179,2026-03-18,Payment for BILL-0029,Deccan Chillies,Raw materials,out,36800.0,NEFT,BILL-0029
+T0180,2026-03-19,Payment for BILL-0030,Kisan Agro Suppliers,Raw materials,out,36200.0,NEFT,BILL-0030
+T0181,2026-03-20,GST payment,GSTN,GST Payment,out,33763.0,Net banking,
+T0182,2026-03-20,Receipt against INV-0051,FreshMart Retail,Sales - B2B,in,64700.0,NEFT,INV-0051
+T0183,2026-03-20,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,19650.0,NEFT,
+T0184,2026-03-25,Freight — dispatches,VRL Logistics,Logistics,out,13704.0,UPI,
+T0185,2026-03-25,Owner withdrawal,Proprietor,Owner Drawings,out,40000.0,Transfer,
+T0186,2026-03-25,Receipt against INV-0055,Om Sai Distributors,Sales - B2B,in,45800.0,NEFT,INV-0055
+T0187,2026-03-26,Payment for BILL-0026,Kisan Agro Suppliers,Raw materials,out,46300.0,NEFT,BILL-0026
+T0188,2026-03-26,Receipt against INV-0053,Kumar Wholesale,Sales - B2B,in,92900.0,NEFT,INV-0053
+T0189,2026-03-27,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,16239.0,NEFT,
+T0190,2026-03-28,Bank charges,HDFC Bank,Bank Charges,out,581.0,Auto-debit,
+T0191,2026-03-28,Receipt against INV-0052,Shree Ganesh Traders,Sales - B2B,in,60100.0,NEFT,INV-0052
+T0192,2026-03-30,Receipt against INV-0056,Shree Ganesh Traders,Sales - B2B,in,66200.0,NEFT,INV-0056
+T0193,2026-04-01,Payment for BILL-0028,Rajasthan Spice Co,Raw materials,out,47800.0,NEFT,BILL-0028
+T0194,2026-04-01,Staff salaries (8),Staff payroll,Salaries,out,205000.0,NEFT,
+T0195,2026-04-03,Receipt against INV-0054,Patil Kirana Stores,Sales - B2B,in,100200.0,NEFT,INV-0054
+T0196,2026-04-03,Receipt against INV-0060,Patil Kirana Stores,Sales - B2B,in,63700.0,NEFT,INV-0060
+T0197,2026-04-03,Zoho Books subscription,Zoho,Software,out,2950.0,Card,
+T0198,2026-04-04,Freight — dispatches,VRL Logistics,Logistics,out,13728.0,UPI,
+T0199,2026-04-05,Factory rent,Hadapsar Industrial Estate,Rent,out,55000.0,NEFT,
+T0200,2026-04-06,Receipt against INV-0059,Metro Foods Pvt Ltd,Sales - B2B,in,96000.0,NEFT,INV-0059
+T0201,2026-04-06,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,27454.0,NEFT,
+T0202,2026-04-07,Loan EMI,HDFC Bank Business Loan,Loan EMI,out,32500.0,Auto-debit,
+T0203,2026-04-07,Payment for BILL-0027,Rajasthan Spice Co,Raw materials,out,34800.0,NEFT,BILL-0027
+T0204,2026-04-07,Receipt against INV-0058,Metro Foods Pvt Ltd,Sales - B2B,in,85800.0,NEFT,INV-0058
+T0205,2026-04-10,Receipt against INV-0064,Om Sai Distributors,Sales - B2B,in,99100.0,NEFT,INV-0064
+T0206,2026-04-10,Receipt against INV-0067,Om Sai Distributors,Sales - B2B,in,86300.0,NEFT,INV-0067
+T0207,2026-04-11,Freight — dispatches,VRL Logistics,Logistics,out,11620.0,UPI,
+T0208,2026-04-12,Electricity bill,MSEDCL,Electricity,out,23141.0,Auto-debit,
+T0209,2026-04-13,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,23483.0,NEFT,
+T0210,2026-04-15,CA fees — quarterly,Joshi & Associates,Professional Fees,out,15000.0,NEFT,
+T0211,2026-04-17,Payment for BILL-0033,Rajasthan Spice Co,Raw materials,out,35200.0,NEFT,BILL-0033
+T0212,2026-04-18,Freight — dispatches,VRL Logistics,Logistics,out,11963.0,UPI,
+T0213,2026-04-18,Packaging material,PackWell Industries,Packaging,out,23701.0,NEFT,
+T0214,2026-04-18,Receipt against INV-0061,Shree Ganesh Traders,Sales - B2B,in,52800.0,NEFT,INV-0061
+T0215,2026-04-18,Receipt against INV-0062,Om Sai Distributors,Sales - B2B,in,57300.0,NEFT,INV-0062
+T0216,2026-04-19,Receipt against INV-0066,Patil Kirana Stores,Sales - B2B,in,106800.0,NEFT,INV-0066
+T0217,2026-04-20,GST payment,GSTN,GST Payment,out,31768.0,Net banking,
+T0218,2026-04-20,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,22207.0,NEFT,
+T0219,2026-04-22,Receipt against INV-0063,Om Sai Distributors,Sales - B2B,in,81800.0,NEFT,INV-0063
+T0220,2026-04-25,Freight — dispatches,VRL Logistics,Logistics,out,13814.0,UPI,
+T0221,2026-04-25,Owner withdrawal,Proprietor,Owner Drawings,out,40000.0,Transfer,
+T0222,2026-04-25,Receipt against INV-0065,Om Sai Distributors,Sales - B2B,in,104100.0,NEFT,INV-0065
+T0223,2026-04-27,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,17953.0,NEFT,
+T0224,2026-04-28,Bank charges,HDFC Bank,Bank Charges,out,427.0,Auto-debit,
+T0225,2026-04-30,Receipt against INV-0073,Om Sai Distributors,Sales - B2B,in,55300.0,NEFT,INV-0073
+T0226,2026-05-01,Staff salaries (8),Staff payroll,Salaries,out,205000.0,NEFT,
+T0227,2026-05-02,Payment for BILL-0034,Deccan Chillies,Raw materials,out,46900.0,NEFT,BILL-0034
+T0228,2026-05-02,Payment for BILL-0035,Kisan Agro Suppliers,Raw materials,out,45200.0,NEFT,BILL-0035
+T0229,2026-05-03,Zoho Books subscription,Zoho,Software,out,2950.0,Card,
+T0230,2026-05-04,Freight — dispatches,VRL Logistics,Logistics,out,10250.0,UPI,
+T0231,2026-05-05,Factory rent,Hadapsar Industrial Estate,Rent,out,55000.0,NEFT,
+T0232,2026-05-06,Receipt against INV-0074,Patil Kirana Stores,Sales - B2B,in,60700.0,NEFT,INV-0074
+T0233,2026-05-06,Receipt against INV-0075,Patil Kirana Stores,Sales - B2B,in,81400.0,NEFT,INV-0075
+T0234,2026-05-06,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,20530.0,NEFT,
+T0235,2026-05-07,Loan EMI,HDFC Bank Business Loan,Loan EMI,out,32500.0,Auto-debit,
+T0236,2026-05-07,Payment for BILL-0031,Deccan Chillies,Raw materials,out,38800.0,NEFT,BILL-0031
+T0237,2026-05-09,Receipt against INV-0077,Om Sai Distributors,Sales - B2B,in,39600.0,NEFT,INV-0077
+T0238,2026-05-10,Trade fair stall / digital ads,Spice India Expo,Marketing,out,23930.0,Card,
+T0239,2026-05-11,Freight — dispatches,VRL Logistics,Logistics,out,14325.0,UPI,
+T0240,2026-05-11,Payment for BILL-0032,Rajasthan Spice Co,Raw materials,out,35300.0,NEFT,BILL-0032
+T0241,2026-05-12,Electricity bill,MSEDCL,Electricity,out,23267.0,Auto-debit,
+T0242,2026-05-13,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,21764.0,NEFT,
+T0243,2026-05-16,Payment for BILL-0038,Rajasthan Spice Co,Raw materials,out,42000.0,NEFT,BILL-0038
+T0244,2026-05-18,Freight — dispatches,VRL Logistics,Logistics,out,13724.0,UPI,
+T0245,2026-05-18,Packaging material,PackWell Industries,Packaging,out,29805.0,NEFT,
+T0246,2026-05-18,Receipt against INV-0071,Shree Ganesh Traders,Sales - B2B,in,104500.0,NEFT,INV-0071
+T0247,2026-05-20,GST payment,GSTN,GST Payment,out,35487.0,Net banking,
+T0248,2026-05-20,Receipt against INV-0076,Metro Foods Pvt Ltd,Sales - B2B,in,53400.0,NEFT,INV-0076
+T0249,2026-05-20,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,22137.0,NEFT,
+T0250,2026-05-23,Payment for BILL-0039,Deccan Chillies,Raw materials,out,37200.0,NEFT,BILL-0039
+T0251,2026-05-23,Receipt against INV-0068,Om Sai Distributors,Sales - B2B,in,103100.0,NEFT,INV-0068
+T0252,2026-05-23,Receipt against INV-0069,Patil Kirana Stores,Sales - B2B,in,59900.0,NEFT,INV-0069
+T0253,2026-05-24,Payment for BILL-0036,Kisan Agro Suppliers,Raw materials,out,53400.0,NEFT,BILL-0036
+T0254,2026-05-25,Freight — dispatches,VRL Logistics,Logistics,out,12688.0,UPI,
+T0255,2026-05-25,Owner withdrawal,Proprietor,Owner Drawings,out,40000.0,Transfer,
+T0256,2026-05-27,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,18135.0,NEFT,
+T0257,2026-05-28,Bank charges,HDFC Bank,Bank Charges,out,502.0,Auto-debit,
+T0258,2026-05-28,Payment for BILL-0037,Kisan Agro Suppliers,Raw materials,out,48300.0,NEFT,BILL-0037
+T0259,2026-05-28,Receipt against INV-0070,Shree Ganesh Traders,Sales - B2B,in,86200.0,NEFT,INV-0070
+T0260,2026-05-29,Receipt against INV-0080,FreshMart Retail,Sales - B2B,in,98400.0,NEFT,INV-0080
+T0261,2026-05-31,Receipt against INV-0072,Shree Ganesh Traders,Sales - B2B,in,55000.0,NEFT,INV-0072
+T0262,2026-06-01,Staff salaries (8),Staff payroll,Salaries,out,205000.0,NEFT,
+T0263,2026-06-03,Zoho Books subscription,Zoho,Software,out,2950.0,Card,
+T0264,2026-06-04,Freight — dispatches,VRL Logistics,Logistics,out,11662.0,UPI,
+T0265,2026-06-04,Receipt against INV-0084,Metro Foods Pvt Ltd,Sales - B2B,in,87700.0,NEFT,INV-0084
+T0266,2026-06-05,Factory rent,Hadapsar Industrial Estate,Rent,out,55000.0,NEFT,
+T0267,2026-06-06,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,19225.0,NEFT,
+T0268,2026-06-07,Loan EMI,HDFC Bank Business Loan,Loan EMI,out,32500.0,Auto-debit,
+T0269,2026-06-07,Receipt against INV-0085,Patil Kirana Stores,Sales - B2B,in,48100.0,NEFT,INV-0085
+T0270,2026-06-08,Receipt against INV-0086,Shree Ganesh Traders,Sales - B2B,in,63400.0,NEFT,INV-0086
+T0271,2026-06-10,Receipt against INV-0087,Metro Foods Pvt Ltd,Sales - B2B,in,54600.0,NEFT,INV-0087
+T0272,2026-06-11,Freight — dispatches,VRL Logistics,Logistics,out,12202.0,UPI,
+T0273,2026-06-11,Receipt against INV-0088,Om Sai Distributors,Sales - B2B,in,50000.0,NEFT,INV-0088
+T0274,2026-06-12,Electricity bill,MSEDCL,Electricity,out,23367.0,Auto-debit,
+T0275,2026-06-13,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,21821.0,NEFT,
+T0276,2026-06-14,Receipt against INV-0082,Patil Kirana Stores,Sales - B2B,in,40600.0,NEFT,INV-0082
+T0277,2026-06-18,Freight — dispatches,VRL Logistics,Logistics,out,13349.0,UPI,
+T0278,2026-06-18,Packaging material,PackWell Industries,Packaging,out,27393.0,NEFT,
+T0279,2026-06-20,GST payment,GSTN,GST Payment,out,34648.0,Net banking,
+T0280,2026-06-20,Receipt against INV-0081,Shree Ganesh Traders,Sales - B2B,in,91300.0,NEFT,INV-0081
+T0281,2026-06-20,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,16622.0,NEFT,
+T0282,2026-06-21,Receipt against INV-0078,Om Sai Distributors,Sales - B2B,in,61800.0,NEFT,INV-0078
+T0283,2026-06-23,Payment for BILL-0043,Kisan Agro Suppliers,Raw materials,out,52400.0,NEFT,BILL-0043
+T0284,2026-06-24,Payment for BILL-0042,Kisan Agro Suppliers,Raw materials,out,41100.0,NEFT,BILL-0042
+T0285,2026-06-25,Freight — dispatches,VRL Logistics,Logistics,out,13815.0,UPI,
+T0286,2026-06-25,Owner withdrawal,Proprietor,Owner Drawings,out,40000.0,Transfer,
+T0287,2026-06-25,Receipt against INV-0079,Kumar Wholesale,Sales - B2B,in,83500.0,NEFT,INV-0079
+T0288,2026-06-27,Receipt against INV-0083,Patil Kirana Stores,Sales - B2B,in,73900.0,NEFT,INV-0083
+T0289,2026-06-27,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,28213.0,NEFT,
+T0290,2026-06-28,Bank charges,HDFC Bank,Bank Charges,out,475.0,Auto-debit,
+T0291,2026-07-01,Payment for BILL-0041,Deccan Chillies,Raw materials,out,41500.0,NEFT,BILL-0041
+T0292,2026-07-01,Staff salaries (8),Staff payroll,Salaries,out,205000.0,NEFT,
+T0293,2026-07-02,Payment for BILL-0040,Deccan Chillies,Raw materials,out,37300.0,NEFT,BILL-0040
+T0294,2026-07-03,Receipt against INV-0095,Om Sai Distributors,Sales - B2B,in,39300.0,NEFT,INV-0095
+T0295,2026-07-03,Zoho Books subscription,Zoho,Software,out,2950.0,Card,
+T0296,2026-07-04,Freight — dispatches,VRL Logistics,Logistics,out,14620.0,UPI,
+T0297,2026-07-05,Factory rent,Hadapsar Industrial Estate,Rent,out,55000.0,NEFT,
+T0298,2026-07-06,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,18748.0,NEFT,
+T0299,2026-07-07,Loan EMI,HDFC Bank Business Loan,Loan EMI,out,32500.0,Auto-debit,
+T0300,2026-07-11,Freight — dispatches,VRL Logistics,Logistics,out,11884.0,UPI,
+T0301,2026-07-12,Electricity bill,MSEDCL,Electricity,out,61400.0,Auto-debit,
+T0302,2026-07-13,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,28769.0,NEFT,
+T0303,2026-07-14,Receipt against INV-0096,Kumar Wholesale,Sales - B2B,in,109000.0,NEFT,INV-0096
+T0304,2026-07-15,CA fees — quarterly,Joshi & Associates,Professional Fees,out,15000.0,NEFT,
+T0305,2026-07-15,Receipt against INV-0097,Patil Kirana Stores,Sales - B2B,in,40800.0,NEFT,INV-0097
+T0306,2026-07-17,Receipt against INV-0089,Kumar Wholesale,Sales - B2B,in,85200.0,NEFT,INV-0089
+T0307,2026-07-18,Freight — dispatches,VRL Logistics,Logistics,out,10550.0,UPI,
+T0308,2026-07-18,Packaging material,PackWell Industries,Packaging,out,27791.0,NEFT,
+T0309,2026-07-20,GST payment,GSTN,GST Payment,out,35699.0,Net banking,
+T0310,2026-07-20,Payment for BILL-0045,Rajasthan Spice Co,Raw materials,out,61000.0,NEFT,BILL-0045
+T0311,2026-07-20,Receipt against INV-0098,Kumar Wholesale,Sales - B2B,in,88000.0,NEFT,INV-0098
+T0312,2026-07-20,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,18760.0,NEFT,
+T0313,2026-07-25,Freight — dispatches,VRL Logistics,Logistics,out,15039.0,UPI,
+T0314,2026-07-25,Owner withdrawal,Proprietor,Owner Drawings,out,40000.0,Transfer,
+T0315,2026-07-26,Receipt against INV-0090,Kumar Wholesale,Sales - B2B,in,84000.0,NEFT,INV-0090
+T0316,2026-07-27,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,23810.0,NEFT,
+T0317,2026-07-28,Bank charges,HDFC Bank,Bank Charges,out,392.0,Auto-debit,
+T0318,2026-07-28,Receipt against INV-0106,Patil Kirana Stores,Sales - B2B,in,59500.0,NEFT,INV-0106
+T0319,2026-07-31,Receipt against INV-0091,Kumar Wholesale,Sales - B2B,in,74900.0,NEFT,INV-0091
+T0320,2026-07-31,Receipt against INV-0094,Kumar Wholesale,Sales - B2B,in,108700.0,NEFT,INV-0094
+T0321,2026-08-01,Payment for BILL-0044,Deccan Chillies,Raw materials,out,51600.0,NEFT,BILL-0044
+T0322,2026-08-01,Payment for BILL-0046,Deccan Chillies,Raw materials,out,52100.0,NEFT,BILL-0046
+T0323,2026-08-01,Staff salaries (8),Staff payroll,Salaries,out,205000.0,NEFT,
+T0324,2026-08-02,Receipt against INV-0092,Metro Foods Pvt Ltd,Sales - B2B,in,99600.0,NEFT,INV-0092
+T0325,2026-08-02,Receipt against INV-0101,Om Sai Distributors,Sales - B2B,in,74100.0,NEFT,INV-0101
+T0326,2026-08-03,Zoho Books subscription,Zoho,Software,out,2950.0,Card,
+T0327,2026-08-04,Freight — dispatches,VRL Logistics,Logistics,out,11246.0,UPI,
+T0328,2026-08-05,Factory rent,Hadapsar Industrial Estate,Rent,out,55000.0,NEFT,
+T0329,2026-08-06,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,21621.0,NEFT,
+T0330,2026-08-07,Loan EMI,HDFC Bank Business Loan,Loan EMI,out,32500.0,Auto-debit,
+T0331,2026-08-07,Payment for BILL-0047,Kisan Agro Suppliers,Raw materials,out,54400.0,NEFT,BILL-0047
+T0332,2026-08-10,Receipt against INV-0093,Shree Ganesh Traders,Sales - B2B,in,88500.0,NEFT,INV-0093
+T0333,2026-08-10,Trade fair stall / digital ads,Spice India Expo,Marketing,out,26027.0,Card,
+T0334,2026-08-11,Freight — dispatches,VRL Logistics,Logistics,out,14023.0,UPI,
+T0335,2026-08-12,Electricity bill,MSEDCL,Electricity,out,20282.0,Auto-debit,
+T0336,2026-08-13,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,28185.0,NEFT,
+T0337,2026-08-14,Receipt against INV-0105,Shree Ganesh Traders,Sales - B2B,in,52600.0,NEFT,INV-0105
+T0338,2026-08-18,Freight — dispatches,VRL Logistics,Logistics,out,13529.0,UPI,
+T0339,2026-08-18,Freight — dispatches,VRL Logistics,Logistics,out,13529.0,UPI,
+T0340,2026-08-18,Packaging material,PackWell Industries,Packaging,out,26418.0,NEFT,
+T0341,2026-08-20,GST payment,GSTN,GST Payment,out,32096.0,Net banking,
+T0342,2026-08-20,Payment for BILL-0051,Deccan Chillies,Raw materials,out,49700.0,NEFT,BILL-0051
+T0343,2026-08-20,Receipt against INV-0103,Kumar Wholesale,Sales - B2B,in,59600.0,NEFT,INV-0103
+T0344,2026-08-20,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,23747.0,NEFT,
+T0345,2026-08-21,Receipt against INV-0102,FreshMart Retail,Sales - B2B,in,45000.0,NEFT,INV-0102
+T0346,2026-08-25,Freight — dispatches,VRL Logistics,Logistics,out,12111.0,UPI,
+T0347,2026-08-25,Owner withdrawal,Proprietor,Owner Drawings,out,40000.0,Transfer,
+T0348,2026-08-27,Receipt against INV-0100,Kumar Wholesale,Sales - B2B,in,60600.0,NEFT,INV-0100
+T0349,2026-08-27,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,18907.0,NEFT,
+T0350,2026-08-28,Bank charges,HDFC Bank,Bank Charges,out,419.0,Auto-debit,
+T0351,2026-08-28,Receipt against INV-0104,FreshMart Retail,Sales - B2B,in,72900.0,NEFT,INV-0104
+T0352,2026-08-31,Payment for BILL-0050,Rajasthan Spice Co,Raw materials,out,46300.0,NEFT,BILL-0050
+T0353,2026-08-31,Receipt against INV-0111,Kumar Wholesale,Sales - B2B,in,107400.0,NEFT,INV-0111
+T0354,2026-09-01,Staff salaries (8),Staff payroll,Salaries,out,205000.0,NEFT,
+T0355,2026-09-03,Zoho Books subscription,Zoho,Software,out,2950.0,Card,
+T0356,2026-09-04,Freight — dispatches,VRL Logistics,Logistics,out,12659.0,UPI,
+T0357,2026-09-05,Factory rent,Hadapsar Industrial Estate,Rent,out,55000.0,NEFT,
+T0358,2026-09-06,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,17178.0,NEFT,
+T0359,2026-09-07,Loan EMI,HDFC Bank Business Loan,Loan EMI,out,32500.0,Auto-debit,
+T0360,2026-09-08,Payment for BILL-0048,Kisan Agro Suppliers,Raw materials,out,56400.0,NEFT,BILL-0048
+T0361,2026-09-09,Payment for BILL-0049,Deccan Chillies,Raw materials,out,48800.0,NEFT,BILL-0049
+T0362,2026-09-09,Receipt against INV-0116,Om Sai Distributors,Sales - B2B,in,112800.0,NEFT,INV-0116
+T0363,2026-09-09,Receipt against INV-0118,Patil Kirana Stores,Sales - B2B,in,100500.0,NEFT,INV-0118
+T0364,2026-09-11,Freight — dispatches,VRL Logistics,Logistics,out,13323.0,UPI,
+T0365,2026-09-12,Electricity bill,MSEDCL,Electricity,out,21902.0,Auto-debit,
+T0366,2026-09-13,Receipt against INV-0108,Om Sai Distributors,Sales - B2B,in,64500.0,NEFT,INV-0108
+T0367,2026-09-13,Receipt against INV-0112,FreshMart Retail,Sales - B2B,in,43000.0,NEFT,INV-0112
+T0368,2026-09-13,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,20190.0,NEFT,
+T0369,2026-09-18,Freight — dispatches,VRL Logistics,Logistics,out,9904.0,UPI,
+T0370,2026-09-18,Packaging material,PackWell Industries,Packaging,out,31769.0,NEFT,
+T0371,2026-09-20,GST payment,GSTN,GST Payment,out,38928.0,Net banking,
+T0372,2026-09-20,Payment for BILL-0055,Kisan Agro Suppliers,Raw materials,out,46400.0,NEFT,BILL-0055
+T0373,2026-09-20,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,29838.0,NEFT,
+T0374,2026-09-22,Consultancy — ISO 22000 certification,QualiCert Advisors,Professional Fees,out,95000.0,NEFT,
+T0375,2026-09-24,Payment for BILL-0052,Kisan Agro Suppliers,Raw materials,out,71000.0,NEFT,BILL-0052
+T0376,2026-09-24,Receipt against INV-0114,FreshMart Retail,Sales - B2B,in,41700.0,NEFT,INV-0114
+T0377,2026-09-25,Freight — dispatches,VRL Logistics,Logistics,out,12183.0,UPI,
+T0378,2026-09-25,Owner withdrawal,Proprietor,Owner Drawings,out,40000.0,Transfer,
+T0379,2026-09-25,Payment for BILL-0054,Rajasthan Spice Co,Raw materials,out,69600.0,NEFT,BILL-0054
+T0380,2026-09-26,Receipt against INV-0109,Shree Ganesh Traders,Sales - B2B,in,63500.0,NEFT,INV-0109
+T0381,2026-09-26,Receipt against INV-0110,FreshMart Retail,Sales - B2B,in,68600.0,NEFT,INV-0110
+T0382,2026-09-27,UPI collections — factory outlet,UPI settlement,Sales - Retail,in,18070.0,NEFT,
+T0383,2026-09-28,Bank charges,HDFC Bank,Bank Charges,out,539.0,Auto-debit,
+T0384,2026-09-28,Payment for BILL-0053,Rajasthan Spice Co,Raw materials,out,63800.0,NEFT,BILL-0053

@@ -1,0 +1,196 @@
+item_id,kind,counterparty,description,category,amount,issue_date,due_date,status,paid_date
+INV-0001,receivable,FreshMart Retail,Spice blends — invoice 0001,Sales - B2B,59500.0,2025-09-05,2025-10-05,paid,2025-10-05
+INV-0002,receivable,Shree Ganesh Traders,Spice blends — invoice 0002,Sales - B2B,68900.0,2025-09-27,2025-10-27,paid,2025-10-29
+INV-0003,receivable,Metro Foods Pvt Ltd,Spice blends — invoice 0003,Sales - B2B,94000.0,2025-09-02,2025-10-02,paid,2025-10-02
+INV-0004,receivable,Shree Ganesh Traders,Spice blends — invoice 0004,Sales - B2B,62100.0,2025-09-03,2025-10-03,paid,2025-10-03
+INV-0005,receivable,Om Sai Distributors,Spice blends — invoice 0005,Sales - B2B,69900.0,2025-09-03,2025-10-03,paid,2025-10-03
+INV-0006,receivable,Metro Foods Pvt Ltd,Spice blends — invoice 0006,Sales - B2B,96500.0,2025-09-04,2025-10-04,paid,2025-10-09
+INV-0007,receivable,Kumar Wholesale,Spice blends — invoice 0007,Sales - B2B,96500.0,2025-09-19,2025-10-19,paid,2025-10-24
+INV-0008,receivable,Metro Foods Pvt Ltd,Spice blends — invoice 0008,Sales - B2B,36300.0,2025-09-13,2025-10-13,paid,2025-10-13
+INV-0009,receivable,Shree Ganesh Traders,Spice blends — invoice 0009,Sales - B2B,90500.0,2025-09-18,2025-10-18,paid,2025-10-20
+INV-0010,receivable,Om Sai Distributors,Spice blends — invoice 0010,Sales - B2B,40900.0,2025-10-18,2025-11-17,paid,2025-11-17
+INV-0011,receivable,Metro Foods Pvt Ltd,Spice blends — invoice 0011,Sales - B2B,78700.0,2025-10-27,2025-11-26,paid,2025-11-23
+INV-0012,receivable,Metro Foods Pvt Ltd,Spice blends — invoice 0012,Sales - B2B,75800.0,2025-10-19,2025-11-18,paid,2025-11-18
+INV-0013,receivable,Shree Ganesh Traders,Spice blends — invoice 0013,Sales - B2B,80700.0,2025-10-18,2025-11-17,paid,2025-11-22
+INV-0014,receivable,Shree Ganesh Traders,Spice blends — invoice 0014,Sales - B2B,46800.0,2025-10-20,2025-11-19,paid,2025-11-28
+INV-0015,receivable,Metro Foods Pvt Ltd,Spice blends — invoice 0015,Sales - B2B,85100.0,2025-10-14,2025-11-13,paid,2025-11-15
+INV-0016,receivable,Metro Foods Pvt Ltd,Spice blends — invoice 0016,Sales - B2B,57200.0,2025-10-15,2025-11-14,paid,2025-11-14
+INV-0017,receivable,Om Sai Distributors,Spice blends — invoice 0017,Sales - B2B,85200.0,2025-10-23,2025-11-22,paid,2025-11-19
+INV-0018,receivable,Metro Foods Pvt Ltd,Spice blends — invoice 0018,Sales - B2B,68200.0,2025-10-10,2025-11-09,paid,2025-11-09
+INV-0019,receivable,Kumar Wholesale,Spice blends — invoice 0019,Sales - B2B,52300.0,2025-10-15,2025-11-14,paid,2025-11-11
+BILL-0001,payable,Rajasthan Spice Co,Whole spices and chillies,Raw materials,51200.0,2025-10-02,2025-10-17,paid,2025-10-17
+BILL-0002,payable,Kisan Agro Suppliers,Whole spices and chillies,Raw materials,43200.0,2025-10-25,2025-11-09,paid,2025-11-09
+BILL-0003,payable,Rajasthan Spice Co,Whole spices and chillies,Raw materials,45900.0,2025-10-11,2025-10-26,paid,2025-10-26
+BILL-0004,payable,Deccan Chillies,Whole spices and chillies,Raw materials,43600.0,2025-10-16,2025-10-31,paid,2025-10-31
+BILL-0005,payable,Rajasthan Spice Co,Whole spices and chillies,Raw materials,48800.0,2025-10-03,2025-10-18,paid,2025-10-18
+INV-0020,receivable,Kumar Wholesale,Spice blends — invoice 0020,Sales - B2B,93800.0,2025-11-13,2025-12-13,paid,2025-12-13
+INV-0021,receivable,Shree Ganesh Traders,Spice blends — invoice 0021,Sales - B2B,57700.0,2025-11-15,2025-12-15,paid,2025-12-20
+INV-0022,receivable,Shree Ganesh Traders,Spice blends — invoice 0022,Sales - B2B,37500.0,2025-11-16,2025-12-16,paid,2025-12-30
+INV-0023,receivable,FreshMart Retail,Spice blends — invoice 0023,Sales - B2B,83700.0,2025-11-05,2025-12-05,paid,2025-12-07
+INV-0024,receivable,Patil Kirana Stores,Spice blends — invoice 0024,Sales - B2B,67300.0,2025-11-28,2025-12-28,paid,2025-12-28
+INV-0025,receivable,Patil Kirana Stores,Spice blends — invoice 0025,Sales - B2B,70900.0,2025-11-13,2025-12-13,paid,2025-12-13
+INV-0026,receivable,Patil Kirana Stores,Spice blends — invoice 0026,Sales - B2B,70900.0,2025-11-28,2025-12-28,paid,2026-01-06
+INV-0027,receivable,Patil Kirana Stores,Spice blends — invoice 0027,Sales - B2B,79900.0,2025-11-12,2025-12-12,paid,2025-12-14
+INV-0028,receivable,Om Sai Distributors,Spice blends — invoice 0028,Sales - B2B,39100.0,2025-11-05,2025-12-05,paid,2025-12-05
+INV-0029,receivable,Om Sai Distributors,Spice blends — invoice 0029,Sales - B2B,49400.0,2025-11-22,2025-12-22,paid,2025-12-24
+BILL-0006,payable,Deccan Chillies,Whole spices and chillies,Raw materials,38900.0,2025-11-19,2025-12-04,paid,2025-12-04
+BILL-0007,payable,Kisan Agro Suppliers,Whole spices and chillies,Raw materials,49900.0,2025-11-23,2025-12-08,paid,2025-12-08
+BILL-0008,payable,Deccan Chillies,Whole spices and chillies,Raw materials,46200.0,2025-11-21,2025-12-06,paid,2025-12-06
+BILL-0009,payable,Kisan Agro Suppliers,Whole spices and chillies,Raw materials,50700.0,2025-11-15,2025-11-30,paid,2025-11-30
+BILL-0010,payable,Deccan Chillies,Whole spices and chillies,Raw materials,43800.0,2025-11-26,2025-12-11,paid,2025-12-11
+INV-0030,receivable,Shree Ganesh Traders,Spice blends — invoice 0030,Sales - B2B,44400.0,2025-12-19,2026-01-18,paid,2026-01-15
+INV-0031,receivable,FreshMart Retail,Spice blends — invoice 0031,Sales - B2B,35700.0,2025-12-20,2026-01-19,paid,2026-02-02
+INV-0032,receivable,Om Sai Distributors,Spice blends — invoice 0032,Sales - B2B,60000.0,2025-12-20,2026-01-19,paid,2026-01-28
+INV-0033,receivable,FreshMart Retail,Spice blends — invoice 0033,Sales - B2B,75600.0,2025-12-12,2026-01-11,paid,2026-01-13
+INV-0034,receivable,Shree Ganesh Traders,Spice blends — invoice 0034,Sales - B2B,92600.0,2025-12-04,2026-01-03,paid,2026-01-05
+INV-0035,receivable,Patil Kirana Stores,Spice blends — invoice 0035,Sales - B2B,55500.0,2025-12-16,2026-01-15,paid,2026-01-15
+INV-0036,receivable,Shree Ganesh Traders,Spice blends — invoice 0036,Sales - B2B,57600.0,2025-12-24,2026-01-23,paid,2026-01-23
+INV-0037,receivable,Patil Kirana Stores,Spice blends — invoice 0037,Sales - B2B,81700.0,2025-12-27,2026-01-26,paid,2026-01-31
+INV-0038,receivable,Shree Ganesh Traders,Spice blends — invoice 0038,Sales - B2B,99600.0,2025-12-07,2026-01-06,paid,2026-01-11
+BILL-0011,payable,Deccan Chillies,Whole spices and chillies,Raw materials,47300.0,2025-12-03,2025-12-18,paid,2025-12-18
+BILL-0012,payable,Rajasthan Spice Co,Whole spices and chillies,Raw materials,40500.0,2025-12-17,2026-01-01,paid,2026-01-01
+BILL-0013,payable,Kisan Agro Suppliers,Whole spices and chillies,Raw materials,48900.0,2025-12-12,2025-12-27,paid,2025-12-27
+BILL-0014,payable,Deccan Chillies,Whole spices and chillies,Raw materials,49000.0,2025-12-18,2026-01-02,paid,2026-01-02
+BILL-0015,payable,Rajasthan Spice Co,Whole spices and chillies,Raw materials,37600.0,2025-12-21,2026-01-05,paid,2026-01-05
+INV-0039,receivable,Kumar Wholesale,Spice blends — invoice 0039,Sales - B2B,103800.0,2026-01-01,2026-01-31,paid,2026-02-14
+INV-0040,receivable,FreshMart Retail,Spice blends — invoice 0040,Sales - B2B,52600.0,2026-01-16,2026-02-15,paid,2026-02-24
+INV-0041,receivable,Metro Foods Pvt Ltd,Spice blends — invoice 0041,Sales - B2B,65800.0,2026-01-12,2026-02-11,paid,2026-02-20
+INV-0042,receivable,FreshMart Retail,Spice blends — invoice 0042,Sales - B2B,40100.0,2026-01-12,2026-02-11,paid,2026-02-08
+INV-0043,receivable,Om Sai Distributors,Spice blends — invoice 0043,Sales - B2B,48300.0,2026-01-16,2026-02-15,paid,2026-02-15
+INV-0044,receivable,Patil Kirana Stores,Spice blends — invoice 0044,Sales - B2B,103500.0,2026-01-20,2026-02-19,paid,2026-02-24
+INV-0045,receivable,Shree Ganesh Traders,Spice blends — invoice 0045,Sales - B2B,98100.0,2026-01-16,2026-02-15,paid,2026-02-15
+INV-0046,receivable,Kumar Wholesale,Spice blends — invoice 0046,Sales - B2B,92900.0,2026-01-03,2026-02-02,paid,2026-01-30
+INV-0047,receivable,Patil Kirana Stores,Spice blends — invoice 0047,Sales - B2B,84300.0,2026-01-26,2026-02-25,paid,2026-02-25
+INV-0048,receivable,Patil Kirana Stores,Spice blends — invoice 0048,Sales - B2B,64900.0,2026-01-06,2026-02-05,paid,2026-02-14
+BILL-0016,payable,Deccan Chillies,Whole spices and chillies,Raw materials,48600.0,2026-01-03,2026-01-18,paid,2026-01-18
+BILL-0017,payable,Kisan Agro Suppliers,Whole spices and chillies,Raw materials,34000.0,2026-01-05,2026-01-20,paid,2026-01-20
+BILL-0018,payable,Deccan Chillies,Whole spices and chillies,Raw materials,50300.0,2026-01-15,2026-01-30,paid,2026-01-30
+BILL-0019,payable,Kisan Agro Suppliers,Whole spices and chillies,Raw materials,50700.0,2026-01-20,2026-02-04,paid,2026-02-04
+BILL-0020,payable,Rajasthan Spice Co,Whole spices and chillies,Raw materials,53000.0,2026-01-22,2026-02-06,paid,2026-02-06
+INV-0049,receivable,Om Sai Distributors,Spice blends — invoice 0049,Sales - B2B,52900.0,2026-02-01,2026-03-03,paid,2026-03-03
+INV-0050,receivable,Metro Foods Pvt Ltd,Spice blends — invoice 0050,Sales - B2B,89200.0,2026-02-08,2026-03-10,paid,2026-03-10
+INV-0051,receivable,FreshMart Retail,Spice blends — invoice 0051,Sales - B2B,64700.0,2026-02-18,2026-03-20,paid,2026-03-20
+INV-0052,receivable,Shree Ganesh Traders,Spice blends — invoice 0052,Sales - B2B,60100.0,2026-02-24,2026-03-26,paid,2026-03-28
+INV-0053,receivable,Kumar Wholesale,Spice blends — invoice 0053,Sales - B2B,92900.0,2026-02-19,2026-03-21,paid,2026-03-26
+INV-0054,receivable,Patil Kirana Stores,Spice blends — invoice 0054,Sales - B2B,100200.0,2026-02-27,2026-03-29,paid,2026-04-03
+INV-0055,receivable,Om Sai Distributors,Spice blends — invoice 0055,Sales - B2B,45800.0,2026-02-18,2026-03-20,paid,2026-03-25
+INV-0056,receivable,Shree Ganesh Traders,Spice blends — invoice 0056,Sales - B2B,66200.0,2026-02-28,2026-03-30,paid,2026-03-30
+INV-0057,receivable,Metro Foods Pvt Ltd,Spice blends — invoice 0057,Sales - B2B,90100.0,2026-02-01,2026-03-03,paid,2026-03-03
+BILL-0021,payable,Deccan Chillies,Whole spices and chillies,Raw materials,45200.0,2026-02-17,2026-03-04,paid,2026-03-04
+BILL-0022,payable,Rajasthan Spice Co,Whole spices and chillies,Raw materials,50400.0,2026-02-26,2026-03-13,paid,2026-03-13
+BILL-0023,payable,Deccan Chillies,Whole spices and chillies,Raw materials,39200.0,2026-02-02,2026-02-17,paid,2026-02-17
+BILL-0024,payable,Rajasthan Spice Co,Whole spices and chillies,Raw materials,50300.0,2026-02-02,2026-02-17,paid,2026-02-17
+BILL-0025,payable,Deccan Chillies,Whole spices and chillies,Raw materials,45800.0,2026-02-15,2026-03-02,paid,2026-03-02
+INV-0058,receivable,Metro Foods Pvt Ltd,Spice blends — invoice 0058,Sales - B2B,85800.0,2026-03-08,2026-04-07,paid,2026-04-07
+INV-0059,receivable,Metro Foods Pvt Ltd,Spice blends — invoice 0059,Sales - B2B,96000.0,2026-03-07,2026-04-06,paid,2026-04-06
+INV-0060,receivable,Patil Kirana Stores,Spice blends — invoice 0060,Sales - B2B,63700.0,2026-03-04,2026-04-03,paid,2026-04-03
+INV-0061,receivable,Shree Ganesh Traders,Spice blends — invoice 0061,Sales - B2B,52800.0,2026-03-22,2026-04-21,paid,2026-04-18
+INV-0062,receivable,Om Sai Distributors,Spice blends — invoice 0062,Sales - B2B,57300.0,2026-03-22,2026-04-21,paid,2026-04-18
+INV-0063,receivable,Om Sai Distributors,Spice blends — invoice 0063,Sales - B2B,81800.0,2026-03-23,2026-04-22,paid,2026-04-22
+INV-0064,receivable,Om Sai Distributors,Spice blends — invoice 0064,Sales - B2B,99100.0,2026-03-09,2026-04-08,paid,2026-04-10
+INV-0065,receivable,Om Sai Distributors,Spice blends — invoice 0065,Sales - B2B,104100.0,2026-03-24,2026-04-23,paid,2026-04-25
+INV-0066,receivable,Patil Kirana Stores,Spice blends — invoice 0066,Sales - B2B,106800.0,2026-03-06,2026-04-05,paid,2026-04-19
+INV-0067,receivable,Om Sai Distributors,Spice blends — invoice 0067,Sales - B2B,86300.0,2026-03-06,2026-04-05,paid,2026-04-10
+BILL-0026,payable,Kisan Agro Suppliers,Whole spices and chillies,Raw materials,46300.0,2026-03-11,2026-03-26,paid,2026-03-26
+BILL-0027,payable,Rajasthan Spice Co,Whole spices and chillies,Raw materials,34800.0,2026-03-23,2026-04-07,paid,2026-04-07
+BILL-0028,payable,Rajasthan Spice Co,Whole spices and chillies,Raw materials,47800.0,2026-03-17,2026-04-01,paid,2026-04-01
+BILL-0029,payable,Deccan Chillies,Whole spices and chillies,Raw materials,36800.0,2026-03-03,2026-03-18,paid,2026-03-18
+BILL-0030,payable,Kisan Agro Suppliers,Whole spices and chillies,Raw materials,36200.0,2026-03-04,2026-03-19,paid,2026-03-19
+INV-0068,receivable,Om Sai Distributors,Spice blends — invoice 0068,Sales - B2B,103100.0,2026-04-18,2026-05-18,paid,2026-05-23
+INV-0069,receivable,Patil Kirana Stores,Spice blends — invoice 0069,Sales - B2B,59900.0,2026-04-23,2026-05-23,paid,2026-05-23
+INV-0070,receivable,Shree Ganesh Traders,Spice blends — invoice 0070,Sales - B2B,86200.0,2026-04-26,2026-05-26,paid,2026-05-28
+INV-0071,receivable,Shree Ganesh Traders,Spice blends — invoice 0071,Sales - B2B,104500.0,2026-04-09,2026-05-09,paid,2026-05-18
+INV-0072,receivable,Shree Ganesh Traders,Spice blends — invoice 0072,Sales - B2B,55000.0,2026-04-26,2026-05-26,paid,2026-05-31
+INV-0073,receivable,Om Sai Distributors,Spice blends — invoice 0073,Sales - B2B,55300.0,2026-04-03,2026-05-03,paid,2026-04-30
+INV-0074,receivable,Patil Kirana Stores,Spice blends — invoice 0074,Sales - B2B,60700.0,2026-04-01,2026-05-01,paid,2026-05-06
+INV-0075,receivable,Patil Kirana Stores,Spice blends — invoice 0075,Sales - B2B,81400.0,2026-04-09,2026-05-09,paid,2026-05-06
+INV-0076,receivable,Metro Foods Pvt Ltd,Spice blends — invoice 0076,Sales - B2B,53400.0,2026-04-23,2026-05-23,paid,2026-05-20
+INV-0077,receivable,Om Sai Distributors,Spice blends — invoice 0077,Sales - B2B,39600.0,2026-04-09,2026-05-09,paid,2026-05-09
+BILL-0031,payable,Deccan Chillies,Whole spices and chillies,Raw materials,38800.0,2026-04-22,2026-05-07,paid,2026-05-07
+BILL-0032,payable,Rajasthan Spice Co,Whole spices and chillies,Raw materials,35300.0,2026-04-26,2026-05-11,paid,2026-05-11
+BILL-0033,payable,Rajasthan Spice Co,Whole spices and chillies,Raw materials,35200.0,2026-04-02,2026-04-17,paid,2026-04-17
+BILL-0034,payable,Deccan Chillies,Whole spices and chillies,Raw materials,46900.0,2026-04-17,2026-05-02,paid,2026-05-02
+BILL-0035,payable,Kisan Agro Suppliers,Whole spices and chillies,Raw materials,45200.0,2026-04-17,2026-05-02,paid,2026-05-02
+INV-0078,receivable,Om Sai Distributors,Spice blends — invoice 0078,Sales - B2B,61800.0,2026-05-08,2026-06-07,paid,2026-06-21
+INV-0079,receivable,Kumar Wholesale,Spice blends — invoice 0079,Sales - B2B,83500.0,2026-05-24,2026-06-23,paid,2026-06-25
+INV-0080,receivable,FreshMart Retail,Spice blends — invoice 0080,Sales - B2B,98400.0,2026-05-02,2026-06-01,paid,2026-05-29
+INV-0081,receivable,Shree Ganesh Traders,Spice blends — invoice 0081,Sales - B2B,91300.0,2026-05-21,2026-06-20,paid,2026-06-20
+INV-0082,receivable,Patil Kirana Stores,Spice blends — invoice 0082,Sales - B2B,40600.0,2026-05-06,2026-06-05,paid,2026-06-14
+INV-0083,receivable,Patil Kirana Stores,Spice blends — invoice 0083,Sales - B2B,73900.0,2026-05-28,2026-06-27,paid,2026-06-27
+INV-0084,receivable,Metro Foods Pvt Ltd,Spice blends — invoice 0084,Sales - B2B,87700.0,2026-05-08,2026-06-07,paid,2026-06-04
+INV-0085,receivable,Patil Kirana Stores,Spice blends — invoice 0085,Sales - B2B,48100.0,2026-05-06,2026-06-05,paid,2026-06-07
+INV-0086,receivable,Shree Ganesh Traders,Spice blends — invoice 0086,Sales - B2B,63400.0,2026-05-09,2026-06-08,paid,2026-06-08
+INV-0087,receivable,Metro Foods Pvt Ltd,Spice blends — invoice 0087,Sales - B2B,54600.0,2026-05-11,2026-06-10,paid,2026-06-10
+INV-0088,receivable,Om Sai Distributors,Spice blends — invoice 0088,Sales - B2B,50000.0,2026-05-12,2026-06-11,paid,2026-06-11
+BILL-0036,payable,Kisan Agro Suppliers,Whole spices and chillies,Raw materials,53400.0,2026-05-09,2026-05-24,paid,2026-05-24
+BILL-0037,payable,Kisan Agro Suppliers,Whole spices and chillies,Raw materials,48300.0,2026-05-13,2026-05-28,paid,2026-05-28
+BILL-0038,payable,Rajasthan Spice Co,Whole spices and chillies,Raw materials,42000.0,2026-05-01,2026-05-16,paid,2026-05-16
+BILL-0039,payable,Deccan Chillies,Whole spices and chillies,Raw materials,37200.0,2026-05-08,2026-05-23,paid,2026-05-23
+INV-0089,receivable,Kumar Wholesale,Spice blends — invoice 0089,Sales - B2B,85200.0,2026-06-20,2026-07-20,paid,2026-07-17
+INV-0090,receivable,Kumar Wholesale,Spice blends — invoice 0090,Sales - B2B,84000.0,2026-06-17,2026-07-17,paid,2026-07-26
+INV-0091,receivable,Kumar Wholesale,Spice blends — invoice 0091,Sales - B2B,74900.0,2026-06-26,2026-07-26,paid,2026-07-31
+INV-0092,receivable,Metro Foods Pvt Ltd,Spice blends — invoice 0092,Sales - B2B,99600.0,2026-06-19,2026-07-19,paid,2026-08-02
+INV-0093,receivable,Shree Ganesh Traders,Spice blends — invoice 0093,Sales - B2B,88500.0,2026-06-27,2026-07-27,paid,2026-08-10
+INV-0094,receivable,Kumar Wholesale,Spice blends — invoice 0094,Sales - B2B,108700.0,2026-06-22,2026-07-22,paid,2026-07-31
+INV-0095,receivable,Om Sai Distributors,Spice blends — invoice 0095,Sales - B2B,39300.0,2026-06-03,2026-07-03,paid,2026-07-03
+INV-0096,receivable,Kumar Wholesale,Spice blends — invoice 0096,Sales - B2B,109000.0,2026-06-12,2026-07-12,paid,2026-07-14
+INV-0097,receivable,Patil Kirana Stores,Spice blends — invoice 0097,Sales - B2B,40800.0,2026-06-18,2026-07-18,paid,2026-07-15
+INV-0098,receivable,Kumar Wholesale,Spice blends — invoice 0098,Sales - B2B,88000.0,2026-06-18,2026-07-18,paid,2026-07-20
+BILL-0040,payable,Deccan Chillies,Whole spices and chillies,Raw materials,37300.0,2026-06-17,2026-07-02,paid,2026-07-02
+BILL-0041,payable,Deccan Chillies,Whole spices and chillies,Raw materials,41500.0,2026-06-16,2026-07-01,paid,2026-07-01
+BILL-0042,payable,Kisan Agro Suppliers,Whole spices and chillies,Raw materials,41100.0,2026-06-09,2026-06-24,paid,2026-06-24
+BILL-0043,payable,Kisan Agro Suppliers,Whole spices and chillies,Raw materials,52400.0,2026-06-08,2026-06-23,paid,2026-06-23
+INV-0099,receivable,Metro Foods Pvt Ltd,Spice blends — invoice 0099,Sales - B2B,62700.0,2026-07-05,2026-08-04,pending,
+INV-0100,receivable,Kumar Wholesale,Spice blends — invoice 0100,Sales - B2B,60600.0,2026-07-23,2026-08-22,paid,2026-08-27
+INV-0101,receivable,Om Sai Distributors,Spice blends — invoice 0101,Sales - B2B,74100.0,2026-07-01,2026-07-31,paid,2026-08-02
+INV-0102,receivable,FreshMart Retail,Spice blends — invoice 0102,Sales - B2B,45000.0,2026-07-22,2026-08-21,paid,2026-08-21
+INV-0103,receivable,Kumar Wholesale,Spice blends — invoice 0103,Sales - B2B,59600.0,2026-07-16,2026-08-15,paid,2026-08-20
+INV-0104,receivable,FreshMart Retail,Spice blends — invoice 0104,Sales - B2B,72900.0,2026-07-15,2026-08-14,paid,2026-08-28
+INV-0105,receivable,Shree Ganesh Traders,Spice blends — invoice 0105,Sales - B2B,52600.0,2026-07-18,2026-08-17,paid,2026-08-14
+INV-0106,receivable,Patil Kirana Stores,Spice blends — invoice 0106,Sales - B2B,59500.0,2026-07-01,2026-07-31,paid,2026-07-28
+INV-0107,receivable,Metro Foods Pvt Ltd,Spice blends — invoice 0107,Sales - B2B,113000.0,2026-07-15,2026-08-14,pending,
+BILL-0044,payable,Deccan Chillies,Whole spices and chillies,Raw materials,51600.0,2026-07-17,2026-08-01,paid,2026-08-01
+BILL-0045,payable,Rajasthan Spice Co,Whole spices and chillies,Raw materials,61000.0,2026-07-05,2026-07-20,paid,2026-07-20
+BILL-0046,payable,Deccan Chillies,Whole spices and chillies,Raw materials,52100.0,2026-07-17,2026-08-01,paid,2026-08-01
+BILL-0047,payable,Kisan Agro Suppliers,Whole spices and chillies,Raw materials,54400.0,2026-07-23,2026-08-07,paid,2026-08-07
+INV-0108,receivable,Om Sai Distributors,Spice blends — invoice 0108,Sales - B2B,64500.0,2026-08-14,2026-09-13,paid,2026-09-13
+INV-0109,receivable,Shree Ganesh Traders,Spice blends — invoice 0109,Sales - B2B,63500.0,2026-08-27,2026-09-26,paid,2026-09-26
+INV-0110,receivable,FreshMart Retail,Spice blends — invoice 0110,Sales - B2B,68600.0,2026-08-27,2026-09-26,paid,2026-09-26
+INV-0111,receivable,Kumar Wholesale,Spice blends — invoice 0111,Sales - B2B,107400.0,2026-08-01,2026-08-31,paid,2026-08-31
+INV-0112,receivable,FreshMart Retail,Spice blends — invoice 0112,Sales - B2B,43000.0,2026-08-12,2026-09-11,paid,2026-09-13
+INV-0113,receivable,Metro Foods Pvt Ltd,Spice blends — invoice 0113,Sales - B2B,65700.0,2026-08-03,2026-09-02,pending,
+INV-0114,receivable,FreshMart Retail,Spice blends — invoice 0114,Sales - B2B,41700.0,2026-08-28,2026-09-27,paid,2026-09-24
+INV-0115,receivable,Shree Ganesh Traders,Spice blends — invoice 0115,Sales - B2B,89000.0,2026-08-27,2026-09-26,pending,
+INV-0116,receivable,Om Sai Distributors,Spice blends — invoice 0116,Sales - B2B,112800.0,2026-08-08,2026-09-07,paid,2026-09-09
+INV-0117,receivable,Metro Foods Pvt Ltd,Spice blends — invoice 0117,Sales - B2B,52600.0,2026-08-11,2026-09-10,pending,
+INV-0118,receivable,Patil Kirana Stores,Spice blends — invoice 0118,Sales - B2B,100500.0,2026-08-01,2026-08-31,paid,2026-09-09
+BILL-0048,payable,Kisan Agro Suppliers,Whole spices and chillies,Raw materials,56400.0,2026-08-24,2026-09-08,paid,2026-09-08
+BILL-0049,payable,Deccan Chillies,Whole spices and chillies,Raw materials,48800.0,2026-08-25,2026-09-09,paid,2026-09-09
+BILL-0050,payable,Rajasthan Spice Co,Whole spices and chillies,Raw materials,46300.0,2026-08-16,2026-08-31,paid,2026-08-31
+BILL-0051,payable,Deccan Chillies,Whole spices and chillies,Raw materials,49700.0,2026-08-05,2026-08-20,paid,2026-08-20
+INV-0119,receivable,Om Sai Distributors,Spice blends — invoice 0119,Sales - B2B,51100.0,2026-09-21,2026-10-21,pending,
+INV-0120,receivable,Metro Foods Pvt Ltd,Spice blends — invoice 0120,Sales - B2B,77200.0,2026-09-26,2026-10-26,pending,
+INV-0121,receivable,Patil Kirana Stores,Spice blends — invoice 0121,Sales - B2B,116200.0,2026-09-11,2026-10-11,pending,
+INV-0122,receivable,Patil Kirana Stores,Spice blends — invoice 0122,Sales - B2B,81200.0,2026-09-05,2026-10-05,pending,
+INV-0123,receivable,Shree Ganesh Traders,Spice blends — invoice 0123,Sales - B2B,65100.0,2026-09-06,2026-10-06,pending,
+INV-0124,receivable,FreshMart Retail,Spice blends — invoice 0124,Sales - B2B,67200.0,2026-09-08,2026-10-08,pending,
+INV-0125,receivable,Metro Foods Pvt Ltd,Spice blends — invoice 0125,Sales - B2B,107700.0,2026-09-07,2026-10-07,pending,
+INV-0126,receivable,Patil Kirana Stores,Spice blends — invoice 0126,Sales - B2B,70800.0,2026-09-13,2026-10-13,pending,
+INV-0127,receivable,Om Sai Distributors,Spice blends — invoice 0127,Sales - B2B,59500.0,2026-09-13,2026-10-13,pending,
+BILL-0052,payable,Kisan Agro Suppliers,Whole spices and chillies,Raw materials,71000.0,2026-09-09,2026-09-24,paid,2026-09-24
+BILL-0053,payable,Rajasthan Spice Co,Whole spices and chillies,Raw materials,63800.0,2026-09-13,2026-09-28,paid,2026-09-28
+BILL-0054,payable,Rajasthan Spice Co,Whole spices and chillies,Raw materials,69600.0,2026-09-10,2026-09-25,paid,2026-09-25
+BILL-0055,payable,Kisan Agro Suppliers,Whole spices and chillies,Raw materials,46400.0,2026-09-05,2026-09-20,paid,2026-09-20
+SCH-0056,payable,Staff payroll,Staff salaries (8),Salaries,205000.0,,2026-10-01,pending,
+SCH-0057,payable,Hadapsar Industrial Estate,Factory rent,Rent,55000.0,,2026-10-05,pending,
+SCH-0058,payable,HDFC Bank Business Loan,Loan EMI,Loan EMI,32500.0,,2026-10-07,pending,
+SCH-0059,payable,Zoho,Zoho Books subscription,Software,2950.0,,2026-10-03,pending,
+SCH-0060,payable,Staff payroll,Staff salaries (8),Salaries,205000.0,,2026-11-01,pending,
+SCH-0061,payable,Hadapsar Industrial Estate,Factory rent,Rent,55000.0,,2026-11-05,pending,
+SCH-0062,payable,HDFC Bank Business Loan,Loan EMI,Loan EMI,32500.0,,2026-11-07,pending,
+SCH-0063,payable,Zoho,Zoho Books subscription,Software,2950.0,,2026-11-03,pending,
+SCH-0064,payable,Staff payroll,Staff salaries (8),Salaries,205000.0,,2026-12-01,pending,
+SCH-0065,payable,Hadapsar Industrial Estate,Factory rent,Rent,55000.0,,2026-12-05,pending,
+SCH-0066,payable,HDFC Bank Business Loan,Loan EMI,Loan EMI,32500.0,,2026-12-07,pending,
+SCH-0067,payable,Zoho,Zoho Books subscription,Software,2950.0,,2026-12-03,pending,
+BILL-PKG-0926,payable,PackWell Industries,Pouches and cartons — September,Packaging,26800.0,2026-09-05,2026-09-25,pending,
