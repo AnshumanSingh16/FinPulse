@@ -281,7 +281,7 @@ class TestOffline:
 
     def test_loan_without_terms_asks(self, ctx):
         run = run_offline("Can we buy a ₹8 lakh van on a loan?", ctx)
-        assert "need more detail" in run.answer and run.verified
+        assert "more detail" in run.answer and run.verified
 
     def test_no_balance_says_unknown(self, demo):
         c = ToolContext(demo["ledger"], demo["obligations"], None, AS_OF, None)

@@ -1,85 +1,92 @@
 # FinPilot AI
 
-An agentic financial copilot for small businesses in India. Upload your bank transactions, invoices and bills, then:
+A money copilot for small business owners in India. In plain words it tells you:
 
-- **Overview**: revenue, recorded expenses, estimated operating profit, cash in bank, what customers owe you and what you owe, with charts and alerts.
-- **Ask FinPilot**: ask questions in plain English. An AI agent picks from approved analysis tools, runs them, checks the results and answers with evidence.
-- **Decision Lab**: simulate a purchase (cash or loan) under base, optimistic and downside scenarios, and explore 30/60/90-day cash-flow forecasts.
+- **How you're doing.** How much cash you have, how long it lasts, and whether it's about to get tight.
+- **What needs doing.** Customers to chase (with a ready-to-send WhatsApp reminder), late bills, and possible double payments.
+- **Answers to your questions.** Ask about your sales, costs or cash and get answers checked against your records.
+- **Whether you can afford something.** Three quick questions, then "Yes", "Yes — but it's tight" or "Not right now", with sliders to try other numbers.
 
-All financial figures are calculated by tested Python code, never by the language model. Every answer shows the tools that ran, the independent checks they passed, and the evidence behind them: method, assumptions, limitations and the supporting records.
+All financial figures are calculated by tested Python code, never by the AI. Every number has a **"How do we know?"** link showing the method, the assumptions and the exact records behind it.
 
-> Decision support, not financial advice. FinPilot never makes payments, sends messages or files returns. Suggested actions go to an approval queue and nothing executes them.
+> Decision support, not financial advice. FinPilot never makes payments, sends messages or files returns. Suggested actions go to your to-do list, and reminders are drafts you send yourself.
 
 ---
 
-## Quick start
+## Run it
 
-Requires Python 3.11 or newer.
+You need Python 3.11 or newer. Node is **not** needed, because the web app ships pre-built.
 
 ```bash
+git clone https://github.com/AnshumanSingh16/finpulse.git
+cd finpulse
 python -m venv .venv
-source .venv/bin/activate          # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-streamlit run app.py
 ```
 
-Open http://localhost:8501. The app starts with the **demo business**, so no setup or API key is needed.
+Activate the environment:
 
-### Enable the AI agent (optional)
+- Windows (cmd): `.venv\Scripts\activate.bat`
+- Windows (PowerShell): `.venv\Scripts\Activate.ps1`
+- macOS or Linux: `source .venv/bin/activate`
 
-Without an API key, Ask FinPilot runs in **rule-based mode**. It sends common questions to the same tools and answers from templates, and nothing leaves your machine. To turn on the AI agent:
+Then install and start:
 
 ```bash
-cp .env.example .env
-# edit .env and set ANTHROPIC_API_KEY=sk-ant-...
+pip install -r requirements.txt
+python run.py
 ```
 
-You can also export the variable in your shell. Real environment variables override `.env`. The key is read at runtime and is never stored in code or in the database.
+Your browser opens at http://localhost:8000 on a **demo shop** with made-up numbers. To use your own data, open **Your data** and upload a bank statement (Excel or CSV).
+
+**Using it on your phone.** Run `python run.py --host 0.0.0.0` and open `http://<your-computer's-IP>:8000` on the phone while it's on the same Wi-Fi.
+
+**If something goes wrong:**
+- **"Python was not found" on Windows:** install Python from python.org and tick **"Add python.exe to PATH"**.
+- **Port 8000 is busy:** use `python run.py --port 8010`.
+
+### Turn on the AI (optional)
+
+Without an API key, Ask uses built-in answers and nothing leaves your computer. To turn on the AI agent:
+
+```bash
+cp .env.example .env      # Windows: copy .env.example .env
+# then set ANTHROPIC_API_KEY=sk-ant-... in .env and restart
+```
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | (unset) | Enables the AI agent. If unset, rule-based mode is used. |
-| `FINPILOT_MODEL` | `claude-opus-5-5` | The model used by the agent. |
+| `ANTHROPIC_API_KEY` | (unset) | Turns on the AI agent. Without it, built-in answers are used. |
+| `FINPILOT_MODEL` | `claude-opus-5-5` | Model used by the agent. |
 | `FINPILOT_MAX_STEPS` | `8` | Maximum rounds of tool calls per question. |
-| `FINPILOT_DB` | `finpilot.db` | SQLite file for uploaded data, the activity log and the approval queue. |
-| `FINPILOT_AI` | (unset) | Set to `off` to force rule-based mode even when a key is set. |
+| `FINPILOT_DB` | `finpilot.db` | Local SQLite file holding your uploads and to-dos. |
+| `FINPILOT_AI` | (unset) | Set to `off` to force built-in answers. |
 
-**What is sent to the AI.** In AI mode, your question and the tool outputs are sent to Anthropic's API so the model can write the answer. Tool outputs include totals and the specific records the tools return, capped at 25 record ids per result. Uploaded files are never sent as a whole. The Ask page shows this notice whenever AI mode is on. Requests use server-side model fallback: if the primary model is unavailable or declines, a fallback model may answer.
+**What is sent to the AI.** In AI mode, your question and the relevant tool outputs are sent to Anthropic's API so it can write the answer. Tool outputs are totals plus at most 25 record ids per result. Your files are never sent. If the main model is unavailable or declines, a server-side fallback model may answer. The Ask page tells you which mode is on.
 
 ---
 
-## Demo script (about 5 minutes)
+## A 3-minute tour (demo shop)
 
-The demo business is **Annapurna Masala Works (fictional)**, a spice processor in Pune. Its data covers 1 Oct 2025 to 30 Sep 2026. The data is fixed and seeded, so every run shows the same numbers. Built into it:
-
-- raw-material costs rise in the last quarter
-- an electricity bill spikes
-- one logistics payment is recorded twice
-- a one-off consultancy fee
-- one customer's invoices go overdue
-- a ₹5 lakh loan pays for a ₹4.2 lakh machine, which shows that cash is not profit
-
-1. **Overview.** Revenue ₹91.6 lakh, estimated operating profit ₹20.6 lakh (labelled as an estimate), and cash ₹14.85 lakh, reconciled to a bank statement. The alerts show the overdue invoices, the duplicate logistics payment and the electricity spike. Open *Evidence* to see the method and the supporting transactions.
-2. **Ask FinPilot.** Click the suggested questions:
-   - *Why did expenses go up last month?* compares categories, names the transactions behind each change and flags unusual payments.
-   - *Can we afford a ₹12 lakh packing machine on a loan at 11% for 3 years?* checks cash, upcoming bills and the purchase simulation.
-   - *Can we buy a ₹8 lakh van on a loan?* asks for the interest rate and tenure instead of assuming them.
-
-   Expand *Tool activity* to see each call, its arguments and the independent checks.
-3. **Decision Lab.** Enter the interest rate and tenure. The verdict, EMI, downside low point and scenario chart update. The *Cash-flow scenarios* tab lets you delay customer payments or lower the collection rate and see the effect at 30, 60 and 90 days.
-4. **Data & uploads.** Upload the files in `data/demo/` (or your own). Map the columns, review the validation report (dates, amounts, duplicates, missing values) and save. Pick *My uploaded data* in the sidebar.
+1. **Home.** It opens with "Your business is in good shape — ₹14.85 L in the bank, about 2.2 months of running costs", plus the cash chart (actual and expected).
+   - Under *Needs your attention*, tap **Draft a reminder** on Metro Foods (₹2.94 L overdue) to get an editable WhatsApp message.
+   - Tap **Review payments** on the possible double payment to see both transactions.
+   - September shows a loss. Tap **Ask FinPilot why**.
+2. **Ask.** Try *"Who owes me money?"* or *"Can I buy a ₹8 lakh van on a loan?"*. For the van, it asks for the loan terms instead of guessing them. Every answer shows a badge confirming its figures were checked, and *How I worked this out* lists the steps.
+3. **Plan → Can I afford it?** Pick *Packing machine · ₹12 L*, then choose **Loan**, 11% and 3 years, and enter ₹45,000 a month in savings. The verdict is "Yes — but it's tight if business slows". Switch between Tough months, Most likely and Goes well, and drag the price slider.
+4. **Plan → Cash ahead.** Slide "Customers pay late" to 30 days and watch the 30/60/90-day balances change.
+5. **Your data.** Upload `data/demo/ledger.csv`, or any bank statement. Check the matched columns, import, then add today's balance.
 
 ---
 
 ## Your own data
 
-Upload CSV or Excel (`.xlsx`) files on the **Data & uploads** page. Columns are matched automatically where possible and can be changed by hand.
+Upload CSV or Excel (`.xlsx`) files on the **Your data** page. Columns are matched automatically where possible and can be changed by hand.
 
 | Table | Needed for | Required columns | Optional |
 |---|---|---|---|
 | **Transactions** (bank ledger) | Everything | date, amount, and one of: a direction column, signed amounts, or separate debit/credit columns | description, counterparty, category, payment mode, reference, currency |
 | **Invoices & bills** | Receivables, payables, forecasts | kind (receivable/payable), amount, due date, status (paid/pending) | id, counterparty, description, category, issue date, paid date |
-| **Bank balances** | Cash position, forecasts, Decision Lab | date, balance | account |
+| **Bank balances** | Cash position, forecasts, affordability | date, balance | account |
 
 The loader handles:
 
@@ -102,29 +109,31 @@ You can enter a bank balance by hand if you don't have a statement file.
 ## Architecture
 
 ```
-app.py                      Streamlit entry: navigation, sidebar, dataset choice
+run.py                      Starts the local server and opens the browser
 finpilot/
   config.py                 Settings from environment / .env (no secrets in code)
-  data/
-    schema.py               Canonical tables, category → class map (revenue, operating, capex, financing, …), Evidence
-    loader.py               CSV/XLSX reading, column mapping, parsing, validation reports
-    demo.py                 Seeded fictional business → data/demo/*.csv
-    store.py                SQLite: uploaded dataset, activity log, approval queue
-  engine/                   Pure Python + pandas. All financial calculations live here.
-    summary.py              Revenue, recorded opex, estimated operating profit, net cash movement
-    expenses.py             Period comparison, duplicates, outliers, rare large payments
-    cash.py                 Cash from dated balance + later rows, reconciliation, paid/pending/overdue
-    forecast.py             30/60/90-day cash forecast from scheduled items + optional run-rate
-    decision.py             Purchase simulation: EMI, three scenarios, verdict, payback
-    alerts.py               Overview alerts
-  agent/
-    tools.py                The approved tools: JSON schemas, Python argument validation, engine calls
-    orchestrator.py         Agent loop, step limit, verification, repair turn, fallback to rule-based
-    verify.py               Independent re-checks of tool results + figure-by-figure answer check
-    offline.py              Rule-based question router (no-key mode)
-  ui/                       Overview, Ask FinPilot, Decision Lab, Data pages; theme and components
-tests/                      pytest suite (engine, loader, store, agent)
+  data/                     Canonical tables, CSV/XLSX loader + validation, demo generator, SQLite store
+  engine/                   Pure Python + pandas. ALL financial calculations live here (tested)
+    summary.py  expenses.py  cash.py  forecast.py  decision.py  alerts.py
+  agent/                    tools.py (approved tools + validation), orchestrator.py (agent loop),
+                            verify.py (independent checks), offline.py (built-in answers)
+  api/
+    server.py               FastAPI: JSON API under /api, and serves the built web app
+    views.py                Plain-language views (status, attention items, reminders…) over the engine
+    dataset.py              Demo vs. your uploaded data
+  web/                      The built web app (generated — do not edit)
+web/                        Next.js + Tailwind source for the web app (Home, Money, Ask, Plan, Your data)
+tests/                      pytest: engine, loader, store, agent, API
 data/demo/                  The fixed synthetic dataset (also usable as sample uploads)
+```
+
+**Changing the web app.** Install Node 20 or newer, then:
+
+```bash
+cd web
+npm install
+NEXT_PUBLIC_API=http://localhost:8000 npm run dev    # live reload on :3000 (run python run.py alongside)
+npm run build                                       # rebuilds finpilot/web for python run.py
 ```
 
 ### How the agent works
@@ -167,7 +176,7 @@ The rule-based mode uses the same tools, validation and verification. If the API
 ## Tests
 
 ```bash
-pytest            # 118 tests, about 10 s
+pytest            # 139 tests, about 25 s
 ```
 
 The tests cover:

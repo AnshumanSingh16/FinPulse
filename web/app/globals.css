@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --color-canvas: #f5f6f4;
+  --color-surface: #ffffff;
+  --color-line: #e6e8e3;
+  --color-ink: #13201a;
+  --color-ink-2: #4b5a52;
+  --color-muted: #87938c;
+
+  --color-brand: #0b6e4f;
+  --color-brand-600: #095c42;
+  --color-brand-50: #e8f3ee;
+
+  --color-good: #0b6e4f;
+  --color-good-50: #e8f3ee;
+  --color-caution: #9a5b05;
+  --color-caution-50: #fdf3dc;
+  --color-bad: #b42318;
+  --color-bad-50: #fdecea;
+  --color-info: #1f62b5;
+  --color-info-50: #eaf2fc;
+
+  /* chart series (validated pair): money in / money out */
+  --color-in: #2a78d6;
+  --color-out: #eb6834;
+
+  --radius-card: 1.25rem;
+  --shadow-card: 0 1px 2px rgb(16 24 20 / 0.04), 0 4px 16px rgb(16 24 20 / 0.04);
+}
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+.prose-answer p {
+  margin: 0.4rem 0;
+}
+.prose-answer ul {
+  list-style: disc;
+  padding-left: 1.2rem;
+  margin: 0.4rem 0;
+}
+.prose-answer li {
+  margin: 0.2rem 0;
+}
+.prose-answer strong {
+  font-weight: 650;
+}
+
+input[type="range"] {
+  accent-color: var(--color-brand);
+}
+
+@keyframes pulse-dot {
+  0%, 80%, 100% { opacity: 0.25; transform: translateY(0); }
+  40% { opacity: 1; transform: translateY(-2px); }
+}
+.dot { animation: pulse-dot 1.2s infinite ease-in-out; }
+.dot:nth-child(2) { animation-delay: 0.15s; }
+.dot:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes sheet-in { from { transform: translateY(16px); opacity: 0; } to { transform: none; opacity: 1; } }
+.sheet { animation: sheet-in 0.18s ease-out; }

@@ -336,7 +336,8 @@ def build_ledger(raw: pd.DataFrame, mapping: dict, drop_exact_duplicates: bool =
     return out, rep
 
 
-def build_obligations(raw: pd.DataFrame, mapping: dict) -> tuple[pd.DataFrame, ValidationReport]:
+def build_obligations(raw: pd.DataFrame, mapping: dict, default_kind: str | None = None, default_status: str | None = None) -> tuple[pd.DataFrame, ValidationReport]:
+    """default_kind / default_status apply when the file has no such column (e.g. a plain list of sales invoices)."""
     rep = ValidationReport("obligations", rows_in=len(raw))
     rows = []
     for i in range(len(raw)):
@@ -345,11 +346,13 @@ def build_obligations(raw: pd.DataFrame, mapping: dict) -> tuple[pd.DataFrame, V
         if cur is not None and str(cur).strip() and str(cur).strip().upper() not in ("INR", "₹", "RS", "RS."):
             rep.rejected.append({"row": i + 2, "reason": f"Currency {cur} is not INR."})
             continue
-        kind_raw = _norm(get("kind") or "")
+        kind_raw = _norm(get("kind") or default_kind or "")
         kind = "receivable" if kind_raw.startswith(("rec", "inv", "sale", "ar")) else "payable" if kind_raw.startswith(("pay", "bill", "purch", "ap")) else None
         amount, _ = parse_amount(get("amount"))
         due = parse_date(get("due_date"))
-        status_raw = _norm(get("status") or "")
+        pd_raw = get("paid_date")
+        has_paid_date = pd_raw is not None and pd.notna(pd_raw) and str(pd_raw).strip() != ""
+        status_raw = _norm(get("status") or ("paid" if default_status and has_paid_date else default_status) or "")
         status = "paid" if status_raw in ("paid", "settled", "closed", "yes", "received", "done") else "pending" if status_raw in ("pending", "unpaid", "open", "due", "overdue", "no", "outstanding", "partly paid") else None
         reasons = []
         if kind is None:

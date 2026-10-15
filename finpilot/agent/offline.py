@@ -105,7 +105,7 @@ def _purchase(q: str, call: ToolCaller, as_of: pd.Timestamp) -> str:
     if not ok:
         return f"I couldn't run the simulation: {r['message']}"
     if r.get("status") == "needs_input":
-        return f"**I need more detail before simulating this loan.** {r['message']} Tell me the annual interest rate and the tenure your lender quoted."
+        return "**I need a bit more detail to check this loan.** Tell me the interest rate and how many years, from your lender's quote — FinPilot doesn't guess loan terms."
     if r.get("status") != "ok":
         return r.get("message", "The simulation could not run.")
     sc = {s["scenario"]: s for s in r["scenarios"]}
@@ -129,7 +129,7 @@ def _purchase(q: str, call: ToolCaller, as_of: pd.Timestamp) -> str:
         lines.append("- No monthly benefit was given, so the simulation counts only the cost. Tell me what it would save or earn each month to include it.")
     if loan and r.get("total_loan_interest"):
         lines.append(f"- Total loan interest over the tenure: {_inr(r['total_loan_interest'])}.")
-    lines.append("\nScenarios are illustrations under the stated settings, not predictions. Open the Decision Lab to change them.")
+    lines.append("\nScenarios are illustrations under the stated settings, not predictions. Try different numbers on the Plan tab.")
     return "\n".join(x for x in lines if x is not None)
 
 
@@ -173,9 +173,9 @@ def _expenses(q: str, call: ToolCaller, as_of) -> str:
     pa, pb = c["period_a"], c["period_b"]
     direction = "up" if c["total_change"] > 0 else "down"
     lines = [
-        f"**Recorded expenses were {_inr(c['total_b'])} from {pb['start']} to {pb['end']}, {direction} {_inr(abs(c['total_change']))}"
+        f"**Running costs were {_inr(c['total_b'])} from {pb['start']} to {pb['end']}, {direction} {_inr(abs(c['total_change']))}"
         + (f" ({abs(c['total_change_pct']):.1f}%)" if c["total_change_pct"] is not None else "")
-        + f" on {pa['start']} to {pa['end']} ({_inr(c['total_a'])}).**",
+        + f" compared with {pa['start']} to {pa['end']} ({_inr(c['total_a'])}).**",
         "",
         "Biggest changes:",
     ]
@@ -258,8 +258,8 @@ def _summary(q: str, call: ToolCaller, as_of: pd.Timestamp) -> str:
     lines = [
         f"**{s['period']['start']} to {s['period']['end']}**",
         f"- Revenue (cash received from sales): {_inr(s['revenue'])}",
-        f"- Recorded operating expenses: {_inr(s['operating_expenses'])}",
-        f"- **Estimated operating profit: {_inr(s['estimated_operating_profit'])}**"
+        f"- Running costs paid: {_inr(s['operating_expenses'])}",
+        f"- **Profit (estimate): {_inr(s['estimated_operating_profit'])}**"
         + (f" ({s['estimated_margin_pct']:.1f}% of revenue)" if s["estimated_margin_pct"] is not None else "")
         + " — an estimate before depreciation, unpaid bills and the interest in loan EMIs.",
         f"- Net cash movement (all money in − out): {_inr(s['net_cash_movement'])}",
@@ -315,8 +315,25 @@ HELP = (
 )
 
 
+_SPAN = re.compile(r"(\d{4}-\d{2}-\d{2}) to (\d{4}-\d{2}-\d{2})")
+_ISO = re.compile(r"\b(\d{4})-(\d{2})-(\d{2})\b")
+
+
+def _human_dates(text: str) -> str:
+    """'2026-09-01 to 2026-09-30' → 'September 2026'; '2026-10-04' → '4 Oct 2026'. Only formatting changes."""
+
+    def span(m):
+        a, b = pd.Timestamp(m.group(1)), pd.Timestamp(m.group(2))
+        if a.day == 1 and b == a + pd.offsets.MonthEnd(0):
+            return f"{a:%B %Y}"
+        return f"{m.group(1)} to {m.group(2)}"
+
+    text = _SPAN.sub(span, text)
+    return _ISO.sub(lambda m: f"{int(m.group(3))} {pd.Timestamp(m.group(0)):%b %Y}", text)
+
+
 def answer(question: str, call: ToolCaller, as_of: pd.Timestamp) -> str:
     for pattern, handler in INTENTS:
         if pattern.search(question):
-            return handler(question, call, as_of)
+            return _human_dates(handler(question, call, as_of))
     return HELP
