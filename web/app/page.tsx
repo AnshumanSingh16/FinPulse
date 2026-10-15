@@ -55,8 +55,8 @@ export default function HomePage() {
   return (
     <div className="space-y-6">
       <header className="rise">
-        <p className="text-sm font-medium text-brand">{t(hello)} 👋</p>
-        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{data.business.replace(" (fictional)", "")}</h1>
+        <p className="eyebrow">{t(hello)}</p>
+        <h1 className="mt-1 text-3xl sm:text-4xl">{data.business.replace(" (fictional)", "")}</h1>
         <p className="text-sm text-muted">{t("Based on your records up to {date}", { date: data.as_of_label })}</p>
       </header>
 
@@ -96,10 +96,10 @@ function Hero({ home }: { home: Home }) {
   const { status, cash } = home;
   const grad = status.tone === "bad" ? "grad-hero-bad" : status.tone === "caution" ? "grad-hero-caution" : "grad-hero";
   return (
-    <section className={cx("rise rise-1 overflow-hidden rounded-[1.75rem] p-5 shadow-xl shadow-violet-300/40 sm:p-7", grad)}>
+    <section className={cx("rise rise-1 overflow-hidden rounded-[1.75rem] p-5 shadow-xl shadow-black/60 sm:p-7", grad)}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="max-w-xl">
-          <p className="text-lg font-semibold leading-snug sm:text-xl">{status.headline}</p>
+          <p className="display text-2xl leading-tight sm:text-[1.7rem]">{status.headline}</p>
           <p className="mt-1 text-sm text-white/80">{status.detail}</p>
         </div>
         {cash.reconciled && (
@@ -111,8 +111,8 @@ function Hero({ home }: { home: Home }) {
       {cash.known ? (
         <div className="mt-5 grid gap-4 md:grid-cols-[minmax(0,16rem)_1fr] md:items-end">
           <div>
-            <p className="text-sm text-white/75">{t("Money in the bank today")}</p>
-            <p className="num mt-1 text-5xl font-bold tracking-tight" title={cash.exact}>
+            <p className="eyebrow !text-white/55">{t("Money in the bank today")}</p>
+            <p className="display num mt-2 text-6xl" title={cash.exact}>
               <CountUp value={cash.amount ?? 0} format={short} />
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
@@ -134,7 +134,7 @@ function Hero({ home }: { home: Home }) {
         <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
           <p className="max-w-lg text-white/85">{t("Type in the closing balance from your bank statement or banking app — it takes ten seconds.")}</p>
           <Link href="/data/#balance">
-            <Button className="!bg-white !text-brand">{t("Add bank balance")}</Button>
+            <Button className="">{t("Add bank balance")}</Button>
           </Link>
         </div>
       )}
@@ -181,7 +181,7 @@ function HealthCard() {
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-sm text-ink-2">{t("Health score")}</p>
-        <p className="text-xl font-bold">{data.grade}</p>
+        <p className="display text-2xl">{data.grade}</p>
         {data.change != null && data.change !== 0 && (
           <p className={cx("text-sm font-medium", data.change > 0 ? "text-good" : "text-bad")}>
             {data.change > 0 ? "▲" : "▼"} {Math.abs(data.change)} {t("since last month")}
@@ -203,7 +203,7 @@ function StoryCardTile() {
   if (!data) return <Card className="h-44 animate-pulse" />;
   return (
     <>
-      <button onClick={() => setOpen(true)} className="rise rise-4 grad-sunset relative flex items-center gap-4 overflow-hidden rounded-[1.5rem] p-5 text-left shadow-lg shadow-orange-200 transition hover:brightness-105">
+      <button onClick={() => setOpen(true)} className="rise rise-4 grad-sunset relative flex items-center gap-4 overflow-hidden rounded-[1.5rem] p-5 text-left shadow-lg shadow-black/60 transition hover:brightness-105">
         <div className="flex -space-x-3">
           {["grad-hero", "grad-ocean", "grad-mint"].map((g, i) => (
             <span key={g} className={cx("grid size-14 place-items-center rounded-full ring-4 ring-white/30", g)} style={{ zIndex: 3 - i }}>
@@ -213,7 +213,7 @@ function StoryCardTile() {
         </div>
         <div className="min-w-0">
           <p className="text-sm text-white/80">{data.range}</p>
-          <p className="text-xl font-bold">{data.title ?? t("Your week")}</p>
+          <p className="display text-2xl">{data.title ?? t("Your week")}</p>
           <p className="truncate text-sm text-white/90">{data.cards[0]?.title}</p>
           <span className="mt-1 inline-block text-xs font-semibold text-white/90 underline underline-offset-2">{t("Tap to see your week")}</span>
         </div>
@@ -336,7 +336,7 @@ function MonthCard({ home }: { home: Home }) {
             <span className="font-semibold">{t(m.profit >= 0 ? "Profit" : "Loss")}</span> <span className="text-xs text-muted">{t("(estimate)")}</span>
           </span>
           <span className="flex items-center gap-2">
-            <span className={cx("num text-2xl font-bold", m.profit < 0 ? "text-bad" : "text-good")}>{short(m.profit)}</span>
+            <span className={cx("display num text-3xl", m.profit < 0 ? "text-bad" : "text-good")}>{short(m.profit)}</span>
             <Change value={m.change?.profit} good="up" />
           </span>
         </div>

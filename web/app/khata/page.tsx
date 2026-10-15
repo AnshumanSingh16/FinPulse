@@ -77,7 +77,7 @@ function Khata() {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold tracking-tight">{t("Khata")}</h1>
+        <h1 className="text-3xl">{t("Khata")}</h1>
         <Segmented
           value={side}
           onChange={go}
@@ -92,10 +92,10 @@ function Khata() {
       {loading && !data && <Loading />}
       {data && (
         <>
-          <section className={cx("rise flex flex-wrap items-end justify-between gap-4 rounded-[1.75rem] p-6 shadow-xl", cust ? "grad-mint shadow-emerald-200" : "grad-sunset shadow-orange-200")}>
+          <section className={cx("rise flex flex-wrap items-end justify-between gap-4 rounded-[1.75rem] p-6 shadow-xl", cust ? "grad-mint shadow-black/60" : "grad-sunset shadow-black/60")}>
             <div>
               <p className="text-sm text-white/85">{t(cust ? "You'll get" : "You'll give")}</p>
-              <p className="num text-4xl font-bold tracking-tight">
+              <p className="display num text-5xl">
                 <CountUp value={data.total} format={short} />
               </p>
               <p className="mt-1 text-sm text-white/85">
@@ -105,19 +105,19 @@ function Khata() {
             <div className="flex flex-wrap gap-2">
               {cust ? (
                 <>
-                  <Button className="!bg-white !text-good" onClick={() => setBulk(true)}>
+                  <Button className="" onClick={() => setBulk(true)}>
                     <MessageCircle className="size-4" /> {t("Remind all overdue")}
                   </Button>
-                  <Button className="glass" onClick={() => qe.open({ kind: "credit_sale" })}>
+                  <Button className="glass !text-ink" onClick={() => qe.open({ kind: "credit_sale" })}>
                     <HandCoins className="size-4" /> {t("Give udhaar")}
                   </Button>
                 </>
               ) : (
                 <>
-                  <Button className="!bg-white !text-[#d4561f]" onClick={() => qe.open({ kind: "payment_out" })}>
+                  <Button className="" onClick={() => qe.open({ kind: "payment_out" })}>
                     <ArrowUpRight className="size-4" /> {t("Pay bill")}
                   </Button>
-                  <Button className="glass" onClick={() => qe.open({ kind: "bill" })}>
+                  <Button className="glass !text-ink" onClick={() => qe.open({ kind: "bill" })}>
                     <ReceiptText className="size-4" /> {t("Add bill")}
                   </Button>
                 </>
@@ -203,7 +203,7 @@ function PersonSheet({ name, onClose }: { name: string; onClose: () => void }) {
             <Avatar name={name} size="lg" />
             <div className="min-w-0 flex-1">
               <p className="text-sm text-white/80">{t(cust ? "You'll get" : "You'll give")}</p>
-              <p className="num text-3xl font-bold">{inr(data.outstanding)}</p>
+              <p className="display num text-4xl">{inr(data.outstanding)}</p>
               {data.overdue > 0 && <p className="text-sm text-white/90">{inr(data.overdue)} {t("overdue")}</p>}
             </div>
             {data.reliability.count >= 2 && (

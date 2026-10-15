@@ -1,39 +1,45 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Inter Variable", "Noto Sans Devanagari", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans: "Inter Variable", "Nirmala UI", "Noto Sans Devanagari", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Fraunces Variable", "Nirmala UI", Georgia, serif;
 
-  --color-canvas: #f6f5fb;
-  --color-surface: #ffffff;
-  --color-line: #ebe8f3;
-  --color-ink: #17132b;
-  --color-ink-2: #555068;
-  --color-muted: #8f8aa3;
+  /* CRED-style dark surfaces */
+  --color-canvas: #0b0b0d;
+  --color-surface: #151518;
+  --color-surface-2: #1d1d21;
+  --color-elevated: #232328;
+  --color-line: #2a2a30;
+  --color-ink: #f4f2ee;
+  --color-ink-2: #a8a6ae;
+  --color-muted: #6f6d76;
 
-  --color-brand: #6a44ff;
-  --color-brand-600: #5631ea;
-  --color-brand-50: #f0ebff;
-  --color-night: #1d1446;
+  /* accents: a soft lilac for links/active, warm gold for "premium" details */
+  --color-brand: #b8a4ff;
+  --color-brand-600: #9f87ff;
+  --color-brand-50: #211c33;
+  --color-gold: #e3c18c;
+  --color-night: #000000;
 
-  --color-good: #0e9f6e;
-  --color-good-50: #e5f7ef;
-  --color-caution: #c26a00;
-  --color-caution-50: #fff3e0;
-  --color-bad: #e0433f;
-  --color-bad-50: #fdecec;
-  --color-info: #2a78d6;
-  --color-info-50: #e9f2fd;
+  --color-good: #3ddc97;
+  --color-good-50: #0f2a20;
+  --color-caution: #ffb547;
+  --color-caution-50: #2d2213;
+  --color-bad: #ff6b6b;
+  --color-bad-50: #331718;
+  --color-info: #6ea8ff;
+  --color-info-50: #15223a;
 
-  /* chart series (validated pair): money in / money out */
-  --color-in: #2a78d6;
-  --color-out: #eb6834;
+  /* chart series validated on the dark surface: money in / money out */
+  --color-in: #4f8ff0;
+  --color-out: #dd6a32;
 
-  --radius-card: 1.5rem;
-  --shadow-card: 0 1px 2px rgb(23 19 43 / 0.04), 0 8px 24px rgb(23 19 43 / 0.06);
+  --radius-card: 1.25rem;
+  --shadow-card: inset 0 1px 0 rgb(255 255 255 / 0.04), 0 10px 30px rgb(0 0 0 / 0.45);
 }
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
 }
 
 html,
@@ -44,48 +50,81 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+body {
+  background:
+    radial-gradient(60rem 30rem at 85% -10%, rgb(184 164 255 / 0.07), transparent 60%),
+    radial-gradient(50rem 25rem at -10% 110%, rgb(227 193 140 / 0.05), transparent 60%),
+    var(--color-canvas);
+  background-attachment: fixed;
+}
+
+h1, .display {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variation-settings: "SOFT" 50, "opsz" 72;
+}
+
+.eyebrow {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
 .num {
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
 }
 
 .card {
-  background: var(--color-surface);
+  background: linear-gradient(180deg, #19191c 0%, #141416 100%);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
 }
 
-/* Signature gradients */
+/* NeoPOP: flat, sharp, with a 3D edge that presses in */
+.neo {
+  border-radius: 0 !important;
+  box-shadow: 4px 4px 0 0 var(--neo-edge, #8d8a94);
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+.neo:active {
+  transform: translate(4px, 4px);
+  box-shadow: 0 0 0 0 var(--neo-edge, #8d8a94);
+}
+
+/* Signature surfaces — deep, metallic, with a single coloured glow */
 .grad-hero {
   background:
-    radial-gradient(120% 140% at 100% 0%, #ff8a5c 0%, rgb(255 138 92 / 0) 45%),
-    radial-gradient(90% 120% at 0% 100%, #22c3a6 0%, rgb(34 195 166 / 0) 50%),
-    linear-gradient(135deg, #2a1680 0%, #5b34f2 55%, #8a4dff 100%);
+    radial-gradient(70% 90% at 100% 0%, rgb(184 164 255 / 0.28) 0%, transparent 60%),
+    radial-gradient(60% 80% at 0% 100%, rgb(227 193 140 / 0.18) 0%, transparent 55%),
+    linear-gradient(160deg, #1d1b26 0%, #0f0f12 100%);
+  border: 1px solid #2e2b3a;
   color: white;
 }
 .grad-hero-bad {
-  background:
-    radial-gradient(120% 140% at 100% 0%, #ffb35c 0%, rgb(255 179 92 / 0) 45%),
-    linear-gradient(135deg, #5a1030 0%, #c2334d 60%, #ff6b5a 100%);
+  background: radial-gradient(70% 90% at 100% 0%, rgb(255 107 107 / 0.3) 0%, transparent 60%), linear-gradient(160deg, #26161a 0%, #0f0f12 100%);
+  border: 1px solid #3a2226;
   color: white;
 }
 .grad-hero-caution {
-  background:
-    radial-gradient(120% 140% at 100% 0%, #ffd166 0%, rgb(255 209 102 / 0) 45%),
-    linear-gradient(135deg, #3a1d75 0%, #a2470e 65%, #f08a24 100%);
+  background: radial-gradient(70% 90% at 100% 0%, rgb(255 181 71 / 0.26) 0%, transparent 60%), linear-gradient(160deg, #241d14 0%, #0f0f12 100%);
+  border: 1px solid #3a2f20;
   color: white;
 }
-.grad-violet { background: linear-gradient(135deg, #5b34f2, #9b5cff); color: white; }
-.grad-sunset { background: linear-gradient(135deg, #ff6b6b, #ffa94d); color: white; }
-.grad-mint { background: linear-gradient(135deg, #0ea37a, #3ad6a8); color: white; }
-.grad-ocean { background: linear-gradient(135deg, #1e5fd8, #38bdf8); color: white; }
-.grad-berry { background: linear-gradient(135deg, #b4237a, #f25fa0); color: white; }
-.grad-night { background: linear-gradient(135deg, #17132b, #3b2f80); color: white; }
+.grad-violet { background: linear-gradient(145deg, #2a2342, #17141f); border: 1px solid #3a3157; color: #e6deff; }
+.grad-sunset { background: linear-gradient(145deg, #3a2316, #1a1310); border: 1px solid #523221; color: #ffd9c2; }
+.grad-mint { background: linear-gradient(145deg, #12352a, #0e1a16); border: 1px solid #1d4a3a; color: #bff5dc; }
+.grad-ocean { background: linear-gradient(145deg, #142a48, #0f1520); border: 1px solid #213b60; color: #cfe2ff; }
+.grad-berry { background: linear-gradient(145deg, #3a1630, #1a1017); border: 1px solid #52203f; color: #ffd1ea; }
+.grad-night { background: linear-gradient(145deg, #2a2a30, #121214); border: 1px solid #36363d; color: #f4f2ee; }
 
 .glass {
-  background: rgb(255 255 255 / 0.14);
-  border: 1px solid rgb(255 255 255 / 0.22);
+  background: rgb(255 255 255 / 0.07);
+  border: 1px solid rgb(255 255 255 / 0.12);
   backdrop-filter: blur(8px);
 }
 
@@ -128,7 +167,10 @@ input[type="range"] { accent-color: var(--color-brand); }
 }
 
 @media print {
-  body { background: white; }
+  :root { color-scheme: light; --color-canvas: #fff; --color-surface: #fff; --color-surface-2: #f4f4f4; --color-line: #ddd; --color-ink: #111; --color-ink-2: #444; --color-muted: #777; }
+  body { background: white !important; color: #111; }
+  .card { background: white !important; }
+  .grad-hero, .grad-hero-bad, .grad-hero-caution, .grad-violet, .grad-sunset, .grad-mint, .grad-ocean, .grad-berry, .grad-night { background: #f3f3f3 !important; color: #111 !important; border-color: #ddd !important; }
   .no-print { display: none !important; }
   .card { box-shadow: none; border-color: #ddd; }
   main { padding: 0 !important; max-width: none !important; }

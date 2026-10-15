@@ -39,7 +39,7 @@ function Plan() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">{t("Plan ahead")}</h1>
+        <h1 className="text-3xl">{t("Plan ahead")}</h1>
         <p className="text-ink-2">Try a decision on your real numbers before you commit.</p>
       </div>
       <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-3 sm:px-0 lg:grid-cols-6">
@@ -231,7 +231,7 @@ function Afford() {
               <Field label="Loan length">
                 <div className="flex flex-wrap gap-2">
                   {[1, 2, 3, 4, 5, 7].map((y) => (
-                    <button key={y} onClick={() => set("years", y)} className={cx("h-10 rounded-full border px-4 text-sm font-medium", f.years === y ? "border-brand bg-brand text-white" : "border-line bg-surface")}>
+                    <button key={y} onClick={() => set("years", y)} className={cx("h-10 rounded-full border px-4 text-sm font-medium", f.years === y ? "border-[#f4f2ee] bg-[#f4f2ee] text-black" : "border-line bg-surface")}>
                       {y} {y === 1 ? "year" : "years"}
                     </button>
                   ))}

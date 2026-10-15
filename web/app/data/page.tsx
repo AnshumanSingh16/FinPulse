@@ -60,7 +60,7 @@ export default function DataPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Your data</h1>
+        <h1 className="text-3xl">Your data</h1>
         <p className="flex items-center gap-1.5 text-ink-2">
           <Lock className="size-4" aria-hidden /> Your files stay on this computer. FinPilot never uploads them anywhere.
         </p>
@@ -408,16 +408,16 @@ function StartFresh({ onDone }: { onDone: () => void }) {
     }
   };
   return (
-    <div className="grad-hero rounded-[1.5rem] p-6 shadow-xl shadow-violet-300/40">
+    <div className="grad-hero rounded-[1.5rem] p-6 shadow-xl shadow-black/60">
       <div className="flex items-center gap-2 text-sm text-white/85">
         <Rocket className="size-4" /> No files? No problem.
       </div>
       <h2 className="mt-1 text-xl font-bold">Start your khata today</h2>
       <p className="mt-1 text-sm text-white/80">Just your shop&apos;s name and today&apos;s bank + cash balance. Then add sales, expenses and udhaar with the + button.</p>
       <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_12rem_auto]">
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Shop name, e.g. Sharma General Store" className="h-12 rounded-2xl bg-white px-4 text-ink outline-none" aria-label="Shop name" />
-        <input value={bal} onChange={(e) => setBal(e.target.value.replace(/[^\d.]/g, ""))} placeholder="₹ balance today" inputMode="numeric" className="h-12 rounded-2xl bg-white px-4 text-ink outline-none" aria-label="Balance today" />
-        <Button size="lg" className="!bg-ink" onClick={go} disabled={!name.trim()}>
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Shop name, e.g. Sharma General Store" className="h-12 rounded-2xl border border-line bg-surface px-4 text-ink outline-none focus:border-gold" aria-label="Shop name" />
+        <input value={bal} onChange={(e) => setBal(e.target.value.replace(/[^\d.]/g, ""))} placeholder="₹ balance today" inputMode="numeric" className="h-12 rounded-2xl border border-line bg-surface px-4 text-ink outline-none focus:border-gold" aria-label="Balance today" />
+        <Button size="lg" className="" onClick={go} disabled={!name.trim()}>
           Start
         </Button>
       </div>

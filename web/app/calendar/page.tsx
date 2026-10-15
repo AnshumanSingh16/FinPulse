@@ -83,7 +83,7 @@ export default function CalendarPage() {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold tracking-tight">{t("Calendar")}</h1>
+        <h1 className="text-3xl">{t("Calendar")}</h1>
         <div className="flex items-center gap-2">
           <Button variant="secondary" size="sm" onClick={() => shift(-1)} aria-label="Previous month">
             <ChevronLeft className="size-4" />
@@ -220,7 +220,7 @@ export default function CalendarPage() {
                 Output {short(data.gst.output_gst)} − input credit {short(data.gst.input_credit)} at {data.settings.gst_rate_sales}% · estimate only
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
-                <Button size="sm" className="!bg-white !text-brand" onClick={addGstGoal} disabled={!data.gst.estimated_payable}>
+                <Button size="sm" className="" onClick={addGstGoal} disabled={!data.gst.estimated_payable}>
                   <PiggyBank className="size-4" /> Set aside as a goal
                 </Button>
                 <EvidenceButton evidence={data.gst.evidence} className="!text-white" />

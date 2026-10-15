@@ -167,7 +167,7 @@ function QuickEntry({ initial, onClose }: { initial: Draft; onClose: () => void 
             className="min-w-0 flex-1 bg-transparent py-2 text-sm outline-none"
             aria-label="Describe the entry"
           />
-          <button onClick={voice} className={cx("grid size-9 place-items-center rounded-xl transition", listening ? "bg-bad text-white animate-pulse" : "text-ink-2 hover:bg-white")} aria-label={listening ? t("Listening") : "Speak"}>
+          <button onClick={voice} className={cx("grid size-9 place-items-center rounded-xl transition", listening ? "bg-bad text-white animate-pulse" : "text-ink-2 hover:bg-elevated")} aria-label={listening ? t("Listening") : "Speak"}>
             <Mic className="size-4" />
           </button>
           <Button size="sm" variant="secondary" onClick={() => fillFromText(text)} disabled={!text.trim()}>
@@ -183,7 +183,7 @@ function QuickEntry({ initial, onClose }: { initial: Draft; onClose: () => void 
               aria-pressed={kind === kk}
               className={cx(
                 "flex flex-col items-start gap-2 rounded-2xl p-3 text-left text-sm font-medium transition",
-                kind === kk ? `${grad} shadow-lg ring-2 ring-offset-2 ${ring}` : "bg-canvas text-ink hover:bg-[#ece9f5]",
+                kind === kk ? `${grad} shadow-lg ring-2 ring-offset-2 ring-offset-surface ${ring}` : "border border-line bg-surface-2 text-ink hover:bg-elevated",
               )}
             >
               <I className="size-5" aria-hidden />
@@ -259,7 +259,7 @@ function QuickEntry({ initial, onClose }: { initial: Draft; onClose: () => void 
             <p className="text-sm font-medium text-ink-2">{t("Paid with")}</p>
             <div className="mt-1.5 flex flex-wrap gap-2">
               {["cash", "upi", "bank", "card"].map((m) => (
-                <button key={m} onClick={() => set("mode", m)} className={cx("h-9 rounded-full border px-4 text-sm", f.mode === m ? "border-brand bg-brand text-white" : "border-line")}>
+                <button key={m} onClick={() => set("mode", m)} className={cx("h-9 rounded-full border px-4 text-sm", f.mode === m ? "border-[#f4f2ee] bg-[#f4f2ee] text-black" : "border-line")}>
                   {t(m === "upi" ? "UPI" : m[0].toUpperCase() + m.slice(1))}
                 </button>
               ))}
@@ -270,7 +270,7 @@ function QuickEntry({ initial, onClose }: { initial: Draft; onClose: () => void 
         <input value={f.note ?? ""} onChange={(e) => set("note", e.target.value)} placeholder={t("Note")} className="h-11 w-full rounded-xl border border-line px-3 text-sm outline-none focus:border-brand" aria-label={t("Note")} />
 
         {err && <p className="rounded-xl bg-bad-50 p-3 text-sm text-bad">{err}</p>}
-        <button onClick={save} disabled={!valid || busy} className={cx("h-13 w-full rounded-2xl py-3.5 text-base font-semibold shadow-lg transition active:scale-[0.99] disabled:opacity-50", k.grad)}>
+        <button onClick={save} disabled={!valid || busy} className="neo h-13 w-full bg-[#f4f2ee] py-3.5 text-sm font-bold tracking-wider text-black uppercase [--neo-edge:#7d7a85] hover:bg-white disabled:opacity-40">
           {busy ? "…" : `${t("Save")} · ${t(k.label)}${amount ? " " + inr(amount) : ""}`}
         </button>
       </div>

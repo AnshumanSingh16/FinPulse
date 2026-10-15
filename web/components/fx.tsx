@@ -100,7 +100,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     <ToastCtx.Provider value={{ show }}>
       {children}
       {toast && (
-        <div key={toast.id} role="status" className="toast fixed bottom-24 left-1/2 z-[60] flex max-w-[92vw] items-center gap-3 rounded-2xl bg-ink px-4 py-3 text-sm text-white shadow-2xl lg:bottom-8">
+        <div key={toast.id} role="status" className="toast fixed bottom-24 left-1/2 z-[60] flex max-w-[92vw] items-center gap-3 rounded-2xl border border-line bg-elevated px-4 py-3 text-sm text-ink shadow-2xl lg:bottom-8">
           {toast.tone === "bad" ? <X className="size-4 shrink-0 text-red-300" /> : <CheckCircle2 className="size-4 shrink-0 text-emerald-300" />}
           <span className="min-w-0">{toast.text}</span>
           {toast.undo && (

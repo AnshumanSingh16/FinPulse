@@ -54,7 +54,7 @@ function Money() {
   const change = (x: Tab) => router.replace(x === "activity" ? "/money/" : `/money/?tab=${x}`, { scroll: false });
   return (
     <div className="space-y-5">
-      <h1 className="text-2xl font-bold tracking-tight">{t("Money")}</h1>
+      <h1 className="text-3xl">{t("Money")}</h1>
       <div className="no-scrollbar -mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
         <Segmented<Tab>
           value={tab}

@@ -51,13 +51,13 @@ export function Button({ variant = "primary", size = "md", className, ...rest }:
   return (
     <button
       className={cx(
-        "inline-flex items-center justify-center gap-2 rounded-full font-medium transition active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand",
-        size === "sm" && "h-8 px-3.5 text-sm",
-        size === "md" && "h-10 px-5 text-[0.95rem]",
-        size === "lg" && "h-12 px-6 text-base",
-        variant === "primary" && "bg-brand text-white hover:bg-brand-600",
-        variant === "secondary" && "border border-line bg-surface text-ink hover:bg-canvas",
-        variant === "ghost" && "text-brand hover:bg-brand-50",
+        "inline-flex items-center justify-center gap-2 font-semibold tracking-wide transition disabled:opacity-40 disabled:pointer-events-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold",
+        size === "sm" && "h-8 px-3.5 text-xs uppercase",
+        size === "md" && "h-10 px-5 text-sm uppercase",
+        size === "lg" && "h-12 px-6 text-sm uppercase",
+        variant === "primary" && "neo bg-[#f4f2ee] text-black hover:bg-white [--neo-edge:#7d7a85]",
+        variant === "secondary" && "neo border border-[#3a3a42] bg-surface-2 text-ink hover:bg-elevated [--neo-edge:#000]",
+        variant === "ghost" && "rounded-full text-brand normal-case tracking-normal hover:bg-brand-50",
         className,
       )}
       {...rest}
@@ -71,7 +71,7 @@ export function Pill({ tone = "neutral", children, className }: { tone?: Tone; c
 
 export function Segmented<T extends string>({ value, options, onChange, className }: { value: T; options: { value: T; label: string }[]; onChange: (v: T) => void; className?: string }) {
   return (
-    <div role="tablist" className={cx("inline-flex rounded-full bg-[#eceee9] p-1", className)}>
+    <div role="tablist" className={cx("inline-flex rounded-full border border-line bg-surface p-1", className)}>
       {options.map((o) => (
         <button
           key={o.value}
@@ -80,7 +80,7 @@ export function Segmented<T extends string>({ value, options, onChange, classNam
           onClick={() => onChange(o.value)}
           className={cx(
             "h-9 rounded-full px-4 text-sm font-medium whitespace-nowrap transition",
-            o.value === value ? "bg-surface text-ink shadow-sm" : "text-ink-2 hover:text-ink",
+            o.value === value ? "bg-[#f4f2ee] text-black shadow-sm" : "text-ink-2 hover:text-ink",
           )}
         >
           {o.label}
@@ -129,8 +129,8 @@ export function Sheet({ open, onClose, title, children, wide }: { open: boolean;
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal aria-label={title}>
-      <div className="absolute inset-0 bg-[#13201a]/40" onClick={onClose} />
-      <div className={cx("sheet relative max-h-[88vh] w-full overflow-y-auto rounded-t-3xl bg-surface p-6 shadow-2xl sm:rounded-3xl", wide ? "sm:max-w-2xl" : "sm:max-w-lg")}>
+      <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={onClose} />
+      <div className={cx("sheet relative max-h-[88vh] w-full overflow-y-auto rounded-t-3xl border border-line bg-surface p-6 shadow-2xl sm:rounded-3xl", wide ? "sm:max-w-2xl" : "sm:max-w-lg")}>
         <div className="mb-4 flex items-start justify-between gap-4">
           <h3 className="text-lg font-semibold tracking-tight">{title}</h3>
           <button onClick={onClose} className="-m-1 rounded-full p-1.5 text-ink-2 hover:bg-canvas" aria-label="Close">

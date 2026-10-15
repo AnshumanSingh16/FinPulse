@@ -54,7 +54,7 @@ export default function GoalsPage() {
   const { t } = useT();
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight">{t("Goals & budgets")}</h1>
+      <h1 className="text-3xl">{t("Goals & budgets")}</h1>
       <Goals />
       <Budgets />
     </div>
@@ -247,7 +247,7 @@ function Budgets() {
           <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
             <div>
               <p className="text-sm text-ink-2">Spent this month</p>
-              <p className="num text-3xl font-bold">
+              <p className="display num text-4xl">
                 {short(st.total_spent)} <span className="text-base font-medium text-muted">/ {short(st.total_limit)}</span>
               </p>
             </div>

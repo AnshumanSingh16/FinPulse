@@ -3,14 +3,14 @@
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { day, inr, tick } from "@/lib/format";
 
-const IN = "#2a78d6";
-const OUT = "#eb6834";
-const GRID = "#eceee9";
-const AXIS = { fontSize: 12, fill: "#87938c" };
+const IN = "#4f8ff0";
+const OUT = "#dd6a32";
+const GRID = "#232327";
+const AXIS = { fontSize: 12, fill: "#6f6d76" };
 
 function TipBox({ title, rows }: { title: string; rows: { label: string; value: string; color?: string; dashed?: boolean }[] }) {
   return (
-    <div className="rounded-xl border border-line bg-surface px-3 py-2 text-sm shadow-lg">
+    <div className="rounded-xl border border-line bg-elevated px-3 py-2 text-sm shadow-lg">
       <p className="mb-1 font-medium">{title}</p>
       {rows.map((r) => (
         <p key={r.label} className="flex items-center gap-2 text-ink-2">
@@ -41,8 +41,8 @@ export function CashChart({ history, outlook, cushion, height = 180 }: { history
         <CartesianGrid vertical={false} stroke={GRID} />
         <XAxis dataKey="date" tickFormatter={day} tick={AXIS} axisLine={false} tickLine={false} minTickGap={40} />
         <YAxis tickFormatter={tick} tick={AXIS} axisLine={false} tickLine={false} width={52} />
-        {cushion != null && <ReferenceLine y={cushion} stroke="#9a5b05" strokeDasharray="4 4" label={{ value: "1 month of costs", position: "insideBottomRight", fontSize: 11, fill: "#9a5b05" }} />}
-        {today && <ReferenceLine x={today} stroke="#87938c" label={{ value: "Today", position: "insideTopLeft", fontSize: 11, fill: "#4b5a52" }} />}
+        {cushion != null && <ReferenceLine y={cushion} stroke="#e3c18c" strokeDasharray="4 4" label={{ value: "1 month of costs", position: "insideBottomRight", fontSize: 11, fill: "#e3c18c" }} />}
+        {today && <ReferenceLine x={today} stroke="#6f6d76" label={{ value: "Today", position: "insideTopLeft", fontSize: 11, fill: "#a8a6ae" }} />}
         <Tooltip
           content={({ active, payload, label }) => {
             if (!active || !payload?.length) return null;
@@ -66,7 +66,7 @@ export function SalesCostsChart({ data }: { data: { month: string; sales: number
         <XAxis dataKey="month" tick={AXIS} axisLine={false} tickLine={false} />
         <YAxis tickFormatter={tick} tick={AXIS} axisLine={false} tickLine={false} width={52} />
         <Tooltip
-          cursor={{ fill: "#f2f3f0" }}
+          cursor={{ fill: "#1d1d21" }}
           content={({ active, payload, label }) =>
             active && payload?.length ? (
               <TipBox
@@ -95,8 +95,8 @@ export function PurchaseChart({ series, cushion }: { series: { date: string; wit
         <CartesianGrid vertical={false} stroke={GRID} />
         <XAxis dataKey="date" tickFormatter={day} tick={AXIS} axisLine={false} tickLine={false} minTickGap={40} />
         <YAxis tickFormatter={tick} tick={AXIS} axisLine={false} tickLine={false} width={52} />
-        <ReferenceLine y={cushion} stroke="#9a5b05" strokeDasharray="4 4" label={{ value: "1 month of costs", position: "insideBottomRight", fontSize: 11, fill: "#9a5b05" }} />
-        <ReferenceLine y={0} stroke="#b42318" strokeOpacity={0.4} />
+        <ReferenceLine y={cushion} stroke="#e3c18c" strokeDasharray="4 4" label={{ value: "1 month of costs", position: "insideBottomRight", fontSize: 11, fill: "#e3c18c" }} />
+        <ReferenceLine y={0} stroke="#ff6b6b" strokeOpacity={0.4} />
         <Tooltip
           content={({ active, payload, label }) =>
             active && payload?.length ? (
@@ -111,7 +111,7 @@ export function PurchaseChart({ series, cushion }: { series: { date: string; wit
           }
         />
         <Legend iconType="plainline" wrapperStyle={{ fontSize: 13, paddingTop: 6 }} formatter={(v) => <span className="text-ink-2">{v}</span>} />
-        <Line type="stepAfter" dataKey="without" name="If you don't buy" stroke="#87938c" strokeWidth={2} strokeDasharray="5 4" dot={false} isAnimationActive={false} />
+        <Line type="stepAfter" dataKey="without" name="If you don't buy" stroke="#6f6d76" strokeWidth={2} strokeDasharray="5 4" dot={false} isAnimationActive={false} />
         <Line type="stepAfter" dataKey="with" name="If you buy" stroke={IN} strokeWidth={2.5} dot={false} isAnimationActive={false} />
       </LineChart>
     </ResponsiveContainer>
@@ -131,8 +131,8 @@ export function ForecastChart({ series, cushion }: { series: { date: string; bal
         <CartesianGrid vertical={false} stroke={GRID} />
         <XAxis dataKey="date" tickFormatter={day} tick={AXIS} axisLine={false} tickLine={false} minTickGap={40} />
         <YAxis tickFormatter={tick} tick={AXIS} axisLine={false} tickLine={false} width={52} />
-        <ReferenceLine y={cushion} stroke="#9a5b05" strokeDasharray="4 4" label={{ value: "Your cushion", position: "insideBottomRight", fontSize: 11, fill: "#9a5b05" }} />
-        <ReferenceLine y={0} stroke="#b42318" strokeOpacity={0.4} />
+        <ReferenceLine y={cushion} stroke="#e3c18c" strokeDasharray="4 4" label={{ value: "Your cushion", position: "insideBottomRight", fontSize: 11, fill: "#e3c18c" }} />
+        <ReferenceLine y={0} stroke="#ff6b6b" strokeOpacity={0.4} />
         <Tooltip content={({ active, payload, label }) => (active && payload?.length ? <TipBox title={day(String(label))} rows={[{ label: "Expected balance", value: inr(Number(payload[0].value)) }]} /> : null)} />
         <Area type="stepAfter" dataKey="balance" stroke={IN} strokeWidth={2} fill="url(#fcFill)" isAnimationActive={false} />
       </AreaChart>
@@ -180,8 +180,8 @@ export function ScoreHistory({ data }: { data: { label: string; score: number }[
       <BarChart data={data} margin={{ top: 16, right: 4, bottom: 0, left: 4 }}>
         <XAxis dataKey="label" tick={AXIS} axisLine={false} tickLine={false} />
         <YAxis hide domain={[0, 100]} />
-        <Tooltip cursor={{ fill: "#f2f0f8" }} content={({ active, payload, label }) => (active && payload?.length ? <TipBox title={String(label)} rows={[{ label: "Score", value: String(payload[0].value) }]} /> : null)} />
-        <Bar dataKey="score" fill="#6a44ff" radius={[6, 6, 0, 0]} label={{ position: "top", fontSize: 11, fill: "#555068" }} isAnimationActive />
+        <Tooltip cursor={{ fill: "#1d1d21" }} content={({ active, payload, label }) => (active && payload?.length ? <TipBox title={String(label)} rows={[{ label: "Score", value: String(payload[0].value) }]} /> : null)} />
+        <Bar dataKey="score" fill="#b8a4ff" radius={[6, 6, 0, 0]} label={{ position: "top", fontSize: 11, fill: "#a8a6ae" }} isAnimationActive />
       </BarChart>
     </ResponsiveContainer>
   );

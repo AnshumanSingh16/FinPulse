@@ -38,14 +38,14 @@ export default function HealthPage() {
   if (data.status !== "ok") return <Card className="text-ink-2">Add a few weeks of transactions to see your health score.</Card>;
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight">{t("Health score")}</h1>
-      <section className="grad-hero flex flex-wrap items-center gap-6 rounded-[1.75rem] p-6 shadow-xl shadow-violet-300/40">
-        <div className="rounded-3xl bg-white/95 p-3 text-ink">
+      <h1 className="text-3xl">{t("Health score")}</h1>
+      <section className="grad-hero flex flex-wrap items-center gap-6 rounded-[1.75rem] p-6 shadow-xl shadow-black/60">
+        <div className="rounded-3xl border border-line bg-black/40 p-3 text-ink">
           <Gauge score={data.score} size={220} />
         </div>
         <div>
           <p className="text-white/80">Your business health</p>
-          <p className="text-4xl font-bold">{data.grade}</p>
+          <p className="display text-5xl">{data.grade}</p>
           {data.change != null && (
             <p className="mt-1 text-white/90">
               {data.change > 0 ? "▲ up" : data.change < 0 ? "▼ down" : "No change"} {data.change ? Math.abs(data.change) : ""} points since last month

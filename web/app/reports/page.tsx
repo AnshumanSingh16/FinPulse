@@ -54,7 +54,7 @@ export default function ReportsPage() {
   return (
     <div className="space-y-5">
       <div className="no-print flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold tracking-tight">{t("Reports")}</h1>
+        <h1 className="text-3xl">{t("Reports")}</h1>
         <div className="flex flex-wrap items-center gap-2">
           <Segmented
             value={kind}
