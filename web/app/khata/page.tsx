@@ -2,7 +2,8 @@
 
 import { ArrowDownLeft, ArrowUpRight, HandCoins, MessageCircle, ReceiptText, Search } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useContext, useEffect, useMemo, useState } from "react";
+import { DataVersion } from "@/components/data-version";
 import { Avatar } from "@/components/cat";
 import { useQuickEntry } from "@/components/quick-entry";
 import { ReminderSheet } from "@/components/reminder";
@@ -50,6 +51,8 @@ export default function KhataPage() {
 
 function Khata() {
   const { t } = useT();
+  const { state } = useContext(DataVersion);
+  const who = state?.type_info ?? { customers: "customers", suppliers: "suppliers" };
   const params = useSearchParams();
   const router = useRouter();
   const side = params.get("side") === "suppliers" ? "suppliers" : "customers";
@@ -66,14 +69,14 @@ function Khata() {
         {(["customers", "suppliers"] as const).map((s) => (
           <button key={s} role="tab" aria-selected={side === s} onClick={() => router.replace(`/khata/?side=${s}`)}
             className={cx("rounded-xl py-2.5 text-sm font-semibold transition", side === s ? "bg-surface text-ink shadow-sm" : "text-ink-2")}>
-            {s === "customers" ? t("Lena · customers") : t("Dena · suppliers")}
+            {s === "customers" ? `${t("Owed to you")} · ${t(who.customers)}` : `${t("You owe")} · ${t(who.suppliers)}`}
           </button>
         ))}
       </div>
 
       {data && (
         <div className={cx("rounded-3xl p-5", lena ? "grad-mint" : "grad-sunset")}>
-          <p className="text-sm text-white/85">{lena ? t("Customers owe you") : t("You owe suppliers")}</p>
+          <p className="text-sm text-white/85">{lena ? t("Your {who} owe you", { who: t(who.customers) }) : t("You owe your {who}", { who: t(who.suppliers) })}</p>
           <p className="num text-4xl font-bold">{short(data.total)}</p>
           <p className="mt-1 text-sm text-white/85">
             {data.overdue > 0 ? t("{amt} is overdue", { amt: short(data.overdue) }) : t("Nothing overdue")} · {t("{n} people", { n: data.count })}

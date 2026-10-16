@@ -13,10 +13,17 @@ from pathlib import Path
 import pandas as pd
 
 from finpilot.data import books, khata, store
+from finpilot.data import demos
 from finpilot.data.demo import AS_OF as DEMO_AS_OF
 from finpilot.data.demo import BUSINESS, load_demo
 
-BOOKS = ("demo", "upload")
+# Demo businesses (book key -> name, business type, city, one-line story). "demo" is the original manufacturer.
+DEMOS = {
+    "demo": {"name": BUSINESS, "type": "manufacturing", "city": "Pune", "story": "Spice maker selling to shops on 30-day credit. Cash is healthy — one big customer is late."},
+    "demo_agency": {"name": demos.AGENCY.business, "type": "services", "city": demos.AGENCY.city, "story": "12-person design agency. A hospital client stopped paying; cash runs out in early November."},
+    "demo_cafe": {"name": demos.CAFE.business, "type": "restaurant", "city": demos.CAFE.city, "story": "Busy café. Diwali stock and a kitchen upgrade squeeze cash below safety in early December."},
+}
+BOOKS = (*DEMOS, "upload")
 
 
 @dataclass
@@ -30,7 +37,7 @@ class Dataset:
 
     @property
     def is_demo(self) -> bool:
-        return self.source == "demo"
+        return self.source in DEMOS
 
     @property
     def book(self) -> str:
@@ -45,9 +52,11 @@ def today() -> pd.Timestamp:
     return pd.Timestamp.today().normalize()
 
 
-@lru_cache(maxsize=1)
-def _demo_tables() -> dict:
-    return load_demo()
+@lru_cache(maxsize=4)
+def _demo_tables(book: str = "demo") -> dict:
+    if book == "demo":
+        return load_demo()
+    return demos.generate(demos.PROFILES[book.removeprefix("demo_")])
 
 
 def _pinned_as_of(db: Path) -> str | None:
@@ -57,12 +66,12 @@ def _pinned_as_of(db: Path) -> str | None:
 
 
 def load(db: Path, book: str) -> Dataset | None:
-    if book == "demo":
-        saved = store.load_dataset(db, "demo")
+    if book in DEMOS:
+        saved = store.load_dataset(db, book)
         if saved is None:
-            t = _demo_tables()
-            return Dataset(BUSINESS, "demo", t["ledger"].copy(), t["obligations"].copy(), t["balances"].copy(), pd.Timestamp(DEMO_AS_OF))
-        return Dataset(saved["name"], "demo", saved["ledger"], saved.get("obligations"), saved.get("balances"), pd.Timestamp(DEMO_AS_OF))
+            t = _demo_tables(book)
+            return Dataset(DEMOS[book]["name"], book, t["ledger"].copy(), t["obligations"].copy(), t["balances"].copy(), pd.Timestamp(DEMO_AS_OF))
+        return Dataset(saved["name"], book, saved["ledger"], saved.get("obligations"), saved.get("balances"), pd.Timestamp(DEMO_AS_OF))
     return load_started(db)
 
 
@@ -80,9 +89,12 @@ def save(db: Path, ds: Dataset, tables: khata.Tables) -> Dataset:
     return load(db, ds.book)  # type: ignore[return-value]
 
 
-def reset_demo(db: Path) -> None:
-    store.clear_dataset(db, "demo")
-    books.reset_book(db, "demo")
+def reset_demo(db: Path, book: str | None = None) -> None:
+    """Undo everything tried in a demo (the current one by default, or all of them with book='all')."""
+    targets = list(DEMOS) if book == "all" else [book or (get_source(db) if get_source(db) in DEMOS else "demo")]
+    for b in targets:
+        store.clear_dataset(db, b)
+        books.reset_book(db, b)
 
 
 def get_source(db: Path) -> str:
@@ -93,18 +105,19 @@ def get_source(db: Path) -> str:
 
 def set_source(db: Path, source: str) -> None:
     if source not in BOOKS:
-        raise ValueError("source must be demo or upload")
+        raise ValueError(f"source must be one of {', '.join(BOOKS)}")
     with store.connect(db) as con:
         con.execute("INSERT OR REPLACE INTO meta VALUES ('source', ?)", (source,))
 
 
 def current(db: Path) -> Dataset:
-    """The upload if the owner chose it and it exists; otherwise the demo."""
-    if get_source(db) == "upload":
+    """The upload if the owner chose it and it exists; otherwise the chosen demo."""
+    src = get_source(db)
+    if src == "upload":
         ds = uploaded(db)
         if ds is not None:
             return ds
-    return load(db, "demo")  # type: ignore[return-value]
+    return load(db, src if src in DEMOS else "demo")  # type: ignore[return-value]
 
 
 def raw_upload_tables(db: Path) -> dict:

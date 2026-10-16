@@ -9,14 +9,33 @@ export interface Evidence {
   record_count: number;
 }
 
+export interface BusinessType {
+  key: string;
+  label: string;
+  customers: string;
+  suppliers: string;
+}
+
+export interface DemoBusiness {
+  key: string;
+  name: string;
+  type: string;
+  city: string;
+  story: string;
+}
+
 export interface AppState {
   business: string;
-  source: "demo" | "upload";
+  source: string;
   is_demo: boolean;
   as_of: string;
   as_of_label: string;
   upload: { name: string; bank_rows: number; invoice_rows: number; balance_rows: number; ready: boolean };
   ai: AiStatus;
+  business_type: string;
+  type_info: BusinessType | null;
+  types: BusinessType[];
+  demos: DemoBusiness[];
 }
 
 export interface Action {

@@ -4,8 +4,8 @@ import type { Metadata, Viewport } from "next";
 import { Providers } from "@/components/providers";
 
 export const metadata: Metadata = {
-  title: "Munshi — your AI bookkeeper",
-  description: "Tell Munshi what happened; it keeps your khata and tells you what to do. English, Hindi, Hinglish.",
+  title: "FinPilot — your cash autopilot",
+  description: "See your cash 90 days ahead. AI agents find the gap and prepare the fix — you approve.",
   icons: { icon: "/icon.svg" },
 };
 

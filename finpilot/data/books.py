@@ -26,6 +26,7 @@ SCHEMA = [
     "preview TEXT, state TEXT, decided_at TEXT, result TEXT, PRIMARY KEY (book, id))",
     "CREATE TABLE IF NOT EXISTS memory (id INTEGER PRIMARY KEY AUTOINCREMENT, book TEXT, text TEXT, created_at TEXT)",
     "CREATE TABLE IF NOT EXISTS checkups (book TEXT, lang TEXT, day TEXT, ran_at TEXT, data TEXT, PRIMARY KEY (book, lang))",
+    "CREATE TABLE IF NOT EXISTS autopilot_moves (book TEXT, id TEXT, state TEXT, at TEXT, PRIMARY KEY (book, id))",
     "CREATE TABLE IF NOT EXISTS chat_log (id INTEGER PRIMARY KEY AUTOINCREMENT, book TEXT, at TEXT, role TEXT, kind TEXT, data TEXT)",
 ]
 
@@ -130,7 +131,8 @@ def update_goal(db: Path, book: str, goal_id: int, add: float | None = None, del
 # ---------------------------------------------------------------- settings
 
 
-DEFAULT_SETTINGS = {"gst_registered": "yes", "gst_rate_sales": "5", "gst_rate_purchases": "5", "gst_filing": "monthly", "language": "en"}
+DEFAULT_SETTINGS = {"gst_registered": "yes", "gst_rate_sales": "5", "gst_rate_purchases": "5", "gst_filing": "monthly", "language": "en",
+                    "business_type": "", "safety": ""}
 
 
 def settings(db: Path, book: str) -> dict[str, str]:
@@ -172,7 +174,7 @@ def pop_entry(db: Path, book: str, entry_id: str) -> dict | None:
 def reset_book(db: Path, book: str) -> None:
     """Forget everything the owner did in a book (used for 'Reset demo')."""
     with connect(db) as con:
-        for t in ("contacts", "promises", "cat_rules", "budgets", "goals", "settings", "entry_log", "agent_actions", "memory", "checkups", "chat_log"):
+        for t in ("contacts", "promises", "cat_rules", "budgets", "goals", "settings", "entry_log", "agent_actions", "memory", "checkups", "chat_log", "autopilot_moves"):
             con.execute(f"DELETE FROM {t} WHERE book = ?", (book,))
 
 
@@ -276,3 +278,19 @@ def update_chat_where(db: Path, book: str, kind: str, key: str, value, changes: 
             data = json.loads(d)
             if data.get(key) == value:
                 con.execute("UPDATE chat_log SET data = ? WHERE id = ?", (json.dumps(data | changes, default=str), i))
+
+
+# ---------------------------------------------------------------- cash autopilot: the owner's decisions on the agents' moves
+
+
+def move_states(db: Path, book: str) -> dict[str, str]:
+    with connect(db) as con:
+        return dict(con.execute("SELECT id, state FROM autopilot_moves WHERE book = ?", (book,)).fetchall())
+
+
+def set_move_state(db: Path, book: str, move_id: str, state: str | None) -> None:
+    with connect(db) as con:
+        if state is None:
+            con.execute("DELETE FROM autopilot_moves WHERE book = ? AND id = ?", (book, move_id))
+        else:
+            con.execute("INSERT OR REPLACE INTO autopilot_moves VALUES (?, ?, ?, ?)", (book, move_id, state, store.now()))

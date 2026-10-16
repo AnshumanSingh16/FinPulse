@@ -6,8 +6,8 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
     <html lang="en-IN">
       <body style={{ fontFamily: "system-ui, sans-serif", background: "#f6f4ef", color: "#1c1d1f", padding: "4rem 1.25rem" }}>
         <div style={{ maxWidth: 520, margin: "0 auto" }}>
-          <h1 style={{ fontSize: 24 }}>Munshi hit a problem</h1>
-          <p>Please send this message to whoever set up Munshi:</p>
+          <h1 style={{ fontSize: 24 }}>FinPilot hit a problem</h1>
+          <p>Please send this message to whoever set up FinPilot:</p>
           <pre style={{ whiteSpace: "pre-wrap", background: "#ece8df", padding: 16, borderRadius: 16, color: "#c0352b" }}>
             {error.message || String(error)}
             {error.digest ? `\n(${error.digest})` : ""}

@@ -1,17 +1,23 @@
-# Munshi — the AI bookkeeper that lives in a chat
+# FinPilot — your cash autopilot
 
-*(code name FinPilot)*
+**Never be surprised by cash again.** FinPilot looks 90 days ahead at your bank balance, warns you before it dips, and has AI agents prepare the moves that fix it — you approve them with one tap. It works for any small business: a shop, a factory, an agency, a café, a clinic, an online seller.
 
-Munshi is for small shop and business owners in India. Instead of forms and dashboards there is **one chat**, like WhatsApp:
+- **Cash tab:**
+  - one sentence at the top: *"You'll run out of cash on 1 Nov"*, *"Cash drops below your safety level on 1 Dec"* or *"You're covered for the next 90 days"*
+  - the bills that cause the dip
+  - a chart: "if nothing is done" vs. "with the agents' plan"
+- **Agents prepare the fixes:**
+  - **Collections:** collect overdue money, with a WhatsApp reminder ready.
+  - **Payables:** ask a supplier to move a bill.
+  - **Spending:** pause owner drawings or marketing.
+  - **Tax:** set GST aside.
 
-- **Tell Munshi what happened** — *“Ravi ko 2500 udhaar”*, *“Metro ne 50k diye”*, *“bijli bill 3200”* — typed or spoken, in Hindi, English or Hinglish. Munshi prepares the entry; one tap saves it.
-- **The chat is the khata.** Every entry lands in the thread as a line you can undo — scroll up and you're reading your account book.
-- **Munshi speaks first.** Each morning it goes through your books by itself and posts what needs you today, with the reminders and fixes already prepared.
-- **Lena / Dena, always on top:** bank balance, money to collect, money to pay.
-- **Ask anything:** *“kaun der se deta hai?”*, *“is mahine kaisa raha?”*, *“help me collect my money”*, *“₹12 lakh ki machine le sakta hoon?”*
-- **Khata screen:** every customer and supplier, what they owe, and a WhatsApp reminder in one tap.
+  Each move shows how much it lifts your lowest point, measured by re-running the whole forecast. **Approve plan** takes the smallest set of moves that keeps you above your safety level.
+- **Timeline:** money in and out week by week for 13 weeks, with every known bill and invoice, plus your approved moves.
+- **Ask:** *"Can I afford a ₹12 lakh machine?"*, *"Who pays late?"*, *"kaun der se deta hai?"* Answers are in English or Hindi, and every figure is checked against your records.
+- **People:** who owes you, who you owe, and a WhatsApp reminder in one tap. The words fit your business: clients, guests, buyers…
 
-Every figure comes from tested Python calculations over your own records and is checked before you see it. Munshi **prepares, you approve** — it never pays, sends or files anything itself. Works offline with built-in answers; add a free Gemini key (or a Claude key) to let it understand anything.
+Every figure comes from tested Python calculations over your own records. FinPilot **prepares, you approve**: it never pays, sends or files anything itself. It works offline with built-in answers; add a free Gemini key (or a Claude key) to let it understand anything.
 
 Why it looks like this: see **[VISION.md](VISION.md)**.
 
@@ -83,14 +89,16 @@ FINPILOT_PROVIDER=gemini        # optional when only one key is set
 
 ---
 
-## A 3-minute tour (demo shop)
+## A 3-minute tour (three demo businesses)
 
-1. Open the app — Munshi is already going through the demo shop's books. Watch its plan tick off, then read the morning message: who to collect from, which bills are due, anything odd — with WhatsApp reminders ready.
-2. Type *“Ravi ko 2500 udhaar”* → **Confirm**. A khata line appears in the chat and **Lena** goes up. Tap **Undo** on the line to take it back.
-3. Ask *“kaun der se deta hai?”* or *“help me collect my money”*. Then tell it *“never remind Metro Foods”* and ask again — it remembers.
-4. Tap **Paisa aaya** above the message box to record a payment with the form instead.
-5. Open **Khata** → Metro Foods: what they owe, their history, **Remind on WhatsApp**.
-6. **Settings** (⚙) → turn the AI on with a free Gemini key, switch to Hindi, use your own books, or print the monthly report for your CA.
+1. Open the app. You're in **Pixel Pundit Studio**, a design agency. The top says **"You'll run out of cash on 1 Nov"**. It isn't counting ₹2.66 L from Kaveri Hospitals, because they are already 61 days late.
+2. Read **Your agents' plan**. Collecting from Kaveri lifts the lowest point by ₹5.26 L, and pausing drawings and marketing adds the rest. Tap **Approve plan**: the green line now stays above your safety level, and Approve & remind opens the WhatsApp reminder.
+3. Open **Timeline**. Week by week you'll see salaries, rent, the office deposit and the Adobe renewal, plus the moves you approved.
+4. Tap the business name at the top and switch to **Brew & Bun Café**. Diwali stock and a kitchen fit-out push cash below safety in early December. Then switch to **Annapurna Masala Works**, which is covered for 90 days.
+5. Tap **change** under "Your safety level" to set your own minimum. The warnings and the plan follow it.
+6. Open **Ask** and try *"Will I run short of cash?"* or *"Can I afford a ₹12 lakh machine?"*.
+7. Open **People** to see who owes you and who you owe.
+8. Open **Settings** (⚙) to turn the AI on with a free Gemini key, switch to Hindi, choose your business type, or **use your own books** (upload a bank statement or start from today's balance).
 
 ## Your own data
 
@@ -126,9 +134,10 @@ You can enter a bank balance by hand if you don't have a statement file.
 run.py                      Starts the local server and opens the browser
 finpilot/
   config.py                 Settings from environment / .env (no secrets in code)
-  data/                     Canonical tables, CSV/XLSX loader + validation, demo generator, SQLite store
+  data/                     Canonical tables, CSV/XLSX loader + validation, demo generators (manufacturer, agency, café), SQLite store
   engine/                   Pure Python + pandas. ALL financial calculations live here (tested)
     summary.py  expenses.py  cash.py  forecast.py  decision.py  alerts.py
+    autopilot.py            The cash autopilot: late-customer exclusion, candidate moves, measured impact, suggested plan, weekly view
   agent/                    tools.py (approved tools + validation), orchestrator.py (agent loop),
                             verify.py (independent checks), offline.py (built-in answers)
   api/
@@ -136,7 +145,7 @@ finpilot/
     views.py                Plain-language views (status, attention items, reminders…) over the engine
     dataset.py              Demo vs. your uploaded data
   web/                      The built web app (generated — do not edit)
-web/                        Next.js + Tailwind source for the web app (Munshi chat, Khata, Settings, Your data, Reports)
+web/                        Next.js + Tailwind source for the web app (Cash, Timeline, Ask, People, Settings, Your data, Reports)
 tests/                      pytest: engine, loader, store, agent, API
 data/demo/                  The fixed synthetic dataset (also usable as sample uploads)
 ```
@@ -152,7 +161,8 @@ npm run build                                       # rebuilds finpilot/web for 
 
 ### How the agent works
 
-1. **Plan and call tools.** The model gets the question, a description of the available data and the rules. Before each round it writes one short line of what it will check — shown live in Ask, with each tool step, over a server-sent-event stream (`POST /api/ask/stream`). It chooses from 28 approved tools:
+1. **Plan and call tools.** The model gets the question, a description of the available data and the rules. Before each round it writes one short line of what it will check — shown live in Ask, with each tool step, over a server-sent-event stream (`POST /api/ask/stream`). It chooses from 29 approved tools:
+   - cash autopilot: `get_cash_autopilot` (the 90-day look-ahead, safety level, causes, and each agent's move with its measured effect). The agent is told to start here for anything about running short.
    - money: `get_financial_summary`, `analyze_expense_changes`, `find_unusual_transactions`, `get_cash_position`, `forecast_cash_flow`
    - khata: `get_receivables_and_payables`, `get_upcoming_payments`, `get_customers_and_suppliers`, `get_person_details`
    - insight: `get_health_score`, `get_weekly_story`, `get_budgets_and_goals`, `get_tax_calendar_and_gst`
@@ -194,11 +204,21 @@ The rule-based mode uses the same tools, validation and verification, with a sma
 ## Tests
 
 ```bash
-pytest            # 265 tests, about a minute
+pytest            # 280 tests, about a minute and a half
 ```
 
 The tests cover:
 
+- **The cash autopilot:**
+  - the three demo stories
+  - late customers not counted
+  - each move's effect equal to a fresh forecast run
+  - a moved bill shifting only that payment
+  - weekly totals adding up
+  - approve, undo, dismiss and approve-plan, plus "supplier agreed" changing the bill's due date
+  - the safety level setting
+  - books kept apart per demo
+  - the offline "will I run short?" answer
 - **Financial calculations:** checked against hand-worked examples on a small fixture, plus independent re-sums of the demo data.
 - **Expense comparisons and unusual-transaction detection:** including the anomalies planted in the demo data.
 - **Duplicate detection:** in the ledger and in uploaded files.

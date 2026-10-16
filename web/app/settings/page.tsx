@@ -1,15 +1,15 @@
 "use client";
 
-import { Bot, Brain, ChevronRight, Database, FileText, Languages, MessageSquareX, Palette } from "lucide-react";
+import { Bot, Brain, Briefcase, ChevronRight, Database, FileText, Languages, MessageSquareX, Palette } from "lucide-react";
 import Link from "next/link";
 import { useContext, useState } from "react";
 import { MemorySheet } from "@/components/agent";
 import { AiSetupSheet } from "@/components/ai-setup";
 import { DataVersion } from "@/components/data-version";
 import { useToast } from "@/components/fx";
-import { LangToggle, MunshiMark, ThemeToggle } from "@/components/shell";
+import { BrandMark, LangToggle, ThemeToggle } from "@/components/shell";
 import { cx } from "@/components/ui";
-import { del } from "@/lib/api";
+import { del, post } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 
 function Row({ I, title, sub, right, onClick, href, danger }: { I: React.ElementType; title: string; sub?: string; right?: React.ReactNode; onClick?: () => void; href?: string; danger?: boolean }) {
@@ -40,17 +40,28 @@ export default function SettingsPage() {
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-3">
-        <MunshiMark size="lg" />
+        <BrandMark size="lg" />
         <div>
           <h1 className="text-2xl">{t("Settings")}</h1>
-          <p className="text-sm text-ink-2">{state?.business.replace(" (fictional)", "")}{state?.is_demo ? ` · ${t("demo shop")}` : ""}</p>
+          <p className="text-sm text-ink-2">{state?.business.replace(" (fictional)", "")}{state?.type_info ? ` · ${t(state.type_info.label)}` : ""}{state?.is_demo ? ` · ${t("demo")}` : ""}</p>
         </div>
       </div>
 
       <div className="card divide-y divide-line overflow-hidden p-0">
-        <Row I={Database} title={t("Your books")} sub={state?.is_demo ? t("Using the demo shop — add your bank statement or start fresh") : t("Uploads, bank balance, GST settings")} href="/data/" />
-        <Row I={Bot} title={t("Munshi's brain")} sub={state?.ai.enabled ? t("AI on — {provider}", { provider: state.ai.provider_label }) : t("Built-in answers (offline). Add a free Gemini key to understand anything.")} onClick={() => setAi(true)} />
-        <Row I={Brain} title={t("What Munshi remembers")} sub={t("Preferences you told it, like who not to remind")} onClick={() => setMemory(true)} />
+        <Row I={Database} title={t("Your books")} sub={state?.is_demo ? t("You're trying a demo — add your bank statement or start fresh") : t("Uploads, bank balance, GST settings")} href="/data/" />
+        {state && !state.is_demo && (
+          <Row I={Briefcase} title={t("Type of business")} sub={t("FinPilot adapts its words and checks to it")}
+            right={
+              <select value={state.business_type} aria-label={t("Type of business")}
+                onChange={async (e) => { await post("/api/settings", { business_type: e.target.value }); refresh(); }}
+                className="h-9 max-w-44 rounded-full border border-line bg-surface px-3 text-sm">
+                <option value="">{t("Choose…")}</option>
+                {state.types.map((x) => <option key={x.key} value={x.key}>{t(x.label)}</option>)}
+              </select>
+            } />
+        )}
+        <Row I={Bot} title={t("FinPilot's brain")} sub={state?.ai.enabled ? t("AI on — {provider}", { provider: state.ai.provider_label }) : t("Built-in answers (offline). Add a free Gemini key to understand anything.")} onClick={() => setAi(true)} />
+        <Row I={Brain} title={t("What FinPilot remembers")} sub={t("Preferences you told it, like who not to remind")} onClick={() => setMemory(true)} />
         <Row I={FileText} title={t("Monthly report for your CA")} sub={t("Profit, costs, GST estimate — print or save as PDF")} href="/reports/" />
       </div>
 
@@ -69,7 +80,7 @@ export default function SettingsPage() {
           }} />
       </div>
 
-      <p className="text-center text-xs text-muted">{t("Munshi prepares, you approve. It never pays, sends or files anything by itself. Not financial advice.")}</p>
+      <p className="text-center text-xs text-muted">{t("FinPilot prepares, you approve. It never pays, sends or files anything by itself. Not financial advice.")}</p>
       <AiSetupSheet open={ai} onClose={() => setAi(false)} />
       <MemorySheet open={memory} onClose={() => setMemory(false)} />
     </div>

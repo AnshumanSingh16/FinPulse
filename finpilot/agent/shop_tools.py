@@ -290,7 +290,7 @@ def t_whatif(ctx: ToolContext, a: dict) -> dict:
         amount = _num(a, "loan_amount", 1, 1e10, required=True)
         rate, years = _num(a, "interest_rate_pct", 0, 40), _num(a, "years", 0.25, 30)
         if rate is None or years is None:
-            return {"status": "needs_input", "message": "The interest rate and loan length must come from the lender's quote. Munshi does not assume loan terms.",
+            return {"status": "needs_input", "message": "The interest rate and loan length must come from the lender's quote. FinPilot does not assume loan terms.",
                     "missing": [k for k, v in (("interest_rate_pct", rate), ("years", years)) if v is None]}
         r = whatif.loan(ctx.ledger, ctx.balances, ctx.obligations, ctx.as_of, amount, rate, years)
     r["kind"] = kind
@@ -386,6 +386,34 @@ def t_draft_budget(ctx: ToolContext, a: dict) -> dict:
     avg = suggest_budgets(ctx.ledger, ctx.as_of).get(match)
     return _draft("set_budget", "Set a monthly budget", f"{match}: {fmt_inr(limit)} a month", {"category": match, "monthly_limit": limit},
                   {"spent_this_month": st["spent"], "suggested_from_recent_average": avg})
+
+
+# ---------------------------------------------------------------- the cash autopilot
+
+
+def t_autopilot(ctx: ToolContext, a: dict) -> dict:
+    _reject_unknown(a, set())
+    from finpilot.engine import autopilot as ap
+
+    st = _settings(ctx)
+    try:
+        safety = float(st.get("safety")) if st.get("safety") else None
+    except ValueError:
+        safety = None
+    states = books.move_states(ctx.db_path, _book(ctx)) if ctx.db_path else {}
+    approved = frozenset(k for k, v in states.items() if v in ("approved", "done"))
+    p = ap.plan(ctx.ledger, ctx.balances, ctx.obligations, ctx.as_of, safety=safety, approved=approved)
+    if p["status"] != "ok":
+        return p
+    return {
+        "status": "ok", "today": p["today"], "safety_level": p["safety"], "horizon_days": p["horizon_days"],
+        "if_nothing_is_done": p["baseline"], "with_the_agents_suggested_moves": p["with_suggested"],
+        "with_moves_the_owner_approved": p["with_approved"] if approved else None,
+        "main_causes_of_the_low_point": p["causes"], "invoices_not_counted_because_customer_is_late": p["at_risk"],
+        "moves": [{"id": m["id"], "agent": m["agent"], "title": m["title"], "detail": m["detail"], "amount": m["amount"],
+                   "raises_lowest_balance_by": m["impact"], "suggested": m["suggested"], "owner_decision": states.get(m["id"], "none")} for m in p["moves"]],
+        "evidence": _trim_evidence(p["evidence"]),
+    }
 
 
 # ---------------------------------------------------------------- plan, memory, review queue
@@ -503,9 +531,14 @@ PLAN_TOOLS: list[Tool] = [
          _obj({"fact": {"type": "string"}}, ["fact"]), t_remember),
     Tool("forget", "Delete one saved memory by its id.", _obj({"id": {"type": "integer"}}, ["id"]), t_forget),
     Tool("recall_memory", "List the facts and preferences the owner asked you to remember.", _obj({}), t_recall),
+    Tool("get_cash_autopilot",
+         "The cash autopilot: today's cash, the owner's safety level, the lowest balance in the next 90 days if nothing is done (and the date cash falls "
+         "below safety or runs out), its main causes, invoices not counted because the customer is already late, and the agents' moves "
+         "(collect, move a supplier bill, pause spending, set aside GST) each with how much it raises the lowest balance, and the owner's decisions.",
+         _obj({}), t_autopilot),
     Tool("get_review_queue", "Bank lines that need a category (uncategorised, or incoming money only guessed as sales), grouped by party, with the current guess.",
          _obj({}), t_review_queue),
-    Tool("draft_promise", "Prepare a note that a customer promised to pay (by a date, optionally an amount) for the owner to confirm. Munshi then flags it if the date passes unpaid.",
+    Tool("draft_promise", "Prepare a note that a customer promised to pay (by a date, optionally an amount) for the owner to confirm. FinPilot then flags it if the date passes unpaid.",
          _obj({"customer": {"type": "string"}, "amount": {"type": "number", "minimum": 0}, "date": {"type": "string", "description": "YYYY-MM-DD"}, "note": {"type": "string"}}, ["customer", "date"]),
          t_draft_promise),
     Tool("draft_recategorise", "Prepare a fix for the category of a party's unreviewed bank lines (and remember it for future lines) for the owner to confirm.",

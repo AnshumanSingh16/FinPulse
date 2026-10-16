@@ -1,36 +1,55 @@
-# Munshi — the AI bookkeeper that lives in a chat
+# FinPilot — your cash autopilot
+
+**Never be surprised by cash again.**
 
 ## The problem
-Crores of Indian shopkeepers, kirana owners, wholesalers and small manufacturers run their business from memory, a notebook and WhatsApp. They don't lack data — every UPI payment and udhaar is somewhere — they lack someone to **keep the books and tell them what to do**. Accounting apps give them forms, dashboards and reports they never open.
+Most small businesses that fail are not unprofitable — they **run out of cash**. A big client pays late, salaries and rent land in the same week, a deposit or an annual renewal comes due, GST is payable on the 20th. The owner finds out when a payment bounces.
 
-Big businesses have a *munshi* (or an accountant) for this. Small ones can't afford one.
+It doesn't matter whether the business is a spice factory, a design agency, a café, a clinic or an online seller: the question every owner carries is the same — *will I have enough money on the day I need it?* Accounting software answers a different question (what happened last month) and expects the owner to work out the rest.
 
 ## The product
-**Munshi is that person, in a chat.** One screen that looks and feels like WhatsApp:
+FinPilot looks 90 days ahead, every day, and does the work an experienced finance person would.
 
-- **You talk, Munshi writes it down.** *“Ravi ko 2500 udhaar”*, *“Metro ne 50k diye”*, *“bijli ka bill 3200 diya”* — typed or spoken, in Hindi, English or Hinglish. Munshi prepares the entry; one tap saves it.
-- **The chat is the khata.** Every entry, payment and reminder appears in the thread, with Undo. Scroll up and you're reading your account book.
-- **Munshi speaks first.** Each morning it posts one message: what needs you today (who to collect from, which bills are due, anything odd), with the actions already prepared.
-- **Lena / Dena, always visible.** Bank balance, money to collect, money to pay — one strip at the top.
-- **Ask anything.** *“Is mahine kaisa raha?”*, *“kaun der se deta hai?”*, *“₹12 lakh ki machine le sakta hoon?”* — answered from your own records.
-- **The Khata screen** — every customer and supplier, what they owe, and a WhatsApp reminder in one tap.
+1. **Predict.** It builds the next 90 days of the bank balance from the owner's own records:
+   - invoices due
+   - bills and salaries
+   - rent and EMIs
+   - GST
+   - the typical day-to-day sales and costs of the last three months
+
+   It does not count money from customers who are already badly late.
+2. **Warn early.** One sentence at the top: *"You'll run out of cash on 1 Nov"*, *"Cash drops below your safety level on 1 Dec"*, or *"You're covered for the next 90 days."* It names the bills that cause the dip.
+3. **Fix it with agents.** Small, specialised agents each prepare a move:
+   - **Collections agent:** collect overdue money, with a WhatsApp reminder ready.
+   - **Payables agent:** ask a supplier to move a bill, with the message ready.
+   - **Spending agent:** pause owner drawings or marketing for a while.
+   - **Tax agent:** set GST money aside so it isn't spent by mistake.
+
+   Every move shows exactly how much it lifts the lowest point. That figure comes from re-running the whole forecast, not from a guess. The agents then put together the smallest plan that keeps cash above the safety level.
+4. **The owner approves.** One tap approves the plan, or a single move. The chart then shows the new path, and the timeline shows each week with the approved moves included.
+5. **Ask anything.** *"Can I afford a ₹12 lakh machine?"*, *"What if Kaveri never pays?"*, *"Kaun der se deta hai?"* Every answer is calculated in Python and every figure is checked against the records.
+
+## Any business
+The engine works on money in and money out, so it is the same for every business type. Only the words change: clients, guests, patients, buyers or marketplaces. The app ships with three demos, each with a different cash problem:
+
+| Demo | Business | Story |
+|---|---|---|
+| Annapurna Masala Works | Manufacturer, Pune | Healthy. One big customer is late. |
+| Pixel Pundit Studio | Design agency, Bengaluru | A hospital client stopped paying, so cash runs out on 1 Nov. Collecting from them and pausing drawings fixes it. |
+| Brew & Bun Café | Café, Mumbai | Diwali stock and a kitchen fit-out push cash below safety in early December. |
 
 ## Principles
-1. **One screen.** If it can be a message, it is a message. No dashboards to learn.
-2. **Never invent a number.** Every figure comes from tested Python calculations over the owner's records and is checked before it is shown. If the data can't answer, Munshi says so.
-3. **Prepare, never act alone.** Munshi drafts; the owner taps. It never pays, sends or files anything itself.
-4. **Speak like the owner.** Hindi, English, Hinglish, voice. Lakh and crore. Udhaar, lena, dena.
-5. **Works offline first.** Built-in answers need no internet or AI key; an AI key (Gemini free tier or Claude) makes Munshi understand anything.
-6. **The owner's data stays on their machine** unless they turn AI on — and then only the figures needed to answer.
-
-## Who it's for (first)
-A shop or small trading/manufacturing business in India with 10–200 customers on udhaar, a bank account with UPI, and an owner who lives on WhatsApp.
-
-## What we deliberately left out
-Health scores, weekly stories, calendars, simulator pages, budgets screens and charts dashboards. The engine behind them still exists and Munshi uses it when asked — but none of it is a screen to learn.
+1. **One promise.** Every screen serves "never be surprised by cash". Anything that doesn't is left out.
+2. **Never invent a number.** All calculations are tested Python. The language model explains them but never computes them, and every figure it says is checked.
+3. **Honest assumptions.** Late customers are not counted. Typical flows are labelled as typical. A move's effect is measured, not estimated. This is arithmetic, not a prediction.
+4. **Prepare, never act alone.** FinPilot drafts reminders and messages; the owner sends them. It never pays, moves money or files anything.
+5. **Works offline.** The built-in answers need no AI key. A Gemini or Claude key makes it understand anything.
+6. **The owner's data stays on their machine**, unless they turn AI on. Even then, only the figures needed to answer are sent.
 
 ## Next
-1. Real WhatsApp: receive messages and send reminders from the owner's own WhatsApp Business number (with approval).
-2. Bank statement and UPI SMS import that runs by itself.
-3. Multi-device (owner + staff), with the books in the cloud under the owner's control.
-4. GST-ready monthly pack for the CA, generated in the chat.
+1. Bank feeds and UPI import that run by themselves, so the forecast is always fresh.
+2. Alerts on WhatsApp the moment the 90-day picture changes.
+3. More agents:
+   - a financing agent (an overdraft or invoice discounting, compared on cost)
+   - a pricing agent
+4. Multi-user (owner + accountant), with the books under the owner's control.

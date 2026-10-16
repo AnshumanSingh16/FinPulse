@@ -87,6 +87,7 @@ CATEGORY_CLASS: dict[str, str] = {
     "owner drawings": "drawings",
     "gst payment": "tax_remittance",
     "tds payment": "tax_remittance",
+    "income tax": "tax_remittance",
     "transfer": "transfer",
     "refund received": "other_in",
     "interest received": "other_in",

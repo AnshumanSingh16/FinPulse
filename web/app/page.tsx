@@ -1,368 +1,319 @@
 "use client";
 
-import { AlertTriangle, ArrowDownLeft, ArrowUp, ArrowUpRight, BookOpen, HandCoins, Landmark, Mic, ReceiptText, RotateCcw, Store } from "lucide-react";
+import {
+  AlertTriangle, ArrowRight, Check, CheckCheck, CircleCheck, CircleDollarSign, Clock, HandCoins, Landmark, MessageCircle, PauseCircle, Pencil, ShieldCheck,
+  Sparkles, Undo2, X,
+} from "lucide-react";
 import Link from "next/link";
-import { Component, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { AgentAnswer, type AgentResult, applyEvent, emptyLive, type Live, LiveCard, streamAgent } from "@/components/agent";
-import { AiModeChip, AiSetupSheet } from "@/components/ai-setup";
+import { useRouter } from "next/navigation";
+import { useCallback, useContext, useEffect, useState } from "react";
+import { CashChart } from "@/components/cash-chart";
 import { DataVersion } from "@/components/data-version";
+import { EvidenceButton } from "@/components/evidence";
 import { useToast } from "@/components/fx";
-import { type Kind, useQuickEntry } from "@/components/quick-entry";
-import { MunshiMark } from "@/components/shell";
-import { cx } from "@/components/ui";
+import { Button, Card, cx, ErrorNote, Loading, MoneyInput, Pill, Sheet } from "@/components/ui";
 import { get, post } from "@/lib/api";
-import { short } from "@/lib/format";
+import { inr, short } from "@/lib/format";
 import { useT } from "@/lib/i18n";
-import type { AiStatus } from "@/lib/types";
+import type { Evidence } from "@/lib/types";
 
-interface Snapshot {
-  cash: number | null;
-  as_of_label: string;
-  to_collect: number;
-  collect_overdue: number;
-  to_pay: number;
-  pay_overdue: number;
+interface Summary {
+  lowest: number;
+  lowest_date: string;
+  end: number;
+  below_safety_from: string | null;
+  runs_out: string | null;
+  safe: boolean;
+  free_cash_today: number;
 }
-interface EntryEvent {
-  entry_id: string;
-  entry_kind: Kind;
-  message: string;
-  amount: number;
+interface Move {
+  id: string;
+  kind: "collect" | "defer" | "pause" | "reserve";
+  agent: string;
   party: string;
-  undone: boolean;
+  amount: number;
+  monthly?: number;
+  items: string[];
+  days_late?: number;
+  from_date?: string;
+  to_date?: string;
+  due?: string;
+  impact: number;
+  new_lowest: number;
+  suggested: boolean;
+  state: "open" | "approved" | "done";
 }
-type Item =
-  | { id: number; at: string; role: "owner"; kind: "text"; data: { text: string } }
-  | { id: number; at: string; role: "munshi"; kind: "answer" | "checkup"; data: AgentResult }
-  | { id: number; at: string; role: "event"; kind: "entry"; data: EntryEvent };
-
-interface Thread {
+interface Plan {
+  status: string;
+  message?: string;
   business: string;
   is_demo: boolean;
-  snapshot: Snapshot;
-  items: Item[];
-  checkup_due: boolean;
-  ai: AiStatus;
+  today: number;
+  safety: number;
+  default_safety: number | null;
+  baseline: Summary;
+  with_suggested: Summary;
+  with_approved: Summary;
+  plan_basis: "approved" | "suggested";
+  series: { baseline: { date: string; balance: number }[]; plan: { date: string; balance: number }[] };
+  causes: { date: string; label: string; amount: number; category: string }[];
+  at_risk: { party: string; amount: number; next_due: string; oldest_late_days: number }[];
+  moves: Move[];
+  evidence: Evidence;
 }
 
-const ENTRY_CHIPS: { kind: Kind; label: string; I: React.ElementType }[] = [
-  { kind: "sale", label: "Sale", I: Store },
-  { kind: "payment_in", label: "Paisa aaya", I: ArrowDownLeft },
-  { kind: "credit_sale", label: "Udhaar diya", I: HandCoins },
-  { kind: "expense", label: "Kharcha", I: ArrowUpRight },
-  { kind: "bill", label: "Supplier bill", I: ReceiptText },
-];
-const ASK_CHIPS = ["Who owes me money?", "How did this month go?", "Help me collect my money"];
-const ASK_CHIPS_HI = ["किस पर उधारी बाकी है?", "इस महीने कैसा रहा?", "मेरी उधारी वसूलने में मदद करो"];
-const ENTRY_ICON: Record<string, React.ElementType> = { sale: Store, payment_in: ArrowDownLeft, credit_sale: HandCoins, expense: ArrowUpRight, bill: ReceiptText, payment_out: ArrowUpRight };
-const MONEY_IN: string[] = ["sale", "payment_in"];
+const AGENT: Record<Move["kind"], { label: string; I: React.ElementType; grad: string }> = {
+  collect: { label: "Collections agent", I: HandCoins, grad: "grad-mint" },
+  defer: { label: "Payables agent", I: Clock, grad: "grad-ocean" },
+  pause: { label: "Spending agent", I: PauseCircle, grad: "grad-sunset" },
+  reserve: { label: "Tax agent", I: Landmark, grad: "grad-violet" },
+};
 
-function dayKey(iso: string) {
-  const d = new Date(iso);
-  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+function day(iso: string | null | undefined, lang = "en") {
+  if (!iso) return "";
+  return new Date(iso + "T00:00:00").toLocaleDateString(lang === "hi" ? "hi-IN" : "en-IN", { day: "numeric", month: "short" });
 }
 
-export default function MunshiChat() {
+/** The move's title, written here so amounts use Indian grouping and the owner's language. */
+function moveTitle(m: Move, t: (s: string, v?: Record<string, string | number>) => string, lang: string) {
+  if (m.kind === "collect") return t("Collect {amt} from {who}", { amt: short(m.amount), who: m.party });
+  if (m.kind === "defer") return t("Ask {who} to move {bill} to {date}", { who: m.party, bill: m.items[0], date: day(m.to_date, lang) });
+  if (m.kind === "pause") return m.party === "Owner Drawings" ? t("Pause owner drawings for 60 days") : t("Pause marketing spend for 60 days");
+  return t("Set aside {amt} for GST due {date}", { amt: short(m.amount), date: day(m.due, lang) });
+}
+function moveDetail(m: Move, t: (s: string, v?: Record<string, string | number>) => string, lang: string) {
+  if (m.kind === "collect") return t("{n} invoice(s) overdue, oldest {d} days. Assumes they pay within a week of your reminder.", { n: m.items.length, d: m.days_late ?? 0 });
+  if (m.kind === "defer") return t("{amt} due {from}. Assumes they agree to 3 more weeks.", { amt: inr(m.amount), from: day(m.from_date, lang) });
+  if (m.kind === "pause") return t("About {amt} a month on average; pausing keeps {kept} in the bank.", { amt: short(m.monthly ?? 0), kept: short(m.amount) });
+  return t("Your typical monthly GST payment, kept aside so it isn't spent by mistake.");
+}
+
+export default function CashPage() {
   const { t, lang } = useT();
-  const { version, state } = useContext(DataVersion);
-  const qe = useQuickEntry();
-  const [thread, setThread] = useState<Thread | null>(null);
-  const [pending, setPending] = useState<string | null>(null);
-  const [live, setLive] = useState<Live | null>(null);
-  const [liveTitle, setLiveTitle] = useState<string | undefined>();
+  const { version } = useContext(DataVersion);
+  const router = useRouter();
+  const [p, setP] = useState<Plan | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const [input, setInput] = useState("");
-  const [listening, setListening] = useState(false);
-  const [setup, setSetup] = useState(false);
-  const end = useRef<HTMLDivElement>(null);
-  const checkupStarted = useRef<string | null>(null);
-  const busy = live !== null;
-
-  const load = useCallback(() => get<Thread>("/api/chat").then(setThread).catch((e) => setErr(String(e))), []);
-
-  const runCheckup = useCallback(async () => {
-    setLiveTitle(t("Munshi is going through your books…"));
-    setLive(emptyLive());
-    try {
-      await streamAgent("/api/agent/checkup/stream", {}, (e) => setLive((l) => (l ? applyEvent(l, e) : l)), lang, "/api/agent/checkup");
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e));
-    } finally {
-      setLive(null);
-      setLiveTitle(undefined);
-      load();
-    }
-  }, [lang, load, t]);
-
+  const [q, setQ] = useState("");
+  const [safetyOpen, setSafetyOpen] = useState(false);
+  const load = useCallback(() => get<Plan>("/api/autopilot").then((x) => { setP(x); setErr(null); }).catch((e) => setErr(String(e))), []);
   useEffect(() => {
     load();
   }, [load, version]);
 
-  // Munshi speaks first: once a day it goes through the books by itself and posts what needs doing.
-  useEffect(() => {
-    if (!thread?.checkup_due || busy) return;
-    const key = `${state?.source}`;
-    if (checkupStarted.current === key) return;
-    checkupStarted.current = key;
-    runCheckup();
-  }, [thread?.checkup_due, busy, state?.source, runCheckup]);
+  if (err) return <ErrorNote message={err} retry={load} />;
+  if (!p) return <Loading label={t("Looking 90 days ahead…")} />;
+  if (p.status !== "ok") return <NoForecast p={p} />;
 
-  useEffect(() => {
-    // braces matter: newer browsers return a Promise from scrollIntoView, and an effect must return nothing (or a cleanup function)
-    end.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [thread?.items.length, live, pending]);
-
-  const send = async (text: string) => {
-    const q = text.trim();
-    if (!q || busy) return;
-    setInput("");
-    setErr(null);
-    setPending(q);
-    setLiveTitle(undefined);
-    setLive(emptyLive());
-    try {
-      await streamAgent("/api/ask/stream", { question: q, conversation_id: "main", log: true }, (e) => setLive((l) => (l ? applyEvent(l, e) : l)), lang, "/api/ask");
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e));
-    } finally {
-      setLive(null);
-      setPending(null);
-      await load();
-    }
-  };
-
-  const listen = () => {
-    const W = window as unknown as { SpeechRecognition?: new () => any; webkitSpeechRecognition?: new () => any }; // eslint-disable-line @typescript-eslint/no-explicit-any
-    const SR = W.SpeechRecognition ?? W.webkitSpeechRecognition;
-    if (!SR) return;
-    const r = new SR();
-    r.lang = lang === "hi" ? "hi-IN" : "en-IN";
-    r.onresult = (e: { results: { [i: number]: { [j: number]: { transcript: string } } } }) => send(e.results[0][0].transcript);
-    r.onend = () => setListening(false);
-    setListening(true);
-    r.start();
-  };
-
-  const items = thread?.items ?? [];
-  const lastAnswer = [...items].reverse().find((i) => i.role === "munshi") as Extract<Item, { role: "munshi" }> | undefined;
-  const lastIsAnswer = items.length > 0 && items[items.length - 1].role === "munshi";
-  const askChips = lastIsAnswer && lastAnswer?.data.suggestions?.length ? lastAnswer.data.suggestions : lang === "hi" ? ASK_CHIPS_HI : ASK_CHIPS;
+  const b = p.baseline;
+  const tone = b.runs_out ? "bad" : b.below_safety_from ? "caution" : "good";
+  const grad = tone === "bad" ? "grad-hero-bad" : tone === "caution" ? "grad-hero-caution" : "grad-hero";
+  const headline = b.runs_out
+    ? t("You'll run out of cash on {date}", { date: day(b.runs_out, lang) })
+    : b.below_safety_from
+      ? t("Cash drops below your safety level on {date}", { date: day(b.below_safety_from, lang) })
+      : t("You're covered for the next 90 days");
+  const suggested = p.moves.filter((m) => m.suggested && m.kind !== "reserve");
+  const result = p.plan_basis === "approved" ? p.with_approved : p.with_suggested;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      {thread && <LenaDena s={thread.snapshot} isDemo={thread.is_demo} />}
-
-      <div className="no-scrollbar min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-4 sm:px-4" role="log" aria-live="polite">
-        {thread && <Welcome business={thread.business} ai={thread.ai} onSetup={() => setSetup(true)} />}
-        {items.map((it, i) => (
-          <div key={it.id}>
-            {(i === 0 || dayKey(items[i - 1].at) !== dayKey(it.at)) && <DaySep iso={it.at} />}
-            <Safe><Bubble item={it} onUndone={load} /></Safe>
-          </div>
-        ))}
-        {pending && <OwnerBubble text={pending} />}
-        {live && (
-          <MunshiRow>
-            <LiveCard live={live} title={liveTitle} />
-          </MunshiRow>
+    <div className="space-y-5">
+      <section className={cx("rise overflow-hidden rounded-[1.75rem] p-5 shadow-xl shadow-black/10 sm:p-7", grad)}>
+        <p className="text-sm font-semibold text-white/80">{t("Cash autopilot · next 90 days")}</p>
+        <h1 className="mt-1 text-2xl leading-tight font-bold sm:text-3xl">{headline}</h1>
+        <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
+          <Stat k={t("In the bank today")} v={short(p.today)} />
+          <Stat k={t("Lowest point")} v={short(b.lowest)} sub={day(b.lowest_date, lang)} />
+          <Stat k={t("Your safety level")} v={short(p.safety)} sub={<button onClick={() => setSafetyOpen(true)} className="inline-flex items-center gap-1 underline underline-offset-2"><Pencil className="size-3" /> {t("change")}</button>} />
+        </div>
+        {p.causes.length > 0 && !b.safe && (
+          <p className="mt-4 text-sm text-white/85">
+            {t("Why")}: {p.causes.map((c) => `${c.label.replace(/^(SCH|BILL|INV)-\d+ to /, "")} ${short(c.amount)} (${day(c.date, lang)})`).join(" · ")}
+          </p>
         )}
-        {err && (
-          <div className="flex items-start gap-2 rounded-2xl bg-bad-50 p-3 text-sm text-bad">
-            <AlertTriangle className="size-5 shrink-0" /> {err}
-          </div>
+        {p.at_risk.length > 0 && (
+          <p className="glass mt-3 flex items-start gap-2 rounded-2xl px-3 py-2 text-sm">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+            <span>{p.at_risk.map((r) => t("Not counting {amt} due from {who} on {date} — they're already {d} days late on older invoices.", { amt: short(r.amount), who: r.party, date: day(r.next_due, lang), d: r.oldest_late_days })).join(" ")}</span>
+          </p>
         )}
-        <div ref={end} />
+      </section>
+
+      <Card>
+        <CashChart baseline={p.series.baseline} plan={p.series.plan} safety={p.safety} planLabel={p.plan_basis === "approved" ? "With your approved moves" : "With the agents' plan"} />
+      </Card>
+
+      <AgentsPlan p={p} result={result} suggested={suggested} onChange={load} />
+
+      <form onSubmit={(e) => { e.preventDefault(); if (q.trim()) router.push(`/ask/?q=${encodeURIComponent(q.trim())}`); }} className="card flex items-center gap-2 rounded-3xl p-1.5 pl-4">
+        <Sparkles className="size-5 shrink-0 text-brand" />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("Ask about your cash — “Can I afford a ₹2 lakh machine?”")} className="h-10 w-full bg-transparent outline-none placeholder:text-muted" aria-label={t("Ask about your cash")} />
+        <Button type="submit" disabled={!q.trim()}><ArrowRight className="size-4" /></Button>
+      </form>
+      <div className="flex justify-center">
+        <EvidenceButton evidence={p.evidence} label={t("How is this worked out?")} />
       </div>
-
-      <div className="no-print shrink-0 border-t border-line bg-canvas/95 px-3 pt-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur sm:px-4">
-        <div className="no-scrollbar -mx-3 mb-2 flex gap-2 overflow-x-auto px-3 sm:-mx-4 sm:px-4">
-          {ENTRY_CHIPS.map(({ kind, label, I }) => (
-            <button key={kind} onClick={() => qe.open({ kind })} className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-sm font-medium text-ink shadow-sm transition hover:border-brand">
-              <I className="size-4 text-brand" /> {t(label)}
-            </button>
-          ))}
-          <span className="mx-1 w-px shrink-0 bg-line" />
-          {askChips.slice(0, 3).map((q) => (
-            <button key={q} onClick={() => send(q)} disabled={busy} className="shrink-0 rounded-full bg-brand-50 px-3 py-1.5 text-sm font-medium text-brand transition hover:bg-brand/15 disabled:opacity-50">
-              {q}
-            </button>
-          ))}
-        </div>
-        <form onSubmit={(e) => { e.preventDefault(); send(input); }} className="card flex items-end gap-1.5 rounded-3xl p-1.5 pl-4">
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                send(input);
-              }
-            }}
-            rows={1}
-            placeholder={t("Message Munshi…")}
-            className="max-h-32 min-h-10 flex-1 resize-none bg-transparent py-2.5 outline-none placeholder:text-muted"
-            aria-label={t("Message Munshi")}
-          />
-          <button type="button" onClick={listen} aria-label={t("Speak")}
-            className={cx("grid size-10 shrink-0 place-items-center rounded-full transition", listening ? "animate-pulse bg-bad text-white" : "text-ink-2 hover:bg-surface-2")}>
-            <Mic className="size-5" />
-          </button>
-          <button type="submit" disabled={!input.trim() || busy} aria-label={t("Send")} className="grid size-10 shrink-0 place-items-center rounded-full bg-brand text-on-brand transition disabled:opacity-40">
-            <ArrowUp className="size-5" />
-          </button>
-        </form>
-      </div>
-      <AiSetupSheet open={setup} onClose={() => setSetup(false)} />
+      <SafetySheet open={safetyOpen} onClose={() => setSafetyOpen(false)} current={p.safety} suggested={p.default_safety} onSaved={load} />
     </div>
   );
 }
 
-function LenaDena({ s, isDemo }: { s: Snapshot; isDemo: boolean }) {
-  const { t } = useT();
-  const tile = "flex min-w-0 flex-1 flex-col rounded-2xl px-3 py-2 transition";
+function Stat({ k, v, sub }: { k: string; v: string; sub?: React.ReactNode }) {
   return (
-    <div className="no-print shrink-0 border-b border-line bg-canvas px-3 pt-3 pb-3 sm:px-4">
-      <div className="flex gap-2">
-        <div className={cx(tile, "bg-surface shadow-sm")}>
-          <span className="flex items-center gap-1 text-[0.7rem] font-semibold tracking-wide text-muted uppercase"><Landmark className="size-3.5" /> {t("Bank")}</span>
-          <span className="num truncate text-lg font-bold">{s.cash == null ? "—" : short(s.cash)}</span>
-        </div>
-        <Link href="/khata/?side=customers" className={cx(tile, "bg-good-50 hover:ring-2 hover:ring-good/30")}>
-          <span className="text-[0.7rem] font-semibold tracking-wide text-good uppercase">{t("Lena")} · {t("to collect")}</span>
-          <span className="num truncate text-lg font-bold text-ink">{short(s.to_collect)}</span>
-          {s.collect_overdue > 0 && <span className="truncate text-[0.7rem] text-bad">{t("{amt} late", { amt: short(s.collect_overdue) })}</span>}
-        </Link>
-        <Link href="/khata/?side=suppliers" className={cx(tile, "bg-caution-50 hover:ring-2 hover:ring-caution/30")}>
-          <span className="text-[0.7rem] font-semibold tracking-wide text-caution uppercase">{t("Dena")} · {t("to pay")}</span>
-          <span className="num truncate text-lg font-bold text-ink">{short(s.to_pay)}</span>
-          {s.pay_overdue > 0 && <span className="truncate text-[0.7rem] text-bad">{t("{amt} late", { amt: short(s.pay_overdue) })}</span>}
-        </Link>
-      </div>
-      {isDemo && (
-        <p className="mt-2 text-center text-xs text-muted">
-          {t("Demo shop with made-up numbers.")}{" "}
-          <Link href="/data/" className="font-semibold text-brand underline underline-offset-2">{t("Use my own books")}</Link>
-        </p>
-      )}
+    <div className="glass min-w-0 rounded-2xl px-2.5 py-2 sm:px-3">
+      <p className="text-[0.65rem] leading-tight font-semibold tracking-wide text-white/75 uppercase sm:text-[0.7rem]">{k}</p>
+      <p className="num mt-0.5 text-base font-bold whitespace-nowrap sm:text-xl">{v}</p>
+      {sub && <p className="truncate text-xs text-white/80">{sub}</p>}
     </div>
   );
 }
 
-function Welcome({ business, ai, onSetup }: { business: string; ai: AiStatus; onSetup: () => void }) {
-  const { t } = useT();
-  return (
-    <MunshiRow>
-      <div className="card max-w-xl space-y-2 p-4 text-[0.95rem]">
-        <p className="font-semibold">{t("Namaste! I'm Munshi, the bookkeeper for {shop}.", { shop: business })}</p>
-        <p className="text-ink-2">{t("Tell me what happened and I'll write it in your khata. Ask me anything about your money. Every morning I'll tell you what needs doing.")}</p>
-        <ul className="space-y-1 text-sm text-ink-2">
-          <li>✍️ <i>“Ravi ko 2500 udhaar”</i> · <i>“Metro ne 50k diye”</i> · <i>“bijli bill 3200”</i></li>
-          <li>💬 <i>“kaun der se deta hai?”</i> · <i>“is mahine kaisa raha?”</i></li>
-        </ul>
-        <div className="flex flex-wrap items-center gap-2 pt-1">
-          <AiModeChip onClick={onSetup} />
-          {!ai.enabled && <button onClick={onSetup} className="text-xs font-semibold text-brand underline underline-offset-2">{t("Make me smarter with a free AI key")}</button>}
-        </div>
-      </div>
-    </MunshiRow>
-  );
-}
-
-function DaySep({ iso }: { iso: string }) {
-  const { t, lang } = useT();
-  const d = new Date(iso);
-  const today = new Date();
-  const y = new Date();
-  y.setDate(today.getDate() - 1);
-  const label = dayKey(iso) === dayKey(today.toISOString()) ? t("Today") : dayKey(iso) === dayKey(y.toISOString()) ? t("Yesterday") : d.toLocaleDateString(lang === "hi" ? "hi-IN" : "en-IN", { day: "numeric", month: "short", year: "numeric" });
-  return (
-    <div className="my-2 flex justify-center">
-      <span className="rounded-full bg-surface-2 px-3 py-0.5 text-xs font-medium text-muted">{label}</span>
-    </div>
-  );
-}
-
-function MunshiRow({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex items-start gap-2">
-      <MunshiMark size="sm" />
-      <div className="min-w-0 flex-1">{children}</div>
-    </div>
-  );
-}
-
-function OwnerBubble({ text, at }: { text: string; at?: string }) {
-  const { lang } = useT();
-  return (
-    <div className="flex justify-end">
-      <p className="max-w-[85%] rounded-3xl rounded-br-md bg-brand px-4 py-2.5 text-on-brand shadow-sm sm:max-w-[75%]">
-        {text}
-        {at && <span className="ml-2 align-bottom text-[0.65rem] text-on-brand/70">{new Date(at).toLocaleTimeString(lang === "hi" ? "hi-IN" : "en-IN", { hour: "numeric", minute: "2-digit" })}</span>}
-      </p>
-    </div>
-  );
-}
-
-function Bubble({ item, onUndone }: { item: Item; onUndone: () => void }) {
-  const { t } = useT();
-  if (item.role === "owner") return <OwnerBubble text={item.data.text} at={item.at} />;
-  if (item.role === "event") return <EntryLine e={item.data} at={item.at} onUndone={onUndone} />;
-  return (
-    <MunshiRow>
-      {item.kind === "checkup" && <p className="mb-1 text-xs font-semibold tracking-wide text-brand uppercase">{t("Morning check-up")}</p>}
-      <AgentAnswer a={item.data} conversation="main" />
-    </MunshiRow>
-  );
-}
-
-/** A khata line in the thread: every entry, from chat or the + buttons, lands here with Undo. */
-function EntryLine({ e, at, onUndone }: { e: EntryEvent; at: string; onUndone: () => void }) {
+function AgentsPlan({ p, result, suggested, onChange }: { p: Plan; result: Summary; suggested: Move[]; onChange: () => void }) {
   const { t, lang } = useT();
   const toast = useToast();
-  const { refresh } = useContext(DataVersion);
-  const I = ENTRY_ICON[e.entry_kind] ?? BookOpen;
-  const incoming = MONEY_IN.includes(e.entry_kind);
-  const undo = async () => {
+  const [busy, setBusy] = useState(false);
+  const open = p.moves.filter((m) => m.state === "open" && m.suggested);
+  const approveAll = async () => {
+    setBusy(true);
     try {
-      await post(`/api/entries/${e.entry_id}/undo`, {});
-      toast.show({ text: t("Undone") });
-      refresh();
-      onUndone();
-    } catch (x) {
-      toast.show({ text: x instanceof Error ? x.message : String(x), tone: "bad" });
+      const r = await post<{ approved: string[] }>("/api/autopilot/approve-suggested", {});
+      toast.show({ text: t("Approved {n} moves", { n: r.approved.length }), tone: "good" });
+      onChange();
+    } finally {
+      setBusy(false);
     }
   };
+  const main = p.moves.filter((m) => m.suggested);
+  const more = p.moves.filter((m) => !m.suggested);
   return (
-    <div className="flex justify-center">
-      <div className={cx("flex max-w-[92%] items-center gap-2.5 rounded-2xl border border-dashed px-3 py-2 text-sm", e.undone ? "border-line text-muted line-through" : "border-brand/30 bg-surface")}>
-        <span className={cx("grid size-7 shrink-0 place-items-center rounded-full", incoming ? "bg-good-50 text-good" : "bg-caution-50 text-caution")}>
-          <I className="size-4" />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="text-[0.65rem] font-semibold tracking-wide text-muted uppercase no-underline">{t("Written in khata")} · {new Date(at).toLocaleTimeString(lang === "hi" ? "hi-IN" : "en-IN", { hour: "numeric", minute: "2-digit" })}</span>
-          <span className="block font-medium text-ink">{e.message}</span>
-        </span>
-        {!e.undone && (
-          <button onClick={undo} className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold text-ink-2 hover:bg-surface-2" aria-label={t("Undo")}>
-            <RotateCcw className="size-3.5" /> {t("Undo")}
-          </button>
+    <section className="space-y-3">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold tracking-tight">{p.baseline.safe ? t("Your agents' suggestions") : t("Your agents' plan")}</h2>
+          <p className="text-sm text-ink-2">
+            {p.baseline.safe
+              ? t("Cash stays above your safety level. These would still help.")
+              : suggested.length
+                ? t("{n} moves. With them, the lowest point is {amt} on {date}.", { n: suggested.length, amt: short(result.lowest), date: day(result.lowest_date, lang) })
+                : t("No move available lifts the low point enough — ask FinPilot for other options.")}
+            {!p.baseline.safe && (result.safe ? <span className="ml-1 font-semibold text-good">✓ {t("Above your safety level")}</span> : <span className="ml-1 font-semibold text-bad">{t("Still below safety")}</span>)}
+          </p>
+        </div>
+        {open.length > 1 && (
+          <Button onClick={approveAll} disabled={busy}>
+            <CheckCheck className="size-4" /> {t("Approve plan ({n})", { n: open.length })}
+          </Button>
         )}
       </div>
-    </div>
+      <ul className="space-y-2.5">
+        {main.map((m) => <MoveCard key={m.id} m={m} onChange={onChange} />)}
+      </ul>
+      {more.length > 0 && (
+        <details className="group">
+          <summary className="cursor-pointer list-none text-sm font-semibold text-brand">{t("More options ({n})", { n: more.length })}</summary>
+          <ul className="mt-2.5 space-y-2.5">{more.map((m) => <MoveCard key={m.id} m={m} onChange={onChange} />)}</ul>
+        </details>
+      )}
+      {p.moves.length === 0 && <Card className="text-sm text-ink-2">{t("Nothing to do — no overdue money, nothing worth moving.")}</Card>}
+    </section>
   );
 }
 
-/** One message that can't be shown must never take the whole chat down. */
-class Safe extends Component<{ children: React.ReactNode }, { err: string | null }> {
-  state = { err: null as string | null };
-  static getDerivedStateFromError(e: Error) {
-    return { err: e?.message || String(e) };
-  }
-  componentDidCatch(e: Error) {
-    console.error(e);
-  }
-  render() {
-    if (this.state.err) return <p className="rounded-2xl bg-caution-50 px-3 py-2 text-xs text-caution">Couldn't show this message ({this.state.err}).</p>;
-    return this.props.children;
-  }
+function MoveCard({ m, onChange }: { m: Move; onChange: () => void }) {
+  const { t, lang } = useT();
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  const A = AGENT[m.kind];
+  const decide = async (decision: "approve" | "dismiss" | "undo" | "done") => {
+    setBusy(true);
+    try {
+      const r = await post<{ next?: string; whatsapp?: string; text?: string }>(`/api/autopilot/moves/${encodeURIComponent(m.id)}`, { decision });
+      if (decision === "approve" && r.whatsapp) {
+        window.open(r.whatsapp, "_blank", "noopener");
+        toast.show({ text: m.kind === "collect" ? t("Reminder opened in WhatsApp — press send") : t("Message to the supplier opened in WhatsApp"), tone: "good" });
+      }
+      onChange();
+    } catch (e) {
+      toast.show({ text: e instanceof Error ? e.message : String(e), tone: "bad" });
+    } finally {
+      setBusy(false);
+    }
+  };
+  const approved = m.state === "approved" || m.state === "done";
+  return (
+    <li className={cx("card flex flex-wrap items-start gap-3 p-4", approved && "ring-2 ring-good/30")}>
+      <span className={cx("grid size-10 shrink-0 place-items-center rounded-2xl", A.grad)}>
+        <A.I className="size-5" aria-hidden />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-semibold tracking-wide text-muted uppercase">{t(A.label)}</p>
+        <p className="font-semibold text-ink">{moveTitle(m, t, lang)}</p>
+        <p className="text-sm text-ink-2">{moveDetail(m, t, lang)}</p>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          {m.impact > 0 ? (
+            <Pill tone="good"><CircleDollarSign className="size-3.5" /> {t("+{amt} to your lowest point", { amt: short(m.impact) })}</Pill>
+          ) : m.kind === "reserve" ? (
+            <Pill tone="info"><ShieldCheck className="size-3.5" /> {t("Free cash today: {amt} less", { amt: short(m.amount) })}</Pill>
+          ) : (
+            <Pill>{t("Doesn't change the low point — still worth doing")}</Pill>
+          )}
+          {approved && <Pill tone="good"><Check className="size-3.5" /> {m.state === "done" ? t("Done") : t("Approved")}</Pill>}
+        </div>
+      </div>
+      <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:flex-col sm:items-end">
+        {!approved ? (
+          <>
+            <Button size="sm" onClick={() => decide("approve")} disabled={busy}>
+              {m.kind === "collect" || m.kind === "defer" ? <MessageCircle className="size-4" /> : <Check className="size-4" />}
+              {m.kind === "collect" ? t("Approve & remind") : m.kind === "defer" ? t("Approve & ask") : t("Approve")}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => decide("dismiss")} disabled={busy}><X className="size-4" /> {t("Not now")}</Button>
+          </>
+        ) : (
+          <>
+            {m.kind === "defer" && m.state === "approved" && (
+              <Button size="sm" onClick={() => decide("done")} disabled={busy}><CircleCheck className="size-4" /> {t("Supplier agreed")}</Button>
+            )}
+            {m.kind === "collect" && (
+              <Link href={`/khata/?side=customers`}><Button size="sm" variant="secondary"><HandCoins className="size-4" /> {t("Record payment")}</Button></Link>
+            )}
+            <Button size="sm" variant="ghost" onClick={() => decide("undo")} disabled={busy}><Undo2 className="size-4" /> {t("Undo")}</Button>
+          </>
+        )}
+      </div>
+    </li>
+  );
+}
+
+function SafetySheet({ open, onClose, current, suggested, onSaved }: { open: boolean; onClose: () => void; current: number; suggested: number | null; onSaved: () => void }) {
+  const { t } = useT();
+  const [v, setV] = useState(String(Math.round(current)));
+  useEffect(() => setV(String(Math.round(current))), [current, open]);
+  const save = async (amount: string | null) => {
+    await post("/api/autopilot/safety", { amount });
+    onSaved();
+    onClose();
+  };
+  return (
+    <Sheet open={open} onClose={onClose} title={t("Your safety level")}>
+      <p className="mb-3 text-sm text-ink-2">{t("The least you want in the bank at any time. The autopilot warns you before cash goes below it and plans moves to stay above it.")}</p>
+      <MoneyInput value={v} onChange={setV} autoFocus />
+      {suggested != null && <p className="mt-2 text-xs text-muted">{t("Suggested: {amt} — about two weeks of your running costs.", { amt: inr(suggested) })}</p>}
+      <div className="mt-4 flex gap-2">
+        <Button onClick={() => save(v)} disabled={!v}>{t("Save")}</Button>
+        <Button variant="ghost" onClick={() => save(null)}>{t("Use suggested")}</Button>
+      </div>
+    </Sheet>
+  );
+}
+
+function NoForecast({ p }: { p: Plan }) {
+  const { t } = useT();
+  return (
+    <Card className="space-y-3">
+      <h1 className="text-2xl">{t("FinPilot needs your bank balance to look ahead")}</h1>
+      <p className="text-ink-2">{p.message}</p>
+      <Link href="/data/"><Button>{t("Add your balance or bank statement")}</Button></Link>
+    </Card>
+  );
 }

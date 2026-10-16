@@ -48,7 +48,7 @@ def last_response(body, name):
 class TestDeclarations:
     def test_every_tool_is_declared_in_geminis_schema_subset(self):
         decls = gemini.function_declarations()
-        assert len(decls) == 28
+        assert len(decls) == 29
         blob = json.dumps(decls)
         assert "additionalProperties" not in blob and '"object"' not in blob
         sim = next(d for d in decls if d["name"] == "simulate_purchase")
@@ -73,7 +73,7 @@ class TestLoop:
         path, body, key = fake.calls[1]
         assert path == "models/gemini-x:generateContent" and key == "AIza-test"
         assert body["contents"][1]["parts"][1]["thoughtSignature"] == "abc"  # model turn kept verbatim
-        assert "Munshi" in body["systemInstruction"]["parts"][0]["text"]
+        assert "FinPilot" in body["systemInstruction"]["parts"][0]["text"]
 
     def test_invented_figure_gets_one_repair_then_a_warning(self, ctx):
         fake = FakeGemini([

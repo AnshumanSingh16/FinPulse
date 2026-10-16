@@ -5,6 +5,7 @@ except, in AI mode, the question and tool outputs to the chosen AI provider (Ant
 
 from __future__ import annotations
 
+import copy
 import json
 import mimetypes
 import queue
@@ -25,6 +26,7 @@ from finpilot import config
 from finpilot.config import settings
 from finpilot.data import books, khata, loader, store
 from finpilot.data.parse_entry import parse as parse_entry
+from finpilot.engine import autopilot as ap
 from finpilot.engine.cash import cash_position, obligations_status
 from finpilot.engine.categorize import categorize_ledger
 
@@ -128,6 +130,17 @@ FOLLOWUPS = {
     "simulate_purchase": [("What if sales drop 20%?", "अगर बिक्री 20% गिरे तो?"), ("When could I run short of cash?", "कैश कब कम पड़ सकता है?")],
 }
 STARTERS = [("What should I do today?", "आज मुझे क्या करना चाहिए?"), ("Who owes me money?", "किस पर उधारी बाकी है?"), ("How did this week go?", "इस हफ़्ते कैसा रहा?")]
+# Business types: the autopilot works the same for all; the words and examples adapt.
+BUSINESS_TYPES = {
+    "retail": {"label": "Shop / retail", "customers": "customers", "suppliers": "suppliers"},
+    "wholesale": {"label": "Wholesale / distribution", "customers": "buyers", "suppliers": "suppliers"},
+    "manufacturing": {"label": "Manufacturing", "customers": "customers", "suppliers": "suppliers"},
+    "services": {"label": "Agency / services", "customers": "clients", "suppliers": "vendors"},
+    "restaurant": {"label": "Restaurant / café", "customers": "customers", "suppliers": "suppliers"},
+    "clinic": {"label": "Clinic / salon / practice", "customers": "patients & clients", "suppliers": "suppliers"},
+    "freelance": {"label": "Freelancer / consultant", "customers": "clients", "suppliers": "vendors"},
+    "online": {"label": "Online seller", "customers": "marketplaces & buyers", "suppliers": "suppliers"},
+}
 _LANG: ContextVar[str] = ContextVar("lang", default="en")
 
 
@@ -188,7 +201,16 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
                 "ready": dataset.uploaded(db) is not None,
             },
             "ai": ai_status(),
+            "business_type": _btype(d),
+            "type_info": BUSINESS_TYPES.get(_btype(d)),
+            "types": [{"key": k, **v} for k, v in BUSINESS_TYPES.items()],
+            "demos": [{"key": k, **v, "name": v["name"].replace(" (fictional)", "")} for k, v in dataset.DEMOS.items()],
         }
+
+    def _btype(d: dataset.Dataset) -> str:
+        if d.book in dataset.DEMOS:
+            return dataset.DEMOS[d.book]["type"]
+        return books.settings(db, d.book).get("business_type") or ""
 
     @app.post("/api/source")
     def set_source(body: dict = Body(...)):
@@ -397,7 +419,7 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
             note = f"The owner confirmed: {item['summary']}."
         elif kind == "send_reminder":
             out |= {"message": "Opening WhatsApp — check the message and press send.", "open": p["whatsapp"]}
-            note = f"The owner opened WhatsApp to send the reminder to {p['customer']} (Munshi cannot tell whether it was sent)."
+            note = f"The owner opened WhatsApp to send the reminder to {p['customer']} (FinPilot cannot tell whether it was sent)."
         else:
             raise HTTPException(400, "Unknown action.")
         books.decide_action(db, d.book, action_id, "done", {k: v for k, v in out.items() if k in ("message", "id")})
@@ -485,7 +507,113 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
         books.delete_memory(db, ds().book, memory_id)
         return books.memories(db, ds().book)
 
-    # ------------------------------------------------------------ Munshi: the chat thread and the lena/dena strip
+    # ------------------------------------------------------------ the cash autopilot
+
+    _AP_CACHE: dict = {}
+
+    def _safety(d: dataset.Dataset) -> float | None:
+        v = books.settings(db, d.book).get("safety")
+        try:
+            return float(v) if v not in (None, "") else None
+        except ValueError:
+            return None
+
+    def _plan(d: dataset.Dataset) -> tuple[dict, dict[str, str]]:
+        states = books.move_states(db, d.book)
+        approved = frozenset(k for k, v in states.items() if v in ("approved", "done"))
+        key = (smart_views._fingerprint(d), _safety(d), approved)
+        if key not in _AP_CACHE:
+            if len(_AP_CACHE) > 16:
+                _AP_CACHE.clear()
+            p = ap.plan(d.ledger, d.balances, d.obligations, d.as_of, safety=_safety(d), approved=approved)
+            if p["status"] == "ok":
+                basis = ap.apply([m for m in p["moves"] if m["approved"] and m["kind"] != "reserve"], d.obligations, d.as_of, ap.Settings())[0]
+                f = forecast_for_timeline(d, p["safety"], basis, ap.at_risk(d.obligations, d.as_of)[0])
+                p["weekly"] = ap.weekly(f)
+            _AP_CACHE[key] = p
+        return copy.deepcopy(_AP_CACHE[key]), states
+
+    def forecast_for_timeline(d: dataset.Dataset, safety: float, extra: list[dict], obl) -> dict:
+        from finpilot.engine.forecast import ForecastOptions, forecast_cash_flow
+
+        return forecast_cash_flow(d.ledger, d.balances, obl, d.as_of, ForecastOptions(horizon_days=91, include_run_rate=True, min_buffer=safety, extra_flows=extra))
+
+    @app.get("/api/autopilot")
+    def autopilot():
+        d = ds()
+        p, states = _plan(d)
+        if p["status"] != "ok":
+            return p | {"business": d.name.replace(" (fictional)", ""), "is_demo": d.is_demo}
+        for m in p["moves"]:
+            m["state"] = states.get(m["id"], "open")
+        p["moves"] = [m for m in p["moves"] if m["state"] != "dismissed"]
+        p["evidence"] = views.evidence(p["evidence"], "How the autopilot works this out")
+        return p | {"business": d.name.replace(" (fictional)", ""), "is_demo": d.is_demo, "business_type": _btype(d), "default_safety": ap.default_safety(d.ledger, d.as_of) if len(d.ledger) else None}
+
+    @app.post("/api/autopilot/moves/{move_id:path}")
+    def autopilot_move(move_id: str, body: dict = Body(...)):
+        """The owner's decision on one move: approve, dismiss, undo, or mark done (e.g. the supplier agreed)."""
+        d = ds()
+        p, _ = _plan(d)
+        m = next((x for x in p.get("moves", []) if x["id"] == move_id), None)
+        decision = str(body.get("decision", ""))
+        if m is None and decision != "undo":
+            raise HTTPException(404, "This move no longer applies — the numbers have changed.")
+        out: dict = {"ok": True}
+        if decision == "approve":
+            books.set_move_state(db, d.book, move_id, "approved")
+            if m["kind"] == "collect":
+                r = khata_views.reminders(d, db, lg(), m["party"])
+                if r:
+                    out |= {"next": "whatsapp", "text": r[0]["text"], "whatsapp": r[0]["whatsapp"]}
+            elif m["kind"] == "defer":
+                text = (f"Namaste {m['party']} team, could we please pay {m['items'][0]} ({ap.fmt_inr(m['amount'])}) on "
+                        f"{pd.Timestamp(m['to_date']):%d %b} instead of {pd.Timestamp(m['from_date']):%d %b}? Thank you for your support. — {d.name.replace(' (fictional)', '')}")
+                out |= {"next": "whatsapp", "text": text, "whatsapp": khata_views.whatsapp(text, books.contacts(db, d.book).get(m["party"]))}
+        elif decision == "dismiss":
+            books.set_move_state(db, d.book, move_id, "dismissed")
+        elif decision == "undo":
+            books.set_move_state(db, d.book, move_id, None)
+        elif decision == "done":
+            if m["kind"] == "defer":  # the supplier agreed: the bill's due date really changes in the books
+                obl = d.obligations.copy()
+                obl["due_date"] = pd.to_datetime(obl["due_date"])
+                obl.loc[obl["item_id"].isin(m["items"]), "due_date"] = pd.Timestamp(m["to_date"])
+                dataset.save(db, d, khata.Tables(d.ledger, obl, d.balances))
+                books.set_move_state(db, d.book, move_id, None)
+            else:
+                books.set_move_state(db, d.book, move_id, "done")
+        else:
+            raise HTTPException(400, "decision must be approve, dismiss, undo or done")
+        store.log(db, "autopilot", f"{decision}: {move_id}")
+        return out
+
+    @app.post("/api/autopilot/approve-suggested")
+    def approve_suggested():
+        d = ds()
+        p, states = _plan(d)
+        ids = [m["id"] for m in p.get("moves", []) if m["suggested"] and states.get(m["id"]) not in ("approved", "done", "dismissed")]
+        for i in ids:
+            books.set_move_state(db, d.book, i, "approved")
+        return {"approved": ids}
+
+    @app.post("/api/autopilot/safety")
+    def autopilot_safety(body: dict = Body(...)):
+        d = ds()
+        v = body.get("amount")
+        if v in (None, ""):
+            books.set_settings(db, d.book, {"safety": ""})
+        else:
+            try:
+                x = float(v)
+            except (TypeError, ValueError) as e:
+                raise HTTPException(400, "Enter an amount.") from e
+            if x < 0:
+                raise HTTPException(400, "Enter an amount of zero or more.")
+            books.set_settings(db, d.book, {"safety": str(round(x))})
+        return {"ok": True}
+
+    # ------------------------------------------------------------ the chat thread (Ask) and the cash strip
 
     def _snapshot(d: dataset.Dataset) -> dict:
         pos = cash_position(d.ledger, d.balances, d.as_of) if len(d.ledger) else {"status": "insufficient_data"}
@@ -680,7 +808,7 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
         if rep.rejected:
             s += f" Skipped {len(rep.rejected)} row{'s' if len(rep.rejected) != 1 else ''} we couldn't read."
         if rep.duplicate_groups and table == "ledger":
-            s += f" {len(rep.duplicate_groups)} possible duplicate{'s' if len(rep.duplicate_groups) != 1 else ''} kept — ask Munshi “any double payments?” to review them."
+            s += f" {len(rep.duplicate_groups)} possible duplicate{'s' if len(rep.duplicate_groups) != 1 else ''} kept — ask FinPilot “any double payments?” to review them."
         return s
 
     @app.post("/api/balance")
@@ -732,6 +860,7 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
     @app.post("/api/demo/reset")
     def reset_demo():
         dataset.reset_demo(db)
+        _AP_CACHE.clear()
         return state()
 
     # ------------------------------------------------------------ khata: quick entries
@@ -939,6 +1068,8 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
             elif k == "gst_registered" and v in ("yes", "no"):
                 clean[k] = v
             elif k == "language" and v in i18n.LANGS:
+                clean[k] = v
+            elif k == "business_type" and (v in BUSINESS_TYPES or v == ""):
                 clean[k] = v
         books.set_settings(db, d.book, clean)
         if body.get("business_name") and not d.is_demo:

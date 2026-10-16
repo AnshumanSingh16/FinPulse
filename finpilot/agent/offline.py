@@ -71,8 +71,8 @@ P = {
                    "ख़रीद जाँचने के लिए उसकी कीमत बताइए — जैसे *“क्या मैं ₹12 लाख की पैकिंग मशीन 11% पर 3 साल के लोन पर ले सकता हूँ?”*"),
     "no_afford": ("**I can't assess affordability yet.** {msg}", "**अभी जाँच नहीं हो सकती।** {msg}"),
     "sim_fail": ("I couldn't run the simulation: {msg}", "सिमुलेशन नहीं चल सका: {msg}"),
-    "need_loan": ("**I need a bit more detail to check this loan.** Tell me the interest rate and how many years, from your lender's quote — Munshi doesn't guess loan terms.",
-                  "**इस लोन को जाँचने के लिए थोड़ी और जानकारी चाहिए।** लोन देने वाले से मिली ब्याज दर और कितने साल का लोन है, बताइए — Munshi लोन की शर्तें अंदाज़े से नहीं लगाता।"),
+    "need_loan": ("**I need a bit more detail to check this loan.** Tell me the interest rate and how many years, from your lender's quote — FinPilot doesn't guess loan terms.",
+                  "**इस लोन को जाँचने के लिए थोड़ी और जानकारी चाहिए।** लोन देने वाले से मिली ब्याज दर और कितने साल का लोन है, बताइए — FinPilot लोन की शर्तें अंदाज़े से नहीं लगाता।"),
     "verdict.good": ("Affordable — cash stays above your buffer even in the downside case.", "ख़रीद सकते हैं — मुश्किल हालत में भी कैश सुरक्षित सीमा से ऊपर रहेगा।"),
     "verdict.caution": ("Possible, but it gets tight — check the downside case.", "हो सकता है, पर तंगी होगी — मुश्किल वाली हालत देखें।"),
     "verdict.bad": ("Not affordable on current numbers — cash goes negative in the base case.", "मौजूदा आंकड़ों पर नहीं — सामान्य हालत में भी कैश शून्य से नीचे जाएगा।"),
@@ -83,12 +83,28 @@ P = {
     "sc.base": ("Most likely", "सबसे संभावित"), "sc.downside": ("Tough months", "मुश्किल महीने"), "sc.optimistic": ("Goes well", "अच्छा रहा तो"),
     "buffer": ("- Cash buffer used: {buf} (about one month of running costs).", "- सुरक्षित सीमा: {buf} (लगभग एक महीने का खर्च)।"),
     "today_cash": ("- Today's cash: {cash}.", "- आज का कैश: {cash}।"),
-    "payback": ("- Simple payback: {m:g} months, based on your expected benefit (not verified by Munshi).", "- लागत लगभग {m:g} महीने में निकलेगी — आपके बताए फ़ायदे के आधार पर (Munshi ने इसे जाँचा नहीं)।"),
+    "payback": ("- Simple payback: {m:g} months, based on your expected benefit (not verified by FinPilot).", "- लागत लगभग {m:g} महीने में निकलेगी — आपके बताए फ़ायदे के आधार पर (FinPilot ने इसे जाँचा नहीं)।"),
     "no_benefit": ("- No monthly benefit was given, so the simulation counts only the cost. Tell me what it would save or earn each month to include it.",
                    "- हर महीने का फ़ायदा नहीं बताया, इसलिए सिर्फ़ लागत गिनी गई। जोड़ना हो तो बताइए कि इससे हर महीने कितनी बचत या कमाई होगी।"),
     "interest": ("- Total loan interest over the tenure: {amt}.", "- पूरे लोन पर कुल ब्याज: {amt}।"),
     "sc.note": ("\nScenarios are illustrations under the stated settings, not predictions. Ask me again with different numbers to compare.",
                 "\nये अनुमान बताई गई शर्तों पर हैं, भविष्यवाणी नहीं। अलग आंकड़ों के साथ फिर पूछें।"),
+    "ap.out": ("**If nothing changes, you'll run out of cash on {date}.** The lowest point is {low} on {lowd}, against your safety level of {safe}.",
+               "**कुछ न बदला तो {date} को कैश खत्म हो जाएगा।** सबसे कम {low} ({lowd}) — आपका सुरक्षा स्तर {safe} है।"),
+    "ap.below": ("**Cash dips below your safety level of {safe} from {date}.** The lowest point is {low} on {lowd}.",
+                 "**{date} से कैश आपके सुरक्षा स्तर {safe} से नीचे जाएगा।** सबसे कम {low} ({lowd})।"),
+    "ap.ok": ("**You're covered for the next {d} days.** Cash stays above your safety level of {safe}; the lowest point is {low} on {lowd}.",
+              "**अगले {d} दिन आप सुरक्षित हैं।** कैश आपके सुरक्षा स्तर {safe} से ऊपर रहेगा; सबसे कम {low} ({lowd})।"),
+    "ap.today": ("- In the bank today: {cash}.", "- आज बैंक में: {cash}।"),
+    "ap.why": ("- Main reasons: {items}.", "- मुख्य कारण: {items}।"),
+    "ap.risk": ("- Not counted: {amt} from {name}, who is already {d} days late on older invoices.",
+                "- नहीं गिना: {name} से {amt}, जो पुराने बिलों पर पहले से {d} दिन लेट हैं।"),
+    "ap.moves": ("\nWhat your agents suggest (each checked by re-running the forecast):", "\nआपके एजेंट क्या सुझाते हैं (हर कदम पूरा अनुमान दोबारा चलाकर जाँचा गया):"),
+    "ap.move": ("{title} — lowest point +{imp}", "{title} — सबसे कम बैलेंस +{imp}"),
+    "ap.with": ("With these, the lowest point becomes {low}{ok}.", "इनसे सबसे कम बैलेंस {low} होगा{ok}।"),
+    "ap.safe": (" — above your safety level", " — सुरक्षा स्तर से ऊपर"),
+    "ap.note": ("\nApprove moves on the Cash tab. FinPilot prepares messages; it never pays or sends anything by itself.",
+                "\nCash टैब पर कदम मंज़ूर करें। FinPilot संदेश तैयार करता है; खुद कभी भुगतान या भेजता नहीं।"),
     "no_fc": ("**I can't forecast cash yet.** {msg}", "**अभी कैश का अनुमान नहीं लग सकता।** {msg}"),
     "fc.fail": ("The forecast could not run.", "अनुमान नहीं बन सका।"),
     "fc.head": ("**Starting from {cash} in the bank on {date}**, with scheduled invoices and bills plus typical recent flows:",
@@ -140,8 +156,8 @@ P = {
     "rec.obl": ("- {id}: {kind} · {party} · {amt} · due {date} · {status}", "- {id}: {kind} · {party} · {amt} · देय {date} · {status}"),
     "rec.nf": ("- Not found: {ids}", "- नहीं मिला: {ids}"),
     "rec.none": ("No matching records.", "कोई रिकॉर्ड नहीं मिला।"),
-    "act.ok": ("**Added to your to-dos (#{id}) for your approval.** Nothing has been sent, paid or filed — Munshi can't do that.",
-               "**आपकी मंज़ूरी के लिए काम-सूची में जोड़ा (#{id})।** कुछ भेजा, भरा या चुकाया नहीं गया — Munshi ऐसा नहीं करता।"),
+    "act.ok": ("**Added to your to-dos (#{id}) for your approval.** Nothing has been sent, paid or filed — FinPilot can't do that.",
+               "**आपकी मंज़ूरी के लिए काम-सूची में जोड़ा (#{id})।** कुछ भेजा, भरा या चुकाया नहीं गया — FinPilot ऐसा नहीं करता।"),
     "help": ("I didn't quite catch that. I can help with things like:\n- *What should I do today?*\n- *Who owes me money?* · *Who pays late?* · *How much does Metro owe?*\n"
              "- *Am I making money?* · *How did this week go?* · *What's my health score?*\n- *Is my rent too high?* · *Why did costs go up?* · *Any double payments?*\n"
              "- *Can I raise prices by 5%?* · *Should I hire a helper for ₹15,000?* · *How much GST should I keep aside?*\n"
@@ -243,6 +259,32 @@ def _purchase(q: str, call: ToolCaller, as_of: pd.Timestamp) -> str:
         lines.append(tr("interest", amt=_inr(r["total_loan_interest"])))
     lines.append(tr("sc.note"))
     return "\n".join(x for x in lines if x is not None)
+
+
+def _autopilot(q: str, call: ToolCaller, as_of) -> str:
+    ok, p = call("get_cash_autopilot", {})
+    if not ok or p.get("status") != "ok":
+        return tr("no_fc", msg=p.get("message", "") if isinstance(p, dict) else "")
+    b, safe = p["if_nothing_is_done"], _inr(p["safety_level"])
+    if b["runs_out"]:
+        head = tr("ap.out", date=b["runs_out"], low=_inr(b["lowest"]), lowd=b["lowest_date"], safe=safe)
+    elif not b["safe"]:
+        head = tr("ap.below", date=b["below_safety_from"], safe=safe, low=_inr(b["lowest"]), lowd=b["lowest_date"])
+    else:
+        head = tr("ap.ok", d=p["horizon_days"], safe=safe, low=_inr(b["lowest"]), lowd=b["lowest_date"])
+    lines = [head, tr("ap.today", cash=_inr(p["today"]))]
+    if p["main_causes_of_the_low_point"] and not b["safe"]:
+        lines.append(tr("ap.why", items=", ".join(f"{re.sub(r'^(INV|BILL|SCH)-[\w-]+ (from|to) ', '', c['label'])} {_inr(c['amount'])} ({c['date']})" for c in p["main_causes_of_the_low_point"])))
+    for r in p["invoices_not_counted_because_customer_is_late"][:2]:
+        lines.append(tr("ap.risk", amt=_inr(r["amount"]), name=r["party"], d=r["oldest_late_days"]))
+    sug = [m for m in p["moves"] if m["suggested"] and m["raises_lowest_balance_by"] > 0]
+    if sug and not b["safe"]:
+        lines.append(tr("ap.moves"))
+        lines.append(_bullets([tr("ap.move", title=m["title"], imp=_inr(m["raises_lowest_balance_by"])) for m in sug]))
+        w = p["with_the_agents_suggested_moves"]
+        lines.append("\n" + tr("ap.with", low=_inr(w["lowest"]), ok=tr("ap.safe") if w["safe"] else ""))
+    lines.append(tr("ap.note"))
+    return "\n".join(lines)
 
 
 def _forecast(q: str, call: ToolCaller, as_of) -> str:
@@ -388,7 +430,7 @@ def _records(q: str, call: ToolCaller, as_of) -> str:
 
 
 def _action(q: str, call: ToolCaller, as_of) -> str:
-    ok, r = call("propose_action", {"action": q.strip()[:120], "reason": "Requested by the user in Ask Munshi"})
+    ok, r = call("propose_action", {"action": q.strip()[:120], "reason": "Requested by the user in Ask FinPilot"})
     if not ok or r.get("status") != "awaiting_human_approval":
         return r["message"]
     return tr("act.ok", id=r["approval_id"])
@@ -397,9 +439,9 @@ def _action(q: str, call: ToolCaller, as_of) -> str:
 # ---------------------------------------------------------------- shop handlers (khata, health, week, what-ifs, GST, drafts)
 
 P.update({
-    "greet": ("Namaste! 🙏 I'm your Munshi assistant. I look at your own records and tell you what matters. Try:\n"
+    "greet": ("Namaste! 🙏 I'm your FinPilot assistant. I look at your own records and tell you what matters. Try:\n"
               "- *What should I do today?*\n- *Who owes me money?*\n- *Who are my best customers?*\n- *Add a sale of ₹500 cash*",
-              "नमस्ते! 🙏 मैं आपका Munshi सहायक हूँ। आपके अपने हिसाब से बताता हूँ कि क्या ज़रूरी है। पूछिए:\n"
+              "नमस्ते! 🙏 मैं आपका FinPilot सहायक हूँ। आपके अपने हिसाब से बताता हूँ कि क्या ज़रूरी है। पूछिए:\n"
               "- *आज मुझे क्या करना चाहिए?*\n- *किस पर उधारी बाकी है?*\n- *मेरे सबसे अच्छे ग्राहक कौन हैं?*\n- *₹500 की नकद बिक्री जोड़ो*"),
     "brief.head": ("**Here's what needs you today ({date}):**", "**आज ({date}) आपके ध्यान लायक बातें:**"),
     "brief.collect": ("**Collect from {name}** — {amt} overdue, oldest {days} days late. I've drafted a WhatsApp reminder below for you to check.",
@@ -495,7 +537,7 @@ P.update({
     "cat.head": ("**{cat}: {amt} over {a} to {b}** — about {avg} a month{share}.", "**{cat}: {a} से {b} में {amt}** — लगभग {avg} महीना{share}।"),
     "cat.share": (", {p:g}% of your sales", ", आपकी बिक्री का {p:g}%"),
     "cat.change": ("- Last month vs the month before: {dir} {chg}.", "- पिछला महीना उससे पहले वाले के मुकाबले: {chg} {dir}।"),
-    "cat.note": ("\nMunshi has no industry benchmarks, so compare this with what similar shops near you pay.", "\nMunshi के पास बाज़ार के मानक नहीं हैं — आस-पास की दुकानों से तुलना करें।"),
+    "cat.note": ("\nFinPilot has no industry benchmarks, so compare this with what similar shops near you pay.", "\nFinPilot के पास बाज़ार के मानक नहीं हैं — आस-पास की दुकानों से तुलना करें।"),
     "cat.none": ("No spending found under {cat}.", "{cat} में कोई खर्च नहीं मिला।"),
 })
 
@@ -887,7 +929,7 @@ P.update({
     "cc.odd": ("{n} payment(s) look unusual or doubled — worth checking (ask *“any double payments?”*).", "{n} भुगतान असामान्य या दोहरे लगते हैं — जाँच लें (पूछें *“कोई दोहरा भुगतान?”*)।"),
     "cc.budgets": ("\nI've prepared monthly budgets for {cats} at your recent average, so they can't creep up unnoticed — I'll tell you in the morning check-up if you go over.", "\n{cats} के लिए आपके हाल के औसत पर महीने का बजट तैयार किया है, ताकि खर्च चुपचाप न बढ़े — ज़्यादा होने पर सुबह के चेक-अप में बताऊँगा।"),
     "cc.has_budgets": ("\nYou already have budgets for your biggest costs — ask me *“how are my budgets?”* any time.", "\nसबसे बड़े खर्चों का बजट पहले से है — कभी भी पूछें *“मेरे बजट कैसे चल रहे हैं?”*"),
-    "mem.saved": ("**Got it — I'll remember:** “{fact}”. You can see or delete it in Settings → What Munshi remembers.", "**ठीक है, याद रखूँगा:** “{fact}”। इसे सेटिंग्स → Munshi को क्या याद है, में देख या हटा सकते हैं।"),
+    "mem.saved": ("**Got it — I'll remember:** “{fact}”. You can see or delete it in Settings → What FinPilot remembers.", "**ठीक है, याद रखूँगा:** “{fact}”। इसे सेटिंग्स → FinPilot को क्या याद है, में देख या हटा सकते हैं।"),
     "mem.none": ("I haven't been asked to remember anything yet. Tell me things like *“remember that Ramesh is my brother — never remind him”*.", "अभी कुछ याद रखने को नहीं कहा गया। जैसे कहें *“याद रखना, रमेश मेरा भाई है — उसे याद-संदेश मत भेजना”*।"),
     "mem.head": ("**Here's what you asked me to remember:**", "**आपने ये बातें याद रखने को कहा था:**"),
     "mem.forgot": ("Done — I've forgotten #{id}.", "ठीक है — #{id} भूल गया।"),
@@ -1121,7 +1163,7 @@ _ENTRY_VERB = re.compile(r"\b(add|record|enter|note|log|likh\w*|daal\w*|jod\w*|d
 _ENTRY_KIND = re.compile(r"^\s*(sold|sale of|received|got|collected|paid|spent|bought|udhaar|udhar|gave|diya|diye|mila|mile|becha|bechi)\b"
                          r"|\b(becha|bechi|beche|bika|udhaar|udhar|chukaya|chukaye|kharcha kiya|jama kiya|bheje|mile|mila)\b|बेचा|उधार दिया|चुकाया|मिले|मिला", re.I)
 EXCLUSIVE = {"records", "entry", "remind", "action", "purchase", "briefing", "greet", "price", "discount", "hire", "budget_goal",
-             "checkup", "collect", "costs", "remember", "recall", "forget", "promise"}
+             "checkup", "collect", "costs", "autopilot", "remember", "recall", "forget", "promise"}
 
 BASE_INTENTS: list[tuple[str, re.Pattern, Callable | None]] = [
     ("records", re.compile(r"\b(T\d{4}|U\d{5}|E\d{5}|INV-\d{3,}|BILL-[A-Z0-9-]+|SCH-\d{3,}|K-\d{4})\b"), _records),
@@ -1142,7 +1184,8 @@ BASE_INTENTS: list[tuple[str, re.Pattern, Callable | None]] = [
     ("discount", re.compile(r"\b(discount|offer|chhoot|chhut)\b|छूट|ऑफ़र", re.I), _discount),
     ("hire", re.compile(r"\b(hire|hiring|helper|employee|worker|staff|naukar|karigar|rakh\w*)\b|कर्मचारी|हेल्पर|रखूँ|रखना", re.I), _hire),
     ("briefing", re.compile(r"\b(what should (?:i|we) (?:do|focus)|to ?do today|today'?s? (?:plan|tasks?|priorit\w*)|priorit\w*|what needs|anything (?:urgent|important)|brief\w*|aaj kya|kya karu\w*|kya karna)\b|आज क्या|क्या करूँ|क्या करना", re.I), _mission_checkup),
-    ("forecast", re.compile(r"\b(forecast|next \d+ days|runway|run out|projection|cash flow|will (?:i|we) have|anuman|agle)\b|अनुमान|अगले", re.I), _forecast),
+    ("autopilot", re.compile(r"\b(run(?:ning)? (?:short|out)|short of (?:cash|money)|cash crunch|safety level|(?:enough|kam) (?:cash|paisa)|dip|survive|be (?:ok|okay|safe))\b|कैश खत्म|पैसे कम", re.I), _autopilot),
+    ("forecast", re.compile(r"\b(forecast|next \d+ days|runway|projection|cash flow|will (?:i|we) have|anuman|agle)\b|अनुमान|अगले", re.I), _forecast),
     ("health", re.compile(r"\b(health|score|sehat|rating|how healthy)\b|सेहत|स्कोर", re.I), _health),
     ("week", re.compile(r"\b(this week|last week|past week|last 7 days|weekly|week|hafte|hafta)\b|हफ़्ते|हफ्ते|सप्ताह", re.I), _week),
     ("tax", re.compile(r"\b(gst|tds|tax|taxes|return|filing|itr)\b|जीएसटी|टैक्स", re.I), _tax),
