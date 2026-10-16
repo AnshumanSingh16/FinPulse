@@ -6,6 +6,7 @@ except, in AI mode, the question and tool outputs to the chosen AI provider (Ant
 from __future__ import annotations
 
 import json
+import mimetypes
 import queue
 import threading
 import uuid
@@ -30,6 +31,11 @@ from finpilot.engine.categorize import categorize_ledger
 from . import dataset, i18n, khata_views, smart_views, views
 
 STATIC = Path(__file__).resolve().parents[1] / "web"
+
+# Windows reads file types from the registry, which some installs map wrongly (e.g. .js as text/plain).
+for _ext, _type in ((".js", "text/javascript"), (".mjs", "text/javascript"), (".css", "text/css"), (".html", "text/html"), (".txt", "text/plain"),
+                    (".json", "application/json"), (".svg", "image/svg+xml"), (".woff2", "font/woff2"), (".woff", "font/woff"), (".ico", "image/x-icon")):
+    mimetypes.add_type(_type, _ext)
 MAX_UPLOAD = 25 * 1024 * 1024
 
 KINDS = {"bank": "ledger", "invoices": "obligations", "balances": "balances"}

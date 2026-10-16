@@ -2,7 +2,7 @@
 
 import { AlertTriangle, ArrowDownLeft, ArrowUp, ArrowUpRight, BookOpen, HandCoins, Landmark, Mic, ReceiptText, RotateCcw, Store } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import { Component, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { AgentAnswer, type AgentResult, applyEvent, emptyLive, type Live, LiveCard, streamAgent } from "@/components/agent";
 import { AiModeChip, AiSetupSheet } from "@/components/ai-setup";
 import { DataVersion } from "@/components/data-version";
@@ -154,7 +154,7 @@ export default function MunshiChat() {
         {items.map((it, i) => (
           <div key={it.id}>
             {(i === 0 || dayKey(items[i - 1].at) !== dayKey(it.at)) && <DaySep iso={it.at} />}
-            <Bubble item={it} onUndone={load} />
+            <Safe><Bubble item={it} onUndone={load} /></Safe>
           </div>
         ))}
         {pending && <OwnerBubble text={pending} />}
@@ -347,4 +347,19 @@ function EntryLine({ e, at, onUndone }: { e: EntryEvent; at: string; onUndone: (
       </div>
     </div>
   );
+}
+
+/** One message that can't be shown must never take the whole chat down. */
+class Safe extends Component<{ children: React.ReactNode }, { err: string | null }> {
+  state = { err: null as string | null };
+  static getDerivedStateFromError(e: Error) {
+    return { err: e?.message || String(e) };
+  }
+  componentDidCatch(e: Error) {
+    console.error(e);
+  }
+  render() {
+    if (this.state.err) return <p className="rounded-2xl bg-caution-50 px-3 py-2 text-xs text-caution">Couldn't show this message ({this.state.err}).</p>;
+    return this.props.children;
+  }
 }
