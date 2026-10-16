@@ -26,6 +26,7 @@ SCHEMA = [
     "preview TEXT, state TEXT, decided_at TEXT, result TEXT, PRIMARY KEY (book, id))",
     "CREATE TABLE IF NOT EXISTS memory (id INTEGER PRIMARY KEY AUTOINCREMENT, book TEXT, text TEXT, created_at TEXT)",
     "CREATE TABLE IF NOT EXISTS checkups (book TEXT, lang TEXT, day TEXT, ran_at TEXT, data TEXT, PRIMARY KEY (book, lang))",
+    "CREATE TABLE IF NOT EXISTS chat_log (id INTEGER PRIMARY KEY AUTOINCREMENT, book TEXT, at TEXT, role TEXT, kind TEXT, data TEXT)",
 ]
 
 
@@ -171,7 +172,7 @@ def pop_entry(db: Path, book: str, entry_id: str) -> dict | None:
 def reset_book(db: Path, book: str) -> None:
     """Forget everything the owner did in a book (used for 'Reset demo')."""
     with connect(db) as con:
-        for t in ("contacts", "promises", "cat_rules", "budgets", "goals", "settings", "entry_log", "agent_actions", "memory", "checkups"):
+        for t in ("contacts", "promises", "cat_rules", "budgets", "goals", "settings", "entry_log", "agent_actions", "memory", "checkups", "chat_log"):
             con.execute(f"DELETE FROM {t} WHERE book = ?", (book,))
 
 
@@ -251,3 +252,27 @@ def last_checkup(db: Path, book: str, lang: str) -> dict | None:
     with connect(db) as con:
         r = con.execute("SELECT day, ran_at, data FROM checkups WHERE book = ? AND lang = ?", (book, lang)).fetchone()
     return {"day": r[0], "ran_at": r[1], **json.loads(r[2])} if r else None
+
+
+# ---------------------------------------------------------------- the chat thread (the owner's messages, Munshi's replies, and khata events)
+
+
+def add_chat(db: Path, book: str, role: str, kind: str, data: dict) -> int:
+    with connect(db) as con:
+        return int(con.execute("INSERT INTO chat_log (book, at, role, kind, data) VALUES (?, ?, ?, ?, ?)",
+                               (book, store.now(), role, kind, json.dumps(data, default=str))).lastrowid)
+
+
+def chat_log(db: Path, book: str, limit: int = 150) -> list[dict]:
+    with connect(db) as con:
+        rows = _rows(con.execute("SELECT id, at, role, kind, data FROM chat_log WHERE book = ? ORDER BY id DESC LIMIT ?", (book, limit)))
+    return [r | {"data": json.loads(r["data"])} for r in reversed(rows)]
+
+
+def update_chat_where(db: Path, book: str, kind: str, key: str, value, changes: dict) -> None:
+    """Merge `changes` into chat items of a kind whose data[key] == value (e.g. mark an entry event undone)."""
+    with connect(db) as con:
+        for i, d in con.execute("SELECT id, data FROM chat_log WHERE book = ? AND kind = ?", (book, kind)).fetchall():
+            data = json.loads(d)
+            if data.get(key) == value:
+                con.execute("UPDATE chat_log SET data = ? WHERE id = ?", (json.dumps(data | changes, default=str), i))

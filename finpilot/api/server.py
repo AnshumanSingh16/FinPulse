@@ -24,6 +24,7 @@ from finpilot import config
 from finpilot.config import settings
 from finpilot.data import books, khata, loader, store
 from finpilot.data.parse_entry import parse as parse_entry
+from finpilot.engine.cash import cash_position, obligations_status
 from finpilot.engine.categorize import categorize_ledger
 
 from . import dataset, i18n, khata_views, smart_views, views
@@ -304,9 +305,22 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
             raise HTTPException(400, "Please keep questions under 2,000 characters.")
         return question
 
+    def _logged(question: str, cid: str | None, lang: str, on_event=None, log: bool = True) -> dict:
+        d = ds()
+        if log:
+            books.add_chat(db, d.book, "owner", "text", {"text": question})
+        out = _run(question, cid, lang, on_event)
+        if log:
+            out["chat_id"] = books.add_chat(db, d.book, "munshi", "answer", _stored(out))
+        return out
+
+    def _stored(out: dict) -> dict:
+        """What the thread keeps of an answer: everything except the full action cards (their live state is read back from the database)."""
+        return {k: v for k, v in out.items() if k != "actions"} | {"action_ids": [a["id"] for a in out.get("actions", [])]}
+
     @app.post("/api/ask")
     def ask(body: dict = Body(...)):
-        return _run(_question(body), body.get("conversation_id"), lg())
+        return _logged(_question(body), body.get("conversation_id"), lg(), log=bool(body.get("log", False)))
 
     def _stream(work_fn, lang: str) -> StreamingResponse:
         q: queue.Queue = queue.Queue()
@@ -338,7 +352,8 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
     def ask_stream(body: dict = Body(...)):
         """The same answer as /api/ask, with live progress as server-sent events: plan, step started / finished, the agent's notes, then the final answer."""
         question, cid, lang = _question(body), body.get("conversation_id"), lg()
-        return _stream(lambda on_event: _run(question, cid, lang, on_event), lang)
+        log = bool(body.get("log", False))
+        return _stream(lambda on_event: _logged(question, cid, lang, on_event, log), lang)
 
     def _decide(d: dataset.Dataset, action_id: str, decision: str, cid: str | None = None) -> dict:
         """The owner's Confirm / Cancel on a card the agent drafted. Only this — never the model — saves anything."""
@@ -376,7 +391,7 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
             note = f"The owner confirmed: {item['summary']}."
         elif kind == "send_reminder":
             out |= {"message": "Opening WhatsApp — check the message and press send.", "open": p["whatsapp"]}
-            note = f"The owner opened WhatsApp to send the reminder to {p['customer']} (FinPilot cannot tell whether it was sent)."
+            note = f"The owner opened WhatsApp to send the reminder to {p['customer']} (Munshi cannot tell whether it was sent)."
         else:
             raise HTTPException(400, "Unknown action.")
         books.decide_action(db, d.book, action_id, "done", {k: v for k, v in out.items() if k in ("message", "id")})
@@ -415,6 +430,7 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
         data = _package(run, d, lang, "", "checkup")
         data["action_ids"] = [a["id"] for a in data.pop("actions")]
         books.save_checkup(db, d.book, lang, _today(), data)
+        books.add_chat(db, d.book, "munshi", "checkup", data | {"day": _today()})
         store.log(db, "checkup", f"{len(data['action_ids'])} action(s) prepared")
         return _checkup_view(d, books.last_checkup(db, d.book, lang))
 
@@ -462,6 +478,42 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
     def delete_memory(memory_id: int):
         books.delete_memory(db, ds().book, memory_id)
         return books.memories(db, ds().book)
+
+    # ------------------------------------------------------------ Munshi: the chat thread and the lena/dena strip
+
+    def _snapshot(d: dataset.Dataset) -> dict:
+        pos = cash_position(d.ledger, d.balances, d.as_of) if len(d.ledger) else {"status": "insufficient_data"}
+        obl = obligations_status(d.obligations, d.as_of)
+        out = {"cash": pos["cash_balance"] if pos.get("status") == "ok" else None, "as_of_label": views.day_full(d.as_of, lg()),
+               "to_collect": 0.0, "collect_overdue": 0.0, "to_pay": 0.0, "pay_overdue": 0.0}
+        if obl.get("status") == "ok":
+            r, p = obl["receivables"], obl["payables"]
+            out |= {"to_collect": round(r["pending_not_due"] + r["overdue"], 2), "collect_overdue": r["overdue"],
+                    "to_pay": round(p["pending_not_due"] + p["overdue"], 2), "pay_overdue": p["overdue"]}
+        return out
+
+    def _hydrate(d: dataset.Dataset, items: list[dict]) -> list[dict]:
+        ids = [i for it in items for i in it["data"].get("action_ids", [])]
+        rows = {a["id"]: _action_out(a) for a in books.actions(db, d.book, ids=ids, limit=max(len(ids), 1))} if ids else {}
+        for it in items:
+            if "action_ids" in it["data"]:
+                it["data"]["actions"] = [rows[i] for i in it["data"].pop("action_ids") if i in rows]
+        return items
+
+    @app.get("/api/chat")
+    def chat():
+        d = ds()
+        done_today = any((c := books.last_checkup(db, d.book, lang)) and c["day"] == _today() for lang in ("en", "hi"))
+        return {"business": d.name.replace(" (fictional)", ""), "is_demo": d.is_demo, "snapshot": _snapshot(d),
+                "items": _hydrate(d, books.chat_log(db, d.book)), "checkup_due": not done_today, "ai": ai_status()}
+
+    @app.delete("/api/chat")
+    def clear_chat():
+        d = ds()
+        with books.connect(db) as con:
+            con.execute("DELETE FROM chat_log WHERE book = ?", (d.book,))
+        chats.pop(f"main:{d.book}", None)
+        return {"ok": True}
 
     # ------------------------------------------------------------ AI settings (the key stays on this computer)
 
@@ -622,7 +674,7 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
         if rep.rejected:
             s += f" Skipped {len(rep.rejected)} row{'s' if len(rep.rejected) != 1 else ''} we couldn't read."
         if rep.duplicate_groups and table == "ledger":
-            s += f" {len(rep.duplicate_groups)} possible duplicate{'s' if len(rep.duplicate_groups) != 1 else ''} kept — check them on Home."
+            s += f" {len(rep.duplicate_groups)} possible duplicate{'s' if len(rep.duplicate_groups) != 1 else ''} kept — ask Munshi “any double payments?” to review them."
         return s
 
     @app.post("/api/balance")
@@ -714,6 +766,8 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
             msg += " · cleared " + ", ".join(f"{s['item_id']}" + ("" if s["full"] else " (part)") for s in res.settled)
         if res.unapplied and body.get("kind") in ("payment_in", "payment_out") and res.settled:
             msg += f" · {views.short(res.unapplied)} more than was due"
+        books.add_chat(db, d.book, "event", "entry", {"entry_id": res.entry_id, "entry_kind": str(body.get("kind")), "message": msg,
+                                                      "amount": float(body.get("amount") or 0), "party": str(body.get("party") or ""), "undone": False})
         return {"id": res.entry_id, "message": msg, "settled": res.settled, "remaining": remaining,
                 "cleared_all": bool(res.settled) and remaining is not None and remaining <= 0}
 
@@ -728,6 +782,7 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
         if rec is None:
             raise HTTPException(404, "Nothing to undo.")
         dataset.save(db, d, khata.undo(d.tables(), rec))
+        books.update_chat_where(db, d.book, "entry", "entry_id", entry_id, {"undone": True})
         return {"ok": True}
 
     # ------------------------------------------------------------ khata: customers & suppliers

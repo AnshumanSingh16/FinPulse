@@ -103,7 +103,6 @@ export default function DataPage() {
         onDone={refresh}
       />
 
-      <AiCard />
       <SettingsCard isDemo={state.is_demo} />
 
       {state.is_demo && (

@@ -71,8 +71,8 @@ P = {
                    "ख़रीद जाँचने के लिए उसकी कीमत बताइए — जैसे *“क्या मैं ₹12 लाख की पैकिंग मशीन 11% पर 3 साल के लोन पर ले सकता हूँ?”*"),
     "no_afford": ("**I can't assess affordability yet.** {msg}", "**अभी जाँच नहीं हो सकती।** {msg}"),
     "sim_fail": ("I couldn't run the simulation: {msg}", "सिमुलेशन नहीं चल सका: {msg}"),
-    "need_loan": ("**I need a bit more detail to check this loan.** Tell me the interest rate and how many years, from your lender's quote — FinPilot doesn't guess loan terms.",
-                  "**इस लोन को जाँचने के लिए थोड़ी और जानकारी चाहिए।** लोन देने वाले से मिली ब्याज दर और कितने साल का लोन है, बताइए — FinPilot लोन की शर्तें अंदाज़े से नहीं लगाता।"),
+    "need_loan": ("**I need a bit more detail to check this loan.** Tell me the interest rate and how many years, from your lender's quote — Munshi doesn't guess loan terms.",
+                  "**इस लोन को जाँचने के लिए थोड़ी और जानकारी चाहिए।** लोन देने वाले से मिली ब्याज दर और कितने साल का लोन है, बताइए — Munshi लोन की शर्तें अंदाज़े से नहीं लगाता।"),
     "verdict.good": ("Affordable — cash stays above your buffer even in the downside case.", "ख़रीद सकते हैं — मुश्किल हालत में भी कैश सुरक्षित सीमा से ऊपर रहेगा।"),
     "verdict.caution": ("Possible, but it gets tight — check the downside case.", "हो सकता है, पर तंगी होगी — मुश्किल वाली हालत देखें।"),
     "verdict.bad": ("Not affordable on current numbers — cash goes negative in the base case.", "मौजूदा आंकड़ों पर नहीं — सामान्य हालत में भी कैश शून्य से नीचे जाएगा।"),
@@ -83,12 +83,12 @@ P = {
     "sc.base": ("Most likely", "सबसे संभावित"), "sc.downside": ("Tough months", "मुश्किल महीने"), "sc.optimistic": ("Goes well", "अच्छा रहा तो"),
     "buffer": ("- Cash buffer used: {buf} (about one month of running costs).", "- सुरक्षित सीमा: {buf} (लगभग एक महीने का खर्च)।"),
     "today_cash": ("- Today's cash: {cash}.", "- आज का कैश: {cash}।"),
-    "payback": ("- Simple payback: {m:g} months, based on your expected benefit (not verified by FinPilot).", "- लागत लगभग {m:g} महीने में निकलेगी — आपके बताए फ़ायदे के आधार पर (FinPilot ने इसे जाँचा नहीं)।"),
+    "payback": ("- Simple payback: {m:g} months, based on your expected benefit (not verified by Munshi).", "- लागत लगभग {m:g} महीने में निकलेगी — आपके बताए फ़ायदे के आधार पर (Munshi ने इसे जाँचा नहीं)।"),
     "no_benefit": ("- No monthly benefit was given, so the simulation counts only the cost. Tell me what it would save or earn each month to include it.",
                    "- हर महीने का फ़ायदा नहीं बताया, इसलिए सिर्फ़ लागत गिनी गई। जोड़ना हो तो बताइए कि इससे हर महीने कितनी बचत या कमाई होगी।"),
     "interest": ("- Total loan interest over the tenure: {amt}.", "- पूरे लोन पर कुल ब्याज: {amt}।"),
-    "sc.note": ("\nScenarios are illustrations under the stated settings, not predictions. Try different numbers on the Plan tab.",
-                "\nये अनुमान बताई गई शर्तों पर हैं, भविष्यवाणी नहीं। अलग आंकड़े Plan टैब पर आज़माएँ।"),
+    "sc.note": ("\nScenarios are illustrations under the stated settings, not predictions. Ask me again with different numbers to compare.",
+                "\nये अनुमान बताई गई शर्तों पर हैं, भविष्यवाणी नहीं। अलग आंकड़ों के साथ फिर पूछें।"),
     "no_fc": ("**I can't forecast cash yet.** {msg}", "**अभी कैश का अनुमान नहीं लग सकता।** {msg}"),
     "fc.fail": ("The forecast could not run.", "अनुमान नहीं बन सका।"),
     "fc.head": ("**Starting from {cash} in the bank on {date}**, with scheduled invoices and bills plus typical recent flows:",
@@ -140,8 +140,8 @@ P = {
     "rec.obl": ("- {id}: {kind} · {party} · {amt} · due {date} · {status}", "- {id}: {kind} · {party} · {amt} · देय {date} · {status}"),
     "rec.nf": ("- Not found: {ids}", "- नहीं मिला: {ids}"),
     "rec.none": ("No matching records.", "कोई रिकॉर्ड नहीं मिला।"),
-    "act.ok": ("**Added to your to-dos (#{id}) for your approval.** Nothing has been sent, paid or filed — FinPilot can't do that.",
-               "**आपकी मंज़ूरी के लिए काम-सूची में जोड़ा (#{id})।** कुछ भेजा, भरा या चुकाया नहीं गया — FinPilot ऐसा नहीं करता।"),
+    "act.ok": ("**Added to your to-dos (#{id}) for your approval.** Nothing has been sent, paid or filed — Munshi can't do that.",
+               "**आपकी मंज़ूरी के लिए काम-सूची में जोड़ा (#{id})।** कुछ भेजा, भरा या चुकाया नहीं गया — Munshi ऐसा नहीं करता।"),
     "help": ("I didn't quite catch that. I can help with things like:\n- *What should I do today?*\n- *Who owes me money?* · *Who pays late?* · *How much does Metro owe?*\n"
              "- *Am I making money?* · *How did this week go?* · *What's my health score?*\n- *Is my rent too high?* · *Why did costs go up?* · *Any double payments?*\n"
              "- *Can I raise prices by 5%?* · *Should I hire a helper for ₹15,000?* · *How much GST should I keep aside?*\n"
@@ -388,7 +388,7 @@ def _records(q: str, call: ToolCaller, as_of) -> str:
 
 
 def _action(q: str, call: ToolCaller, as_of) -> str:
-    ok, r = call("propose_action", {"action": q.strip()[:120], "reason": "Requested by the user in Ask FinPilot"})
+    ok, r = call("propose_action", {"action": q.strip()[:120], "reason": "Requested by the user in Ask Munshi"})
     if not ok or r.get("status") != "awaiting_human_approval":
         return r["message"]
     return tr("act.ok", id=r["approval_id"])
@@ -397,9 +397,9 @@ def _action(q: str, call: ToolCaller, as_of) -> str:
 # ---------------------------------------------------------------- shop handlers (khata, health, week, what-ifs, GST, drafts)
 
 P.update({
-    "greet": ("Namaste! 🙏 I'm your FinPilot assistant. I look at your own records and tell you what matters. Try:\n"
+    "greet": ("Namaste! 🙏 I'm your Munshi assistant. I look at your own records and tell you what matters. Try:\n"
               "- *What should I do today?*\n- *Who owes me money?*\n- *Who are my best customers?*\n- *Add a sale of ₹500 cash*",
-              "नमस्ते! 🙏 मैं आपका FinPilot सहायक हूँ। आपके अपने हिसाब से बताता हूँ कि क्या ज़रूरी है। पूछिए:\n"
+              "नमस्ते! 🙏 मैं आपका Munshi सहायक हूँ। आपके अपने हिसाब से बताता हूँ कि क्या ज़रूरी है। पूछिए:\n"
               "- *आज मुझे क्या करना चाहिए?*\n- *किस पर उधारी बाकी है?*\n- *मेरे सबसे अच्छे ग्राहक कौन हैं?*\n- *₹500 की नकद बिक्री जोड़ो*"),
     "brief.head": ("**Here's what needs you today ({date}):**", "**आज ({date}) आपके ध्यान लायक बातें:**"),
     "brief.collect": ("**Collect from {name}** — {amt} overdue, oldest {days} days late. I've drafted a WhatsApp reminder below for you to check.",
@@ -459,7 +459,7 @@ P.update({
     "wi.hire_extra": (" (with {x} extra sales a month)", " ({x} ज़्यादा महीने की बिक्री के साथ)"),
     "wi.hire_be": ("- They pay for themselves if they bring about {be} of extra sales a month.", "- अगर वे हर महीने लगभग {be} की ज़्यादा बिक्री लाएँ तो ख़र्च निकल जाएगा।"),
     "wi.hire_cash": ("- Lowest bank balance over 6 months: {w} with the hire vs {wo} without.", "- 6 महीने में सबसे कम बैलेंस: भर्ती के साथ {w}, बिना {wo}।"),
-    "wi.note": ("\nA what-if on your past averages, not a prediction. Try other numbers on the Plan tab.", "\nयह पिछले औसत पर हिसाब है, भविष्यवाणी नहीं। अलग आंकड़े Plan टैब पर आज़माएँ।"),
+    "wi.note": ("\nA what-if on your past averages, not a prediction. Ask again with other numbers to compare.", "\nयह पिछले औसत पर हिसाब है, भविष्यवाणी नहीं। अलग आंकड़ों के साथ फिर पूछें।"),
     "tax.not": ("You've marked the business as not GST-registered, so there's no GST to set aside.", "आपने व्यवसाय को GST में पंजीकृत नहीं बताया है, इसलिए GST अलग रखने की ज़रूरत नहीं।"),
     "tax.head": ("**Set aside about {amt} for GST** for last month ({a} to {b}), at {r:g}% on sales minus {rp:g}% credit on purchases.",
                  "**पिछले महीने ({a} से {b}) के GST के लिए लगभग {amt} अलग रखें** — बिक्री पर {r:g}%, ख़रीद पर {rp:g}% क्रेडिट घटाकर।"),
@@ -495,7 +495,7 @@ P.update({
     "cat.head": ("**{cat}: {amt} over {a} to {b}** — about {avg} a month{share}.", "**{cat}: {a} से {b} में {amt}** — लगभग {avg} महीना{share}।"),
     "cat.share": (", {p:g}% of your sales", ", आपकी बिक्री का {p:g}%"),
     "cat.change": ("- Last month vs the month before: {dir} {chg}.", "- पिछला महीना उससे पहले वाले के मुकाबले: {chg} {dir}।"),
-    "cat.note": ("\nFinPilot has no industry benchmarks, so compare this with what similar shops near you pay.", "\nFinPilot के पास बाज़ार के मानक नहीं हैं — आस-पास की दुकानों से तुलना करें।"),
+    "cat.note": ("\nMunshi has no industry benchmarks, so compare this with what similar shops near you pay.", "\nMunshi के पास बाज़ार के मानक नहीं हैं — आस-पास की दुकानों से तुलना करें।"),
     "cat.none": ("No spending found under {cat}.", "{cat} में कोई खर्च नहीं मिला।"),
 })
 
@@ -857,8 +857,8 @@ P.update({
     "m.ck.bills": ("Check bills due this week", "इस हफ़्ते के बिल देखना"), "m.ck.budget": ("Check budgets and goals", "बजट और लक्ष्य देखना"),
     "m.ck.odd": ("Look for unusual payments", "असामान्य भुगतान खोजना"), "m.ck.review": ("Check bank lines needing a category", "बिना श्रेणी वाली एंट्री देखना"),
     "m.ck.prep": ("Prepare actions for you", "आपके लिए काम तैयार करना"),
-    "ck.calm": ("**All calm today ✅** — nothing overdue, no bills this week and nothing unusual.", "**आज सब ठीक है ✅** — न उधारी बकाया, न इस हफ़्ते बिल, न कुछ असामान्य।"),
-    "ck.head": ("**Daily check-up — {n} thing(s) need you today.**", "**रोज़ का चेक-अप — आज {n} बातों पर ध्यान दें।**"),
+    "ck.calm": ("**Namaste 🙏 All calm today** — nothing overdue, no bills this week and nothing unusual.", "**नमस्ते 🙏 आज सब ठीक है** — न उधारी बकाया, न इस हफ़्ते बिल, न कुछ असामान्य।"),
+    "ck.head": ("**Namaste 🙏 I've gone through your books. {n} thing(s) need you today:**", "**नमस्ते 🙏 मैंने आपका हिसाब देख लिया। आज {n} काम आपके ध्यान के लिए:**"),
     "ck.cash": ("Cash in bank {cash}{low}.", "बैंक में {cash}{low}।"),
     "ck.low": ("; lowest in the next 30 days {low} on {date}", "; अगले 30 दिन में सबसे कम {low}, {date} को"),
     "ck.collect": ("**Collect {amt} from {name}** — oldest {days} days late.", "**{name} से {amt} वसूलें** — सबसे पुराना {days} दिन देर।"),
@@ -885,9 +885,9 @@ P.update({
     "cc.share": (" ({p:g}% of sales)", " (बिक्री का {p:g}%)"),
     "cc.rise": ("Biggest rise last month: **{cat}**, up {chg}.", "पिछले महीने सबसे ज़्यादा बढ़ा: **{cat}**, {chg}।"),
     "cc.odd": ("{n} payment(s) look unusual or doubled — worth checking (ask *“any double payments?”*).", "{n} भुगतान असामान्य या दोहरे लगते हैं — जाँच लें (पूछें *“कोई दोहरा भुगतान?”*)।"),
-    "cc.budgets": ("\nI've prepared monthly budgets for {cats} at your recent average, so they can't creep up unnoticed — I'll flag them on Home if you go over.", "\n{cats} के लिए आपके हाल के औसत पर महीने का बजट तैयार किया है, ताकि खर्च चुपचाप न बढ़े — ज़्यादा होने पर होम पर बताऊँगा।"),
-    "cc.has_budgets": ("\nYou already have budgets for your biggest costs — see Goals & budgets.", "\nसबसे बड़े खर्चों का बजट पहले से है — लक्ष्य और बजट में देखें।"),
-    "mem.saved": ("**Got it — I'll remember:** “{fact}”. You can see or delete this under *Memory* on the Ask page.", "**ठीक है, याद रखूँगा:** “{fact}”। इसे 'पूछें' पेज पर *याद* में देख या हटा सकते हैं।"),
+    "cc.budgets": ("\nI've prepared monthly budgets for {cats} at your recent average, so they can't creep up unnoticed — I'll tell you in the morning check-up if you go over.", "\n{cats} के लिए आपके हाल के औसत पर महीने का बजट तैयार किया है, ताकि खर्च चुपचाप न बढ़े — ज़्यादा होने पर सुबह के चेक-अप में बताऊँगा।"),
+    "cc.has_budgets": ("\nYou already have budgets for your biggest costs — ask me *“how are my budgets?”* any time.", "\nसबसे बड़े खर्चों का बजट पहले से है — कभी भी पूछें *“मेरे बजट कैसे चल रहे हैं?”*"),
+    "mem.saved": ("**Got it — I'll remember:** “{fact}”. You can see or delete it in Settings → What Munshi remembers.", "**ठीक है, याद रखूँगा:** “{fact}”। इसे सेटिंग्स → Munshi को क्या याद है, में देख या हटा सकते हैं।"),
     "mem.none": ("I haven't been asked to remember anything yet. Tell me things like *“remember that Ramesh is my brother — never remind him”*.", "अभी कुछ याद रखने को नहीं कहा गया। जैसे कहें *“याद रखना, रमेश मेरा भाई है — उसे याद-संदेश मत भेजना”*।"),
     "mem.head": ("**Here's what you asked me to remember:**", "**आपने ये बातें याद रखने को कहा था:**"),
     "mem.forgot": ("Done — I've forgotten #{id}.", "ठीक है — #{id} भूल गया।"),

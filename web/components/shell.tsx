@@ -1,44 +1,19 @@
 "use client";
 
-import {
-  BookUser, CalendarDays, Database, FileText, Gauge, House, Languages, LayoutGrid, MessageCircleQuestion, Monitor, Moon, Plus, Sparkles, Sun, Target, Wallet, X,
-} from "lucide-react";
+import { BookUser, Languages, MessageCircle, Monitor, Moon, Settings, Sun } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useContext, useEffect, useState } from "react";
-import { post } from "@/lib/api";
+import { useEffect, useState } from "react";
 import { useT } from "@/lib/i18n";
-import { DataVersion } from "./data-version";
-import { useQuickEntry } from "./quick-entry";
 import { cx } from "./ui";
 
-const MAIN = [
-  { href: "/", label: "Home", icon: House },
-  { href: "/khata/", label: "Khata", icon: BookUser },
-  { href: "/money/", label: "Money", icon: Wallet },
-  { href: "/ask/", label: "Ask", icon: MessageCircleQuestion },
-  { href: "/plan/", label: "Plan", icon: Target },
-];
-const EXTRA = [
-  { href: "/calendar/", label: "Calendar", icon: CalendarDays },
-  { href: "/goals/", label: "Goals & budgets", icon: LayoutGrid },
-  { href: "/health/", label: "Health score", icon: Gauge },
-  { href: "/reports/", label: "Reports", icon: FileText },
-  { href: "/data/", label: "Your data", icon: Database },
-];
-
-function active(path: string, href: string) {
-  return href === "/" ? path === "/" : path.startsWith(href.replace(/\/$/, ""));
-}
-
-export function Logo({ light }: { light?: boolean }) {
+/** Munshi's mark: a ledger-green tile with a saffron "म". */
+export function MunshiMark({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
+  const box = size === "sm" ? "size-8 text-base" : size === "lg" ? "size-14 text-2xl" : "size-10 text-lg";
   return (
-    <Link href="/" className="flex items-center gap-2.5" aria-label="FinPilot home">
-      <span className="grad-hero grid size-9 place-items-center rounded-xl text-[#ffd27a] shadow-sm">
-        <Sparkles className="size-5" aria-hidden />
-      </span>
-      <span className={cx("display text-[1.3rem]", light && "text-white")}>FinPilot</span>
-    </Link>
+    <span className={cx("grad-hero grid shrink-0 place-items-center rounded-2xl font-bold text-[#ffd27a] shadow-sm", box)} aria-hidden>
+      म
+    </span>
   );
 }
 
@@ -89,128 +64,40 @@ export function ThemeToggle({ className }: { className?: string }) {
   );
 }
 
+const TABS = [
+  { href: "/", label: "Munshi", I: MessageCircle },
+  { href: "/khata/", label: "Khata", I: BookUser },
+];
+
 export function Shell({ children }: { children: React.ReactNode }) {
   const path = usePathname() || "/";
-  const { state, refresh } = useContext(DataVersion);
   const { t } = useT();
-  const qe = useQuickEntry();
-  const [more, setMore] = useState(false);
-  const isAsk = active(path, "/ask/");
-  const isReport = active(path, "/reports/");
-
-  const useMine = async () => {
-    await post("/api/source", { source: "upload" });
-    refresh();
-  };
-
-  const navItem = (href: string, label: string, I: React.ElementType) => (
-    <Link
-      key={href}
-      href={href}
-      className={cx(
-        "flex h-11 items-center gap-3 rounded-xl px-3 text-[0.95rem] font-medium transition",
-        active(path, href) ? "bg-brand-50 font-semibold text-brand" : "text-ink-2 hover:bg-surface-2 hover:text-ink",
-      )}
-    >
-      <I className="size-5" aria-hidden /> {t(label)}
-    </Link>
-  );
-
+  const isChat = path === "/";
+  const isPrint = path.startsWith("/reports");
   return (
-    <div className="min-h-dvh">
-      <aside className="no-print fixed inset-y-0 left-0 hidden w-64 flex-col overflow-y-auto border-r border-line bg-surface px-4 py-6 lg:flex">
-        <div className="flex items-center justify-between px-2">
-          <Logo />
-        </div>
-        <button onClick={() => qe.open()} className="mt-6 flex h-12 items-center justify-center gap-2 rounded-full bg-brand text-[0.95rem] font-semibold text-on-brand shadow-md shadow-brand/20 transition hover:bg-brand-600 active:scale-[0.98]">
-          <Plus className="size-5" /> {t("New entry")}
-        </button>
-        <nav className="mt-6 space-y-1" aria-label="Main">
-          {MAIN.map(({ href, label, icon }) => navItem(href, label, icon))}
-          <div className="my-3 h-px bg-line" />
-          {EXTRA.map(({ href, label, icon }) => navItem(href, label, icon))}
-        </nav>
-        <div className="mt-auto space-y-3 pt-6">
-          <div className="flex items-center justify-between gap-2">
-            <LangToggle />
-            <ThemeToggle />
-          </div>
-          {state && (
-            <div className="rounded-2xl border border-line bg-surface p-3 text-xs text-ink-2">
-              <p className="font-semibold text-ink">{state.business}</p>
-              <p>{t("Figures up to {date}", { date: state.as_of_label })}</p>
-            </div>
-          )}
-        </div>
-      </aside>
-
-      <header className="no-print sticky top-0 z-30 flex h-14 items-center justify-between border-b border-line bg-surface/90 px-4 backdrop-blur lg:hidden">
-        <Logo />
-        <LangToggle />
-      </header>
-
-      <div className="lg:pl-64">
-        {state?.is_demo && !active(path, "/data/") && !isReport && (
-          <div className="no-print flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-b border-line bg-caution-50 px-4 py-2 text-center text-xs text-ink-2">
-            <span>{t("You're exploring a demo shop with made-up numbers.")}</span>
-            {state.upload.ready ? (
-              <button onClick={useMine} className="font-semibold text-gold underline underline-offset-2">
-                {t("Switch to my business")}
-              </button>
-            ) : (
-              <Link href="/data/" className="font-semibold text-gold underline underline-offset-2">
-                {t("Add my own data")}
-              </Link>
-            )}
-          </div>
-        )}
-        <main className={cx("mx-auto w-full max-w-6xl px-4 sm:px-6", isAsk ? "pb-0 pt-4" : "pb-32 pt-6 lg:pb-12")}>{children}</main>
-      </div>
-
-      {/* Mobile tab bar with the big + */}
-      <nav className="no-print fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden" aria-label="Main">
-        {[MAIN[0], MAIN[1]].map(({ href, label, icon: I }) => (
-          <Link key={href} href={href} className={cx("flex h-16 flex-col items-center justify-center gap-1 text-[0.7rem] font-medium", active(path, href) ? "text-brand" : "text-muted")}>
-            <I className="size-[22px]" aria-hidden /> {t(label)}
-          </Link>
-        ))}
-        <div className="grid place-items-center">
-          <button onClick={() => qe.open()} className="-mt-7 grid size-14 place-items-center rounded-full bg-brand text-on-brand shadow-lg shadow-brand/30 ring-4 ring-canvas transition active:scale-95" aria-label={t("New entry")}>
-            <Plus className="size-7" />
-          </button>
-        </div>
-        <Link href="/ask/" className={cx("flex h-16 flex-col items-center justify-center gap-1 text-[0.7rem] font-medium", active(path, "/ask/") ? "text-brand" : "text-muted")}>
-          <MessageCircleQuestion className="size-[22px]" aria-hidden /> {t("Ask")}
+    <div className={cx("mx-auto flex w-full max-w-3xl flex-col", isChat ? "h-dvh" : "min-h-dvh")}>
+      <header className="no-print sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b border-line bg-canvas/90 px-3 backdrop-blur sm:px-4">
+        <Link href="/" className="flex items-center gap-2" aria-label="Munshi">
+          <MunshiMark size="sm" />
+          <span className="hidden text-lg font-bold tracking-tight sm:inline">Munshi</span>
         </Link>
-        <button onClick={() => setMore(true)} className={cx("flex h-16 flex-col items-center justify-center gap-1 text-[0.7rem] font-medium", more ? "text-brand" : "text-muted")}>
-          <LayoutGrid className="size-[22px]" aria-hidden /> {t("More")}
-        </button>
-      </nav>
-
-      {more && (
-        <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal aria-label={t("More")}>
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={() => setMore(false)} />
-          <div className="sheet absolute inset-x-0 bottom-0 rounded-t-3xl border-t border-line bg-surface p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))]">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <p className="font-semibold">{t("More")}</p>
-              <ThemeToggle className="ml-auto" />
-              <button onClick={() => setMore(false)} aria-label={t("Close")} className="rounded-full p-1.5 hover:bg-canvas">
-                <X className="size-5" />
-              </button>
-            </div>
-            <div className="grid grid-cols-3 gap-3">
-              {[MAIN[2], MAIN[4], ...EXTRA].map(({ href, label, icon: I }, i) => (
-                <Link key={href} href={href} onClick={() => setMore(false)} className="flex flex-col items-center gap-2 rounded-2xl border border-line bg-surface-2 p-3 text-center text-xs font-medium">
-                  <span className={cx("grid size-11 place-items-center rounded-2xl", ["grad-violet", "grad-sunset", "grad-mint", "grad-ocean", "grad-berry", "grad-night", "grad-violet"][i % 7])}>
-                    <I className="size-5" aria-hidden />
-                  </span>
-                  {t(label)}
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+        <nav className="mx-auto inline-flex rounded-full border border-line bg-surface p-1" aria-label="Main">
+          {TABS.map(({ href, label, I }) => {
+            const on = href === "/" ? isChat : path.startsWith(href.replace(/\/$/, ""));
+            return (
+              <Link key={href} href={href} aria-current={on ? "page" : undefined}
+                className={cx("inline-flex h-8 items-center gap-1.5 rounded-full px-4 text-sm font-semibold transition", on ? "bg-brand text-on-brand shadow-sm" : "text-ink-2 hover:text-ink")}>
+                <I className="size-4" aria-hidden /> {t(label)}
+              </Link>
+            );
+          })}
+        </nav>
+        <Link href="/settings/" aria-label={t("Settings")}
+          className={cx("grid size-10 place-items-center rounded-full transition hover:bg-surface-2", path.startsWith("/settings") ? "text-brand" : "text-ink-2")}>
+          <Settings className="size-5" />
+        </Link>
+      </header>
+      <main className={cx("flex w-full flex-1 flex-col", isChat ? "min-h-0" : "px-4 pt-5 pb-16 sm:px-5", isPrint && "max-w-none")}>{children}</main>
     </div>
   );
 }

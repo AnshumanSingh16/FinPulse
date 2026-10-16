@@ -290,7 +290,7 @@ def t_whatif(ctx: ToolContext, a: dict) -> dict:
         amount = _num(a, "loan_amount", 1, 1e10, required=True)
         rate, years = _num(a, "interest_rate_pct", 0, 40), _num(a, "years", 0.25, 30)
         if rate is None or years is None:
-            return {"status": "needs_input", "message": "The interest rate and loan length must come from the lender's quote. FinPilot does not assume loan terms.",
+            return {"status": "needs_input", "message": "The interest rate and loan length must come from the lender's quote. Munshi does not assume loan terms.",
                     "missing": [k for k, v in (("interest_rate_pct", rate), ("years", years)) if v is None]}
         r = whatif.loan(ctx.ledger, ctx.balances, ctx.obligations, ctx.as_of, amount, rate, years)
     r["kind"] = kind
@@ -505,7 +505,7 @@ PLAN_TOOLS: list[Tool] = [
     Tool("recall_memory", "List the facts and preferences the owner asked you to remember.", _obj({}), t_recall),
     Tool("get_review_queue", "Bank lines that need a category (uncategorised, or incoming money only guessed as sales), grouped by party, with the current guess.",
          _obj({}), t_review_queue),
-    Tool("draft_promise", "Prepare a note that a customer promised to pay (by a date, optionally an amount) for the owner to confirm. FinPilot then flags it if the date passes unpaid.",
+    Tool("draft_promise", "Prepare a note that a customer promised to pay (by a date, optionally an amount) for the owner to confirm. Munshi then flags it if the date passes unpaid.",
          _obj({"customer": {"type": "string"}, "amount": {"type": "number", "minimum": 0}, "date": {"type": "string", "description": "YYYY-MM-DD"}, "note": {"type": "string"}}, ["customer", "date"]),
          t_draft_promise),
     Tool("draft_recategorise", "Prepare a fix for the category of a party's unreviewed bank lines (and remember it for future lines) for the owner to confirm.",

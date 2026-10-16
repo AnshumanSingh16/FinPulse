@@ -1,29 +1,28 @@
 1:"$Sreact.fragment"
-2:"/_next/static/chunks/0umf92h1sb77c.js"
-3:"/_next/static/chunks/0dbbagdxfk02e.js"
-4:"/_next/static/chunks/3-wb14osv5oik.js"
+2:"/_next/static/chunks/3dlrkk7spmxiq.js"
+3:"/_next/static/chunks/2k8-uxx1_5m3c.js"
+4:"/_next/static/chunks/26mfky9rsf0c3.js"
 5:I[28739,["$2","$3","$4"],"Providers"]
 6:I[39756,["$2","$3","$4"],"default"]
 7:I[37457,["$2","$3","$4"],"default"]
 9:I[47257,["$2","$3","$4"],"ClientPageRoot"]
-a:"/_next/static/chunks/1jjnzulvhuw8v.js"
-b:"/_next/static/chunks/1wn5mt1azymem.js"
-c:"/_next/static/chunks/3i1v3sw7h31l5.js"
-d:I[31713,["$2","$3","$4","$a","$b","$c"],"default"]
-10:I[97367,["$2","$3","$4"],"OutletBoundary"]
-11:"$Sreact.suspense"
-13:"ViewportBoundary"
-14:I[97367,["$2","$3","$4"],"$13"]
-16:"MetadataBoundary"
-17:I[97367,["$2","$3","$4"],"$16"]
-19:I[68027,["$2","$3","$4"],"default",1]
-:HL["/_next/static/chunks/2ft21wn_-7v75.css","style"]
+a:"/_next/static/chunks/0bwfi4h180jr1.js"
+b:"/_next/static/chunks/41bod113ttgol.js"
+c:I[31713,["$2","$3","$4","$a","$b"],"default"]
+f:I[97367,["$2","$3","$4"],"OutletBoundary"]
+10:"$Sreact.suspense"
+12:"ViewportBoundary"
+13:I[97367,["$2","$3","$4"],"$12"]
+15:"MetadataBoundary"
+16:I[97367,["$2","$3","$4"],"$15"]
+18:I[68027,["$2","$3","$4"],"default",1]
+:HL["/_next/static/chunks/2wuwl797z6bfu.css","style"]
 :HC["/",""]
-8:[["children",{"s":"__PAGE__","h":512,"d":{"r":["$","$1","c",{"children":[["$","$L9",null,{"Component":"$d","serverProvidedParams":{"searchParams":{},"params":{},"promises":["$@e","$@f"]}}],[["$","script","script-0",{"src":"/_next/static/chunks/1jjnzulvhuw8v.js","async":true,"nonce":"$undefined"}],["$","script","script-1",{"src":"/_next/static/chunks/1wn5mt1azymem.js","async":true,"nonce":"$undefined"}],["$","script","script-2",{"src":"/_next/static/chunks/3i1v3sw7h31l5.js","async":true,"nonce":"$undefined"}]],["$","$L10",null,{"children":["$","$11",null,{"name":"Next.MetadataOutlet","children":"$@12"}]}]]}],"p":false,"v":null}}]]
-0:{"P":null,"c":["",""],"q":"","i":false,"t":{"t":{"s":"","h":528,"d":{"r":["$","$1","c",{"children":[[["$","link","0",{"rel":"stylesheet","href":"/_next/static/chunks/2ft21wn_-7v75.css","precedence":"next","crossOrigin":"$undefined","nonce":"$undefined"}],["$","script","script-0",{"src":"/_next/static/chunks/0umf92h1sb77c.js","async":true,"nonce":"$undefined"}],["$","script","script-1",{"src":"/_next/static/chunks/0dbbagdxfk02e.js","async":true,"nonce":"$undefined"}],["$","script","script-2",{"src":"/_next/static/chunks/3-wb14osv5oik.js","async":true,"nonce":"$undefined"}]],["$","html",null,{"lang":"en-IN","suppressHydrationWarning":true,"children":[["$","head",null,{"children":["$","script",null,{"dangerouslySetInnerHTML":{"__html":"try{var t=localStorage.getItem(\"finpilot.theme\");if(t===\"light\"||t===\"dark\")document.documentElement.dataset.theme=t}catch(e){}"}}]}],["$","body",null,{"children":["$","$L5",null,{"children":["$","$L6",null,{"parallelRouterKey":"children","error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$L7",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":[[["$","title",null,{"children":"404: This page could not be found."}],["$","div",null,{"style":{"fontFamily":"system-ui,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif,\"Apple Color Emoji\",\"Segoe UI Emoji\"","height":"100vh","textAlign":"center","display":"flex","flexDirection":"column","alignItems":"center","justifyContent":"center"},"children":["$","div",null,{"children":[["$","style",null,{"dangerouslySetInnerHTML":{"__html":"body{color:#000;background:#fff;margin:0}.next-error-h1{border-right:1px solid rgba(0,0,0,.3)}@media (prefers-color-scheme:dark){body{color:#fff;background:#000}.next-error-h1{border-right:1px solid rgba(255,255,255,.3)}}"}}],["$","h1",null,{"className":"next-error-h1","style":{"display":"inline-block","margin":"0 20px 0 0","padding":"0 23px 0 0","fontSize":24,"fontWeight":500,"verticalAlign":"top","lineHeight":"49px"},"children":404}],["$","div",null,{"style":{"display":"inline-block"},"children":["$","h2",null,{"style":{"fontSize":14,"fontWeight":400,"lineHeight":"49px","margin":0},"children":"This page could not be found."}]}]]}]}]],[]],"forbidden":"$undefined","unauthorized":"$undefined"}]}]}]]}]]}],"p":false,"v":null},"c":"$Q8"},"h":{"r":["$","$1","h",{"children":[null,["$","$L14",null,{"children":"$L15"}],["$","$L17",null,{"children":[["$","div",null,{"hidden":true,"children":["$","$11",null,{"name":"Next.Metadata","children":"$L18"}]}],null]}],null]}],"p":false,"v":null}},"m":"$undefined","G":["$19",[["$","link","0",{"rel":"stylesheet","href":"/_next/static/chunks/2ft21wn_-7v75.css","precedence":"next","crossOrigin":"$undefined","nonce":"$undefined"}]]],"S":true,"r":"$undefined","s":"$undefined","a":"$undefined","l":"$undefined","p":"$undefined","d":"$undefined","b":"UG4nEEbTxWtssHche1sxH"}
-e:{}
-f:"$8:0:1:d:r:props:children:0:props:serverProvidedParams:params"
-15:[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1"}],["$","meta","2",{"name":"theme-color","content":"#f6f4ef","media":"(prefers-color-scheme: light)"}],["$","meta","3",{"name":"theme-color","content":"#101214","media":"(prefers-color-scheme: dark)"}]]
-1a:I[27201,["$2","$3","$4"],"IconMark"]
-12:null
-18:[["$","title","0",{"children":"FinPilot — your business, in plain words"}],["$","meta","1",{"name":"description","content":"Your khata, cash, udhaar and big decisions — in English or Hindi."}],["$","link","2",{"rel":"icon","href":"/icon.svg"}],["$","$L1a","3",{}]]
+8:[["children",{"s":"__PAGE__","h":512,"d":{"r":["$","$1","c",{"children":[["$","$L9",null,{"Component":"$c","serverProvidedParams":{"searchParams":{},"params":{},"promises":["$@d","$@e"]}}],[["$","script","script-0",{"src":"/_next/static/chunks/0bwfi4h180jr1.js","async":true,"nonce":"$undefined"}],["$","script","script-1",{"src":"/_next/static/chunks/41bod113ttgol.js","async":true,"nonce":"$undefined"}]],["$","$Lf",null,{"children":["$","$10",null,{"name":"Next.MetadataOutlet","children":"$@11"}]}]]}],"p":false,"v":null}}]]
+0:{"P":null,"c":["",""],"q":"","i":false,"t":{"t":{"s":"","h":528,"d":{"r":["$","$1","c",{"children":[[["$","link","0",{"rel":"stylesheet","href":"/_next/static/chunks/2wuwl797z6bfu.css","precedence":"next","crossOrigin":"$undefined","nonce":"$undefined"}],["$","script","script-0",{"src":"/_next/static/chunks/3dlrkk7spmxiq.js","async":true,"nonce":"$undefined"}],["$","script","script-1",{"src":"/_next/static/chunks/2k8-uxx1_5m3c.js","async":true,"nonce":"$undefined"}],["$","script","script-2",{"src":"/_next/static/chunks/26mfky9rsf0c3.js","async":true,"nonce":"$undefined"}]],["$","html",null,{"lang":"en-IN","suppressHydrationWarning":true,"children":[["$","head",null,{"children":["$","script",null,{"dangerouslySetInnerHTML":{"__html":"try{var t=localStorage.getItem(\"finpilot.theme\");if(t===\"light\"||t===\"dark\")document.documentElement.dataset.theme=t}catch(e){}"}}]}],["$","body",null,{"children":["$","$L5",null,{"children":["$","$L6",null,{"parallelRouterKey":"children","error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$L7",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":[[["$","title",null,{"children":"404: This page could not be found."}],["$","div",null,{"style":{"fontFamily":"system-ui,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif,\"Apple Color Emoji\",\"Segoe UI Emoji\"","height":"100vh","textAlign":"center","display":"flex","flexDirection":"column","alignItems":"center","justifyContent":"center"},"children":["$","div",null,{"children":[["$","style",null,{"dangerouslySetInnerHTML":{"__html":"body{color:#000;background:#fff;margin:0}.next-error-h1{border-right:1px solid rgba(0,0,0,.3)}@media (prefers-color-scheme:dark){body{color:#fff;background:#000}.next-error-h1{border-right:1px solid rgba(255,255,255,.3)}}"}}],["$","h1",null,{"className":"next-error-h1","style":{"display":"inline-block","margin":"0 20px 0 0","padding":"0 23px 0 0","fontSize":24,"fontWeight":500,"verticalAlign":"top","lineHeight":"49px"},"children":404}],["$","div",null,{"style":{"display":"inline-block"},"children":["$","h2",null,{"style":{"fontSize":14,"fontWeight":400,"lineHeight":"49px","margin":0},"children":"This page could not be found."}]}]]}]}]],[]],"forbidden":"$undefined","unauthorized":"$undefined"}]}]}]]}]]}],"p":false,"v":null},"c":"$Q8"},"h":{"r":["$","$1","h",{"children":[null,["$","$L13",null,{"children":"$L14"}],["$","$L16",null,{"children":[["$","div",null,{"hidden":true,"children":["$","$10",null,{"name":"Next.Metadata","children":"$L17"}]}],null]}],null]}],"p":false,"v":null}},"m":"$undefined","G":["$18",[["$","link","0",{"rel":"stylesheet","href":"/_next/static/chunks/2wuwl797z6bfu.css","precedence":"next","crossOrigin":"$undefined","nonce":"$undefined"}]]],"S":true,"r":"$undefined","s":"$undefined","a":"$undefined","l":"$undefined","p":"$undefined","d":"$undefined","b":"sZE1KVP9T5MniYAqA23aB"}
+d:{}
+e:"$8:0:1:d:r:props:children:0:props:serverProvidedParams:params"
+14:[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1"}],["$","meta","2",{"name":"theme-color","content":"#f6f4ef","media":"(prefers-color-scheme: light)"}],["$","meta","3",{"name":"theme-color","content":"#101214","media":"(prefers-color-scheme: dark)"}]]
+19:I[27201,["$2","$3","$4"],"IconMark"]
+11:null
+17:[["$","title","0",{"children":"Munshi — your AI bookkeeper"}],["$","meta","1",{"name":"description","content":"Tell Munshi what happened; it keeps your khata and tells you what to do. English, Hindi, Hinglish."}],["$","link","2",{"rel":"icon","href":"/icon.svg"}],["$","$L19","3",{}]]

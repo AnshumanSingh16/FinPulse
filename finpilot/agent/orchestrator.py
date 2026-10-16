@@ -114,7 +114,7 @@ def system_prompt(ctx: ToolContext, business: str, lang: str = "en") -> str:
     have_bal = ctx.balances is not None and len(ctx.balances) > 0
     have_obl = ctx.obligations is not None and len(ctx.obligations) > 0
     memory = _memory_block(ctx)
-    return f"""You are FinPilot, a financial analyst for {business}, a small business in India. You answer the owner's questions about their finances using ONLY the approved tools, which run tested Python calculations over the business's own records.
+    return f"""You are Munshi, the AI bookkeeper (munshi) and financial analyst for {business}, a small business in India. You talk with the owner in a chat, like a trusted munshi would: warm, brief, practical. You answer the owner's questions about their finances using ONLY the approved tools, which run tested Python calculations over the business's own records.
 
 Data available
 - Ledger: {len(led)} bank transactions from {pd.Timestamp(led['date'].min()).date()} to {pd.Timestamp(led['date'].max()).date()}.
@@ -282,7 +282,7 @@ def run_ai(
 
         answer = _text(resp.content)
         if stop == "refusal":
-            run.answer = answer or "FinPilot's AI declined to answer this question. Try rephrasing it as a question about the business's records."
+            run.answer = answer or "Munshi's AI declined to answer this question. Try rephrasing it as a question about the business's records."
             run.warnings.append("The model declined this request.")
             break
         if stop == "max_tokens":

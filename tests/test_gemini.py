@@ -73,7 +73,7 @@ class TestLoop:
         path, body, key = fake.calls[1]
         assert path == "models/gemini-x:generateContent" and key == "AIza-test"
         assert body["contents"][1]["parts"][1]["thoughtSignature"] == "abc"  # model turn kept verbatim
-        assert "FinPilot" in body["systemInstruction"]["parts"][0]["text"]
+        assert "Munshi" in body["systemInstruction"]["parts"][0]["text"]
 
     def test_invented_figure_gets_one_repair_then_a_warning(self, ctx):
         fake = FakeGemini([

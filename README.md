@@ -1,31 +1,21 @@
-# FinPilot AI
+# Munshi — the AI bookkeeper that lives in a chat
 
-A friendly, bilingual (English / हिंदी) money app for small shop owners in India — a digital khata plus a copilot that tells you, in plain words, how your business is doing and what to do next.
+*(code name FinPilot)*
 
-**Every day**
-- **Quick entry (+):** record a sale, expense, udhaar given, payment received or supplier bill in two taps — or just type/say *“Ravi ko 3000 udhaar”* / *“sold masala to Ravi 2500 cash”*. Every entry can be undone.
-- **Khata:** customer and supplier ledgers — who owes what, how late, a *pays on time / often late* badge, promise-to-pay dates, and one-tap WhatsApp reminders (drafts you send yourself), including “remind all”.
-- **Home:** your cash, how long it lasts, a 90-day outlook, and the few things that need attention right now.
+Munshi is for small shop and business owners in India. Instead of forms and dashboards there is **one chat**, like WhatsApp:
 
-**Smart**
-- **Health score (0–100)** from five simple checks, with a tip and a “fix this” link for each, and the score month by month.
-- **Your week** — an Instagram-style story of the last 7 days: sales, best day, top customer, collections, biggest spend.
-- **Plan:** *Can I afford it?*, *Cash ahead*, *Raise prices?*, *Run a discount?*, *Hire someone?*, *Take a loan?* — live sliders on your real numbers.
-- **Goals & budgets:** monthly limits per category with alerts, and savings goals (GST set-aside, Diwali stock…) with progress rings.
-- **Calendar:** money in/out by day, invoices and bills due, regular payments, and typical GST/TDS dates, plus a GST set-aside estimate.
-- **Auto-categorise** bank statement lines (UPI/NEFT narrations → Sales, Electricity, Rent…) and learn from your corrections.
-- **Reports:** a monthly report for your CA and a loan-readiness summary for a bank — print or save as PDF.
-- **Your agent works for you, not just answers:**
-  - **Daily check-up by itself** — open the app and the agent reviews your cash, dues, broken promises, bills, budgets, odd payments and uncategorised lines, ticking off a plan you can watch, then leaves a briefing on Home with actions ready to **Approve** (or **Approve all**).
-  - **Missions** — *“collect my money”*, *“cut my costs”*: it writes a step-by-step plan, works through it live, and prepares several actions (reminders for each overdue customer, budgets for your biggest costs).
-  - **Memory** — tell it *“never remind Ramesh, he's my brother”* and it remembers and acts on it (it will skip him). See or delete memories any time.
-  - **Ask anything** in English, Hindi or Hinglish (*“who pays late?”*, *“is my rent too high?”*, *“add a sale of ₹500”*, *“Metro promised to pay by 25 Oct”*). Every figure is checked against your records.
-  - **It prepares, you approve:** entries, WhatsApp reminders, payment promises, category fixes, goals and budgets are saved only when you tap **Confirm** — cards wait in the inbox, even after a restart.
-- **Light and dark themes** (follows your phone, or pick one).
+- **Tell Munshi what happened** — *“Ravi ko 2500 udhaar”*, *“Metro ne 50k diye”*, *“bijli bill 3200”* — typed or spoken, in Hindi, English or Hinglish. Munshi prepares the entry; one tap saves it.
+- **The chat is the khata.** Every entry lands in the thread as a line you can undo — scroll up and you're reading your account book.
+- **Munshi speaks first.** Each morning it goes through your books by itself and posts what needs you today, with the reminders and fixes already prepared.
+- **Lena / Dena, always on top:** bank balance, money to collect, money to pay.
+- **Ask anything:** *“kaun der se deta hai?”*, *“is mahine kaisa raha?”*, *“help me collect my money”*, *“₹12 lakh ki machine le sakta hoon?”*
+- **Khata screen:** every customer and supplier, what they owe, and a WhatsApp reminder in one tap.
 
-All financial figures are calculated by tested Python code, never by the AI. Every number has a **“How do we know?”** link showing the method, assumptions and the exact records behind it.
+Every figure comes from tested Python calculations over your own records and is checked before you see it. Munshi **prepares, you approve** — it never pays, sends or files anything itself. Works offline with built-in answers; add a free Gemini key (or a Claude key) to let it understand anything.
 
-> Decision support, not financial advice. FinPilot never makes payments, sends messages or files returns. Suggested actions go to your to-do list; reminders are drafts you send yourself; goals are plans, not money movements.
+Why it looks like this: see **[VISION.md](VISION.md)**.
+
+> Decision support, not financial advice.
 
 ---
 
@@ -95,14 +85,12 @@ FINPILOT_PROVIDER=gemini        # optional when only one key is set
 
 ## A 3-minute tour (demo shop)
 
-1. **Home** — “Your business is in good shape”, ₹14.85 L in the bank. Tap **Your week** for the story, and the **health score** (54, *Fair* — sales are slowing and Metro Foods owes ₹2.94 L).
-2. Press **+** and type *“Metro Foods se 1 lakh mila neft”* → **Fill from text** → Save. The oldest invoices are cleared, cash goes up, and you can Undo.
-3. **Khata** → Metro Foods: timeline, reliability badge, set a promise date, **Send reminder** (WhatsApp).
-4. **Plan** → *Raise prices?* drag to +5% and −3% customers; *Take a loan?* see the EMI and whether profit covers it.
-5. **Goals & budgets** → start “Diwali stock fund”; **Suggest from my spending** to set budgets.
-6. **Calendar** → October bills, customer dues and GST dates. **Reports** → print the monthly report.
-7. Switch the language to **हिं** (top right) — everything, including Ask answers, turns Hindi.
-8. **Your data** → *Start your khata today* with no files, or upload a bank statement. *Reset demo* undoes everything you tried.
+1. Open the app — Munshi is already going through the demo shop's books. Watch its plan tick off, then read the morning message: who to collect from, which bills are due, anything odd — with WhatsApp reminders ready.
+2. Type *“Ravi ko 2500 udhaar”* → **Confirm**. A khata line appears in the chat and **Lena** goes up. Tap **Undo** on the line to take it back.
+3. Ask *“kaun der se deta hai?”* or *“help me collect my money”*. Then tell it *“never remind Metro Foods”* and ask again — it remembers.
+4. Tap **Paisa aaya** above the message box to record a payment with the form instead.
+5. Open **Khata** → Metro Foods: what they owe, their history, **Remind on WhatsApp**.
+6. **Settings** (⚙) → turn the AI on with a free Gemini key, switch to Hindi, use your own books, or print the monthly report for your CA.
 
 ## Your own data
 
@@ -148,7 +136,7 @@ finpilot/
     views.py                Plain-language views (status, attention items, reminders…) over the engine
     dataset.py              Demo vs. your uploaded data
   web/                      The built web app (generated — do not edit)
-web/                        Next.js + Tailwind source for the web app (Home, Money, Ask, Plan, Your data)
+web/                        Next.js + Tailwind source for the web app (Munshi chat, Khata, Settings, Your data, Reports)
 tests/                      pytest: engine, loader, store, agent, API
 data/demo/                  The fixed synthetic dataset (also usable as sample uploads)
 ```
@@ -206,7 +194,7 @@ The rule-based mode uses the same tools, validation and verification, with a sma
 ## Tests
 
 ```bash
-pytest            # 259 tests, about a minute
+pytest            # 265 tests, about a minute
 ```
 
 The tests cover:

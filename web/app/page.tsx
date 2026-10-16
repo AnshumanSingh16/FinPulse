@@ -1,495 +1,350 @@
 "use client";
 
-import {
-  ArrowDownLeft, ArrowDownRight, ArrowRight, ArrowUpRight, Bell, CalendarClock, Check, ChevronRight, Copy, HandCoins, Landmark, MessageCircle,
-  Play, ReceiptText, ShieldCheck, Sparkles, Store, Tag, TrendingDown, Undo2, UserRound, Wallet, X,
-} from "lucide-react";
+import { AlertTriangle, ArrowDownLeft, ArrowUp, ArrowUpRight, BookOpen, HandCoins, Landmark, Mic, ReceiptText, RotateCcw, Store } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useContext, useEffect, useState } from "react";
-import { AgentInbox } from "@/components/agent-inbox";
-import { CatIcon } from "@/components/cat";
-import { HeroCashChart, SalesCostsChart } from "@/components/charts";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import { AgentAnswer, type AgentResult, applyEvent, emptyLive, type Live, LiveCard, streamAgent } from "@/components/agent";
+import { AiModeChip, AiSetupSheet } from "@/components/ai-setup";
 import { DataVersion } from "@/components/data-version";
-import { EvidenceButton } from "@/components/evidence";
-import { CountUp, useToast } from "@/components/fx";
-import { Gauge } from "@/components/gauge";
-import { useQuickEntry } from "@/components/quick-entry";
-import { BulkReminders, ReminderSheet } from "@/components/reminder";
-import { StoryViewer, type StoryCard } from "@/components/story";
-import { Button, Card, cx, ErrorNote, Loading, SectionTitle, toneBg, toneText } from "@/components/ui";
-import { post, useApi } from "@/lib/api";
-import { inr, pct, short } from "@/lib/format";
+import { useToast } from "@/components/fx";
+import { type Kind, useQuickEntry } from "@/components/quick-entry";
+import { MunshiMark } from "@/components/shell";
+import { cx } from "@/components/ui";
+import { get, post } from "@/lib/api";
+import { short } from "@/lib/format";
 import { useT } from "@/lib/i18n";
-import type { AttentionItem, Home, Todo } from "@/lib/types";
+import type { AiStatus } from "@/lib/types";
 
-const ICONS: Record<string, React.ElementType> = { customer: UserRound, bill: ReceiptText, copy: Copy, spark: Sparkles, trend: TrendingDown, bank: Landmark, alert: Bell, wallet: Wallet, tag: Tag };
-
-interface Health {
-  status: string;
-  score: number;
-  grade: string;
-  change: number | null;
-  focus: { label: string; tip: string; href: string } | null;
+interface Snapshot {
+  cash: number | null;
+  as_of_label: string;
+  to_collect: number;
+  collect_overdue: number;
+  to_pay: number;
+  pay_overdue: number;
 }
-interface Story {
-  status: string;
-  title: string;
-  range: string;
-  cards: StoryCard[];
-  this?: { sales: number };
+interface EntryEvent {
+  entry_id: string;
+  entry_kind: Kind;
+  message: string;
+  amount: number;
+  party: string;
+  undone: boolean;
+}
+type Item =
+  | { id: number; at: string; role: "owner"; kind: "text"; data: { text: string } }
+  | { id: number; at: string; role: "munshi"; kind: "answer" | "checkup"; data: AgentResult }
+  | { id: number; at: string; role: "event"; kind: "entry"; data: EntryEvent };
+
+interface Thread {
+  business: string;
+  is_demo: boolean;
+  snapshot: Snapshot;
+  items: Item[];
+  checkup_due: boolean;
+  ai: AiStatus;
 }
 
-export default function HomePage() {
-  const { t } = useT();
-  const { data, error, loading, reload } = useApi<Home>("/api/home");
-  const [hello, setHello] = useState("Hello");
+const ENTRY_CHIPS: { kind: Kind; label: string; I: React.ElementType }[] = [
+  { kind: "sale", label: "Sale", I: Store },
+  { kind: "payment_in", label: "Paisa aaya", I: ArrowDownLeft },
+  { kind: "credit_sale", label: "Udhaar diya", I: HandCoins },
+  { kind: "expense", label: "Kharcha", I: ArrowUpRight },
+  { kind: "bill", label: "Supplier bill", I: ReceiptText },
+];
+const ASK_CHIPS = ["Who owes me money?", "How did this month go?", "Help me collect my money"];
+const ASK_CHIPS_HI = ["किस पर उधारी बाकी है?", "इस महीने कैसा रहा?", "मेरी उधारी वसूलने में मदद करो"];
+const ENTRY_ICON: Record<string, React.ElementType> = { sale: Store, payment_in: ArrowDownLeft, credit_sale: HandCoins, expense: ArrowUpRight, bill: ReceiptText, payment_out: ArrowUpRight };
+const MONEY_IN: string[] = ["sale", "payment_in"];
+
+function dayKey(iso: string) {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+export default function MunshiChat() {
+  const { t, lang } = useT();
+  const { version, state } = useContext(DataVersion);
+  const qe = useQuickEntry();
+  const [thread, setThread] = useState<Thread | null>(null);
+  const [pending, setPending] = useState<string | null>(null);
+  const [live, setLive] = useState<Live | null>(null);
+  const [liveTitle, setLiveTitle] = useState<string | undefined>();
+  const [err, setErr] = useState<string | null>(null);
+  const [input, setInput] = useState("");
+  const [listening, setListening] = useState(false);
+  const [setup, setSetup] = useState(false);
+  const end = useRef<HTMLDivElement>(null);
+  const checkupStarted = useRef<string | null>(null);
+  const busy = live !== null;
+
+  const load = useCallback(() => get<Thread>("/api/chat").then(setThread).catch((e) => setErr(String(e))), []);
+
+  const runCheckup = useCallback(async () => {
+    setLiveTitle(t("Munshi is going through your books…"));
+    setLive(emptyLive());
+    try {
+      await streamAgent("/api/agent/checkup/stream", {}, (e) => setLive((l) => (l ? applyEvent(l, e) : l)), lang, "/api/agent/checkup");
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLive(null);
+      setLiveTitle(undefined);
+      load();
+    }
+  }, [lang, load, t]);
+
   useEffect(() => {
-    const h = new Date().getHours();
-    setHello(h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening");
-  }, []);
+    load();
+  }, [load, version]);
 
-  if (error) return <ErrorNote message={error} retry={reload} />;
-  if (loading && !data) return <Loading />;
-  if (!data) return null;
+  // Munshi speaks first: once a day it goes through the books by itself and posts what needs doing.
+  useEffect(() => {
+    if (!thread?.checkup_due || busy) return;
+    const key = `${state?.source}`;
+    if (checkupStarted.current === key) return;
+    checkupStarted.current = key;
+    runCheckup();
+  }, [thread?.checkup_due, busy, state?.source, runCheckup]);
+
+  useEffect(() => end.current?.scrollIntoView({ behavior: "smooth", block: "end" }), [thread?.items.length, live, pending]);
+
+  const send = async (text: string) => {
+    const q = text.trim();
+    if (!q || busy) return;
+    setInput("");
+    setErr(null);
+    setPending(q);
+    setLiveTitle(undefined);
+    setLive(emptyLive());
+    try {
+      await streamAgent("/api/ask/stream", { question: q, conversation_id: "main", log: true }, (e) => setLive((l) => (l ? applyEvent(l, e) : l)), lang, "/api/ask");
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLive(null);
+      setPending(null);
+      await load();
+    }
+  };
+
+  const listen = () => {
+    const W = window as unknown as { SpeechRecognition?: new () => any; webkitSpeechRecognition?: new () => any }; // eslint-disable-line @typescript-eslint/no-explicit-any
+    const SR = W.SpeechRecognition ?? W.webkitSpeechRecognition;
+    if (!SR) return;
+    const r = new SR();
+    r.lang = lang === "hi" ? "hi-IN" : "en-IN";
+    r.onresult = (e: { results: { [i: number]: { [j: number]: { transcript: string } } } }) => send(e.results[0][0].transcript);
+    r.onend = () => setListening(false);
+    setListening(true);
+    r.start();
+  };
+
+  const items = thread?.items ?? [];
+  const lastAnswer = [...items].reverse().find((i) => i.role === "munshi") as Extract<Item, { role: "munshi" }> | undefined;
+  const lastIsAnswer = items.length > 0 && items[items.length - 1].role === "munshi";
+  const askChips = lastIsAnswer && lastAnswer?.data.suggestions?.length ? lastAnswer.data.suggestions : lang === "hi" ? ASK_CHIPS_HI : ASK_CHIPS;
 
   return (
-    <div className="space-y-6">
-      <header className="rise">
-        <p className="eyebrow">{t(hello)}</p>
-        <h1 className="mt-1 text-3xl sm:text-4xl">{data.business.replace(" (fictional)", "")}</h1>
-        <p className="text-sm text-muted">{t("Based on your records up to {date}", { date: data.as_of_label })}</p>
-      </header>
+    <div className="flex min-h-0 flex-1 flex-col">
+      {thread && <LenaDena s={thread.snapshot} isDemo={thread.is_demo} />}
 
-      <Hero home={data} />
-      <AgentInbox />
-      <QuickActions />
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <HealthCard />
-        <StoryCardTile />
+      <div className="no-scrollbar min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-4 sm:px-4" role="log" aria-live="polite">
+        {thread && <Welcome business={thread.business} ai={thread.ai} onSetup={() => setSetup(true)} />}
+        {items.map((it, i) => (
+          <div key={it.id}>
+            {(i === 0 || dayKey(items[i - 1].at) !== dayKey(it.at)) && <DaySep iso={it.at} />}
+            <Bubble item={it} onUndone={load} />
+          </div>
+        ))}
+        {pending && <OwnerBubble text={pending} />}
+        {live && (
+          <MunshiRow>
+            <LiveCard live={live} title={liveTitle} />
+          </MunshiRow>
+        )}
+        {err && (
+          <div className="flex items-start gap-2 rounded-2xl bg-bad-50 p-3 text-sm text-bad">
+            <AlertTriangle className="size-5 shrink-0" /> {err}
+          </div>
+        )}
+        <div ref={end} />
       </div>
 
-      {data.attention.length > 0 && <Attention items={data.attention} onChange={reload} />}
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        {data.month && <MonthCard home={data} />}
-        {data.spending.length > 0 && <Spending home={data} />}
+      <div className="no-print shrink-0 border-t border-line bg-canvas/95 px-3 pt-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur sm:px-4">
+        <div className="no-scrollbar -mx-3 mb-2 flex gap-2 overflow-x-auto px-3 sm:-mx-4 sm:px-4">
+          {ENTRY_CHIPS.map(({ kind, label, I }) => (
+            <button key={kind} onClick={() => qe.open({ kind })} className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-sm font-medium text-ink shadow-sm transition hover:border-brand">
+              <I className="size-4 text-brand" /> {t(label)}
+            </button>
+          ))}
+          <span className="mx-1 w-px shrink-0 bg-line" />
+          {askChips.slice(0, 3).map((q) => (
+            <button key={q} onClick={() => send(q)} disabled={busy} className="shrink-0 rounded-full bg-brand-50 px-3 py-1.5 text-sm font-medium text-brand transition hover:bg-brand/15 disabled:opacity-50">
+              {q}
+            </button>
+          ))}
+        </div>
+        <form onSubmit={(e) => { e.preventDefault(); send(input); }} className="card flex items-end gap-1.5 rounded-3xl p-1.5 pl-4">
+          <textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                send(input);
+              }
+            }}
+            rows={1}
+            placeholder={t("Message Munshi…")}
+            className="max-h-32 min-h-10 flex-1 resize-none bg-transparent py-2.5 outline-none placeholder:text-muted"
+            aria-label={t("Message Munshi")}
+          />
+          <button type="button" onClick={listen} aria-label={t("Speak")}
+            className={cx("grid size-10 shrink-0 place-items-center rounded-full transition", listening ? "animate-pulse bg-bad text-white" : "text-ink-2 hover:bg-surface-2")}>
+            <Mic className="size-5" />
+          </button>
+          <button type="submit" disabled={!input.trim() || busy} aria-label={t("Send")} className="grid size-10 shrink-0 place-items-center rounded-full bg-brand text-on-brand transition disabled:opacity-40">
+            <ArrowUp className="size-5" />
+          </button>
+        </form>
       </div>
-
-      {data.trend.length > 1 && (
-        <Card>
-          <SectionTitle>{t("Sales and running costs, month by month")}</SectionTitle>
-          <SalesCostsChart data={data.trend} />
-        </Card>
-      )}
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        {data.upcoming.length > 0 && <Upcoming home={data} />}
-        <Todos />
-        <RecentEntries />
-      </div>
+      <AiSetupSheet open={setup} onClose={() => setSetup(false)} />
     </div>
   );
 }
 
-function Hero({ home }: { home: Home }) {
+function LenaDena({ s, isDemo }: { s: Snapshot; isDemo: boolean }) {
   const { t } = useT();
-  const { status, cash } = home;
-  const grad = status.tone === "bad" ? "grad-hero-bad" : status.tone === "caution" ? "grad-hero-caution" : "grad-hero";
+  const tile = "flex min-w-0 flex-1 flex-col rounded-2xl px-3 py-2 transition";
   return (
-    <section className={cx("rise rise-1 overflow-hidden rounded-[1.75rem] p-5 shadow-xl shadow-black/10 sm:p-7", grad)}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="max-w-xl">
-          <p className="display text-2xl leading-tight sm:text-[1.7rem]">{status.headline}</p>
-          <p className="mt-1 text-sm text-white/80">{status.detail}</p>
+    <div className="no-print shrink-0 border-b border-line bg-canvas px-3 pt-3 pb-3 sm:px-4">
+      <div className="flex gap-2">
+        <div className={cx(tile, "bg-surface shadow-sm")}>
+          <span className="flex items-center gap-1 text-[0.7rem] font-semibold tracking-wide text-muted uppercase"><Landmark className="size-3.5" /> {t("Bank")}</span>
+          <span className="num truncate text-lg font-bold">{s.cash == null ? "—" : short(s.cash)}</span>
         </div>
-        {cash.reconciled && (
-          <span className="glass inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium">
-            <ShieldCheck className="size-3.5" /> {t("Matches your bank statement")}
-          </span>
-        )}
-      </div>
-      {cash.known ? (
-        <div className="mt-5 grid gap-4 md:grid-cols-[minmax(0,16rem)_1fr] md:items-end">
-          <div>
-            <p className="eyebrow !text-white/55">{t("Money in the bank today")}</p>
-            <p className="display num mt-2 text-6xl" title={cash.exact}>
-              <CountUp value={cash.amount ?? 0} format={short} />
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {cash.months_of_costs != null && <span className="glass rounded-full px-3 py-1 text-xs font-medium">{t("Covers {n} months of costs", { n: cash.months_of_costs })}</span>}
-              {cash.in_90_days != null && (
-                <span className="glass rounded-full px-3 py-1 text-xs font-medium">
-                  {t("Expected in 90 days")}: {short(cash.in_90_days)}
-                </span>
-              )}
-            </div>
-            <EvidenceButton evidence={cash.evidence} label={t("How do we know?")} className="mt-4 !text-white/90" />
-          </div>
-          <div className="-mx-2">
-            <HeroCashChart history={cash.history ?? []} outlook={cash.outlook ?? []} />
-            <p className="px-2 text-[0.7rem] text-white/65">{t("Solid: your actual balance. Dashed: expected — not a guarantee.")}</p>
-          </div>
-        </div>
-      ) : (
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
-          <p className="max-w-lg text-white/85">{t("Type in the closing balance from your bank statement or banking app — it takes ten seconds.")}</p>
-          <Link href="/data/#balance">
-            <Button className="">{t("Add bank balance")}</Button>
-          </Link>
-        </div>
-      )}
-    </section>
-  );
-}
-
-function QuickActions() {
-  const { t } = useT();
-  const qe = useQuickEntry();
-  const [bulk, setBulk] = useState(false);
-  const items = [
-    { label: "Add sale", I: Store, grad: "grad-mint", go: () => qe.open({ kind: "sale" }) },
-    { label: "Add expense", I: ArrowUpRight, grad: "grad-sunset", go: () => qe.open({ kind: "expense" }) },
-    { label: "Gave udhaar", I: HandCoins, grad: "grad-violet", go: () => qe.open({ kind: "credit_sale" }) },
-    { label: "Got payment", I: ArrowDownLeft, grad: "grad-ocean", go: () => qe.open({ kind: "payment_in" }) },
-    { label: "Remind all", I: MessageCircle, grad: "grad-berry", go: () => setBulk(true) },
-  ];
-  return (
-    <>
-      <div className="rise rise-2 no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-5 sm:px-0">
-        {items.map(({ label, I, grad, go }) => (
-          <button key={label} onClick={go} className="card flex min-w-[6.5rem] flex-col items-center gap-2 p-3 text-center text-sm font-medium transition hover:-translate-y-0.5 hover:shadow-lg">
-            <span className={cx("grid size-12 place-items-center rounded-2xl shadow-md", grad)}>
-              <I className="size-6" aria-hidden />
-            </span>
-            {t(label)}
-          </button>
-        ))}
-      </div>
-      {bulk && <BulkReminders onClose={() => setBulk(false)} />}
-    </>
-  );
-}
-
-function HealthCard() {
-  const { t } = useT();
-  const { data } = useApi<Health>("/api/health");
-  if (!data || data.status !== "ok") return <Card className="h-44 animate-pulse" />;
-  return (
-    <Link href="/health/" className="card rise rise-3 group flex items-center gap-4 p-5 transition hover:shadow-lg">
-      <div className="text-ink">
-        <Gauge score={data.score} size={150} label={t("Health score")} />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm text-ink-2">{t("Health score")}</p>
-        <p className="display text-2xl">{data.grade}</p>
-        {data.change != null && data.change !== 0 && (
-          <p className={cx("text-sm font-medium", data.change > 0 ? "text-good" : "text-bad")}>
-            {data.change > 0 ? "▲" : "▼"} {Math.abs(data.change)} {t("since last month")}
-          </p>
-        )}
-        {data.focus && <p className="mt-1 line-clamp-2 text-xs text-ink-2">{data.focus.label}: {data.focus.tip}</p>}
-        <span className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-brand group-hover:underline">
-          {t("Health score")} <ChevronRight className="size-4" />
-        </span>
-      </div>
-    </Link>
-  );
-}
-
-function StoryCardTile() {
-  const { t } = useT();
-  const { data } = useApi<Story>("/api/story");
-  const [open, setOpen] = useState(false);
-  if (!data) return <Card className="h-44 animate-pulse" />;
-  return (
-    <>
-      <button onClick={() => setOpen(true)} className="rise rise-4 grad-sunset relative flex items-center gap-4 overflow-hidden rounded-[1.5rem] p-5 text-left shadow-lg shadow-black/10 transition hover:brightness-105">
-        <div className="flex -space-x-3">
-          {["grad-hero", "grad-ocean", "grad-mint"].map((g, i) => (
-            <span key={g} className={cx("grid size-14 place-items-center rounded-full ring-4 ring-white/30", g)} style={{ zIndex: 3 - i }}>
-              {i === 0 && <Play className="size-6 fill-white" />}
-            </span>
-          ))}
-        </div>
-        <div className="min-w-0">
-          <p className="text-sm text-white/80">{data.range}</p>
-          <p className="display text-2xl">{data.title ?? t("Your week")}</p>
-          <p className="truncate text-sm text-white/90">{data.cards[0]?.title}</p>
-          <span className="mt-1 inline-block text-xs font-semibold text-white/90 underline underline-offset-2">{t("Tap to see your week")}</span>
-        </div>
-      </button>
-      {open && <StoryViewer cards={data.cards} title={data.title ?? t("Your week")} range={data.range} onClose={() => setOpen(false)} />}
-    </>
-  );
-}
-
-function Attention({ items, onChange }: { items: AttentionItem[]; onChange: () => void }) {
-  const { t } = useT();
-  const router = useRouter();
-  const [remind, setRemind] = useState<string | null>(null);
-  const [added, setAdded] = useState<Record<string, boolean>>({});
-  const [hidden, setHidden] = useState<Record<string, boolean>>({});
-  const [all, setAll] = useState(false);
-  const remaining = items.filter((i) => !hidden[i.id]);
-  const visible = all ? remaining : remaining.slice(0, 4);
-
-  const act = async (i: AttentionItem) => {
-    const a = i.action;
-    if (a.type === "remind" && a.customer) setRemind(a.customer);
-    else if (a.type === "review") router.push(`/money/?ids=${(a.ids ?? []).join(",")}`);
-    else if (a.type === "add_balance") router.push("/data/#balance");
-    else if (a.type === "open" && a.href) router.push(a.href);
-    else if (a.type === "todo" && a.text) {
-      await post("/api/todos", { text: a.text, reason: i.title });
-      setAdded((s) => ({ ...s, [i.id]: true }));
-      onChange();
-    }
-  };
-  if (!remaining.length) return null;
-  return (
-    <section>
-      <SectionTitle>
-        {t("Needs your attention")} <span className="ml-1 rounded-full bg-bad px-2 py-0.5 text-xs font-bold text-white">{remaining.length}</span>
-      </SectionTitle>
-      <div className="grid gap-3 md:grid-cols-2">
-        {visible.map((i) => {
-          const I = ICONS[i.icon] ?? Bell;
-          return (
-            <Card key={i.id} className={cx("relative flex gap-3.5 overflow-hidden p-4 pl-5")}>
-              <span className={cx("absolute inset-y-0 left-0 w-1.5", i.tone === "bad" ? "bg-bad" : i.tone === "caution" ? "bg-[#f59e0b]" : i.tone === "info" ? "bg-info" : "bg-good")} />
-              <span className={cx("grid size-11 shrink-0 place-items-center rounded-2xl", toneBg[i.tone])}>
-                <I className={cx("size-5", toneText[i.tone])} aria-hidden />
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-start justify-between gap-2">
-                  <p className="font-semibold leading-snug">{i.title}</p>
-                  <button onClick={() => setHidden((h) => ({ ...h, [i.id]: true }))} className="-mr-1 -mt-1 rounded-full p-1 text-muted hover:bg-canvas hover:text-ink" aria-label={t("Hide for now")}>
-                    <X className="size-4" />
-                  </button>
-                </div>
-                <p className="mt-0.5 text-sm text-ink-2">{i.body}</p>
-                <Button size="sm" variant={added[i.id] ? "secondary" : "primary"} className="mt-3" onClick={() => act(i)} disabled={added[i.id]}>
-                  {added[i.id] ? (
-                    <>
-                      <Check className="size-4" /> {t("Added to to-dos")}
-                    </>
-                  ) : (
-                    <>
-                      {i.action.label} <ArrowRight className="size-4" />
-                    </>
-                  )}
-                </Button>
-              </div>
-            </Card>
-          );
-        })}
-      </div>
-      {remaining.length > visible.length && (
-        <Button variant="ghost" className="mt-2" onClick={() => setAll(true)}>
-          {t("Show {n} more", { n: remaining.length - visible.length })}
-        </Button>
-      )}
-      <ReminderSheet customer={remind} onClose={() => setRemind(null)} />
-    </section>
-  );
-}
-
-function Change({ value, good }: { value: number | null | undefined; good: "up" | "down" }) {
-  if (value == null || Math.abs(value) < 0.5) return null;
-  const up = value > 0;
-  const isGood = (up && good === "up") || (!up && good === "down");
-  const I = up ? ArrowUpRight : ArrowDownRight;
-  return (
-    <span className={cx("inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-semibold", isGood ? "bg-good-50 text-good" : "bg-bad-50 text-bad")}>
-      <I className="size-3.5" aria-hidden />
-      {pct(value)}
-    </span>
-  );
-}
-
-function MonthCard({ home }: { home: Home }) {
-  const { t } = useT();
-  const m = home.month!;
-  const prev = m.previous;
-  const rows = [
-    { label: "Sales received", value: m.sales, change: m.change?.sales, good: "up" as const, grad: "grad-mint", I: Store },
-    { label: "Running costs paid", value: m.costs, change: m.change?.costs, good: "down" as const, grad: "grad-sunset", I: ArrowUpRight },
-  ];
-  return (
-    <Card>
-      <SectionTitle action={prev && <span className="text-xs text-muted">{t("vs {month}", { month: (prev as { short_label?: string }).short_label ?? prev.label })}</span>}>{m.label}</SectionTitle>
-      <div className="space-y-3">
-        {rows.map((r) => (
-          <div key={r.label} className="flex items-center gap-3">
-            <span className={cx("grid size-10 place-items-center rounded-2xl", r.grad)}>
-              <r.I className="size-5" aria-hidden />
-            </span>
-            <span className="flex-1 text-ink-2">{t(r.label)}</span>
-            <span className="num text-lg font-semibold">{short(r.value)}</span>
-            <span className="w-16 text-right">
-              <Change value={r.change} good={r.good} />
-            </span>
-          </div>
-        ))}
-        <div className={cx("flex items-center justify-between gap-3 rounded-2xl p-4", m.profit >= 0 ? "bg-good-50" : "bg-bad-50")}>
-          <span>
-            <span className="font-semibold">{t(m.profit >= 0 ? "Profit" : "Loss")}</span> <span className="text-xs text-muted">{t("(estimate)")}</span>
-          </span>
-          <span className="flex items-center gap-2">
-            <span className={cx("display num text-3xl", m.profit < 0 ? "text-bad" : "text-good")}>{short(m.profit)}</span>
-            <Change value={m.change?.profit} good="up" />
-          </span>
-        </div>
-      </div>
-      {home.insight && (
-        <div className={cx("mt-4 rounded-2xl p-4 text-sm", toneBg[home.insight.tone])}>
-          <p className="text-ink">{home.insight.text}</p>
-          <Link href={`/ask/?q=${encodeURIComponent(home.insight.ask)}`} className="mt-2 inline-flex items-center gap-1 font-semibold text-brand hover:underline">
-            <Sparkles className="size-4" /> {t("Ask FinPilot why")} <ChevronRight className="size-4" />
-          </Link>
-        </div>
-      )}
-      <div className="mt-4 flex items-center justify-between">
-        <EvidenceButton evidence={m.evidence} label={t("How is profit worked out?")} />
-        <Link href="/money/?tab=profit" className="text-sm font-medium text-ink-2 hover:text-ink">
-          {t("All months")} →
+        <Link href="/khata/?side=customers" className={cx(tile, "bg-good-50 hover:ring-2 hover:ring-good/30")}>
+          <span className="text-[0.7rem] font-semibold tracking-wide text-good uppercase">{t("Lena")} · {t("to collect")}</span>
+          <span className="num truncate text-lg font-bold text-ink">{short(s.to_collect)}</span>
+          {s.collect_overdue > 0 && <span className="truncate text-[0.7rem] text-bad">{t("{amt} late", { amt: short(s.collect_overdue) })}</span>}
+        </Link>
+        <Link href="/khata/?side=suppliers" className={cx(tile, "bg-caution-50 hover:ring-2 hover:ring-caution/30")}>
+          <span className="text-[0.7rem] font-semibold tracking-wide text-caution uppercase">{t("Dena")} · {t("to pay")}</span>
+          <span className="num truncate text-lg font-bold text-ink">{short(s.to_pay)}</span>
+          {s.pay_overdue > 0 && <span className="truncate text-[0.7rem] text-bad">{t("{amt} late", { amt: short(s.pay_overdue) })}</span>}
         </Link>
       </div>
-    </Card>
-  );
-}
-
-function Spending({ home }: { home: Home }) {
-  const { t } = useT();
-  const max = Math.max(...home.spending.map((s) => s.amount));
-  return (
-    <Card>
-      <SectionTitle action={<span className="text-xs text-muted">{home.month?.label}</span>}>{t("Where your money went")}</SectionTitle>
-      <ul className="space-y-3.5">
-        {home.spending.map((s) => (
-          <li key={s.category} className="flex items-center gap-3">
-            <CatIcon category={s.category} />
-            <div className="min-w-0 flex-1">
-              <div className="mb-1 flex items-baseline justify-between gap-3 text-sm">
-                <span className="truncate font-medium">{s.category}</span>
-                <span className="num font-semibold">{inr(s.amount)}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="h-2 flex-1 rounded-full bg-canvas">
-                  <div className="h-2 rounded-full bg-out" style={{ width: `${Math.max(3, (s.amount / max) * 100)}%` }} />
-                </div>
-                <span className="w-14 text-right">
-                  <Change value={s.change_pct} good="down" />
-                </span>
-              </div>
-            </div>
-          </li>
-        ))}
-      </ul>
-      <Link href="/money/?dir=out" className="mt-4 inline-block text-sm font-medium text-ink-2 hover:text-ink">
-        {t("See all payments")} →
-      </Link>
-    </Card>
-  );
-}
-
-function Upcoming({ home }: { home: Home }) {
-  const { t } = useT();
-  return (
-    <Card>
-      <SectionTitle action={home.upcoming_total != null && <span className="num text-sm font-semibold">{inr(home.upcoming_total)}</span>}>{t("Bills in the next 14 days")}</SectionTitle>
-      <ul className="divide-y divide-line">
-        {home.upcoming.map((u) => (
-          <li key={u.date + u.name + u.amount} className="flex items-center gap-3 py-2.5">
-            <span className="grad-violet grid size-11 shrink-0 place-items-center rounded-2xl text-center text-[0.7rem] leading-tight font-semibold">
-              {u.day.split(" ").map((p) => (
-                <span key={p} className="block">
-                  {p}
-                </span>
-              ))}
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate font-medium">{u.what || u.name}</p>
-              <p className="truncate text-xs text-muted">{u.name}</p>
-            </div>
-            <span className="num font-semibold">{inr(u.amount)}</span>
-          </li>
-        ))}
-      </ul>
-    </Card>
-  );
-}
-
-function Todos() {
-  const { t } = useT();
-  const { data, reload } = useApi<Todo[]>("/api/todos");
-  const open = (data ?? []).filter((x) => x.status === "open");
-  const decide = async (id: number, status: "done" | "dismissed") => {
-    await post(`/api/todos/${id}`, { status });
-    reload();
-  };
-  return (
-    <Card>
-      <SectionTitle>
-        <span className="inline-flex items-center gap-2">
-          <CalendarClock className="size-5 text-brand" aria-hidden /> {t("Your to-dos")}
-        </span>
-      </SectionTitle>
-      {open.length === 0 ? (
-        <p className="text-sm text-ink-2">
-          {t("Nothing pending. When you or FinPilot suggest an action — like paying a bill — it lands here for you to approve. FinPilot never pays or sends anything itself.")}
+      {isDemo && (
+        <p className="mt-2 text-center text-xs text-muted">
+          {t("Demo shop with made-up numbers.")}{" "}
+          <Link href="/data/" className="font-semibold text-brand underline underline-offset-2">{t("Use my own books")}</Link>
         </p>
-      ) : (
-        <ul className="divide-y divide-line">
-          {open.map((x) => (
-            <li key={x.id} className="flex items-center gap-3 py-2.5">
-              <div className="min-w-0 flex-1">
-                <p className="font-medium">{x.text}</p>
-                {x.reason && <p className="truncate text-xs text-muted">{x.reason}</p>}
-              </div>
-              <Button size="sm" variant="secondary" onClick={() => decide(x.id, "done")}>
-                <Check className="size-4" /> {t("Done")}
-              </Button>
-              <button onClick={() => decide(x.id, "dismissed")} className="rounded-full p-1.5 text-muted hover:bg-canvas" aria-label="Dismiss">
-                <X className="size-4" />
-              </button>
-            </li>
-          ))}
-        </ul>
       )}
-    </Card>
+    </div>
   );
 }
 
-function RecentEntries() {
+function Welcome({ business, ai, onSetup }: { business: string; ai: AiStatus; onSetup: () => void }) {
   const { t } = useT();
-  const { refresh } = useContext(DataVersion);
-  const toast = useToast();
-  const { data } = useApi<{ entries: { id: string; kind: string; summary: string; undone: number; at: string }[] }>("/api/entries");
-  const list = (data?.entries ?? []).filter((e) => !e.undone).slice(0, 6);
-  if (!list.length) return null;
-  const undo = async (id: string) => {
-    await post(`/api/entries/${id}/undo`, {});
-    refresh();
-    toast.show({ text: t("Undone") });
-  };
-  const KIND_GRAD: Record<string, string> = { sale: "grad-mint", payment_in: "grad-ocean", credit_sale: "grad-violet", expense: "grad-sunset", bill: "grad-berry", payment_out: "grad-night" };
   return (
-    <Card>
-      <SectionTitle>{t("Recent entries")}</SectionTitle>
-      <ul className="divide-y divide-line">
-        {list.map((e) => (
-          <li key={e.id} className="flex items-center gap-3 py-2.5">
-            <span className={cx("size-2.5 shrink-0 rounded-full", KIND_GRAD[e.kind] ?? "grad-violet")} />
-            <p className="min-w-0 flex-1 truncate text-sm">{e.summary}</p>
-            <button onClick={() => undo(e.id)} className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium text-ink-2 hover:bg-canvas">
-              <Undo2 className="size-3.5" /> {t("Undo")}
-            </button>
-          </li>
-        ))}
-      </ul>
-    </Card>
+    <MunshiRow>
+      <div className="card max-w-xl space-y-2 p-4 text-[0.95rem]">
+        <p className="font-semibold">{t("Namaste! I'm Munshi, the bookkeeper for {shop}.", { shop: business })}</p>
+        <p className="text-ink-2">{t("Tell me what happened and I'll write it in your khata. Ask me anything about your money. Every morning I'll tell you what needs doing.")}</p>
+        <ul className="space-y-1 text-sm text-ink-2">
+          <li>✍️ <i>“Ravi ko 2500 udhaar”</i> · <i>“Metro ne 50k diye”</i> · <i>“bijli bill 3200”</i></li>
+          <li>💬 <i>“kaun der se deta hai?”</i> · <i>“is mahine kaisa raha?”</i></li>
+        </ul>
+        <div className="flex flex-wrap items-center gap-2 pt-1">
+          <AiModeChip onClick={onSetup} />
+          {!ai.enabled && <button onClick={onSetup} className="text-xs font-semibold text-brand underline underline-offset-2">{t("Make me smarter with a free AI key")}</button>}
+        </div>
+      </div>
+    </MunshiRow>
+  );
+}
+
+function DaySep({ iso }: { iso: string }) {
+  const { t, lang } = useT();
+  const d = new Date(iso);
+  const today = new Date();
+  const y = new Date();
+  y.setDate(today.getDate() - 1);
+  const label = dayKey(iso) === dayKey(today.toISOString()) ? t("Today") : dayKey(iso) === dayKey(y.toISOString()) ? t("Yesterday") : d.toLocaleDateString(lang === "hi" ? "hi-IN" : "en-IN", { day: "numeric", month: "short", year: "numeric" });
+  return (
+    <div className="my-2 flex justify-center">
+      <span className="rounded-full bg-surface-2 px-3 py-0.5 text-xs font-medium text-muted">{label}</span>
+    </div>
+  );
+}
+
+function MunshiRow({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-2">
+      <MunshiMark size="sm" />
+      <div className="min-w-0 flex-1">{children}</div>
+    </div>
+  );
+}
+
+function OwnerBubble({ text, at }: { text: string; at?: string }) {
+  const { lang } = useT();
+  return (
+    <div className="flex justify-end">
+      <p className="max-w-[85%] rounded-3xl rounded-br-md bg-brand px-4 py-2.5 text-on-brand shadow-sm sm:max-w-[75%]">
+        {text}
+        {at && <span className="ml-2 align-bottom text-[0.65rem] text-on-brand/70">{new Date(at).toLocaleTimeString(lang === "hi" ? "hi-IN" : "en-IN", { hour: "numeric", minute: "2-digit" })}</span>}
+      </p>
+    </div>
+  );
+}
+
+function Bubble({ item, onUndone }: { item: Item; onUndone: () => void }) {
+  const { t } = useT();
+  if (item.role === "owner") return <OwnerBubble text={item.data.text} at={item.at} />;
+  if (item.role === "event") return <EntryLine e={item.data} at={item.at} onUndone={onUndone} />;
+  return (
+    <MunshiRow>
+      {item.kind === "checkup" && <p className="mb-1 text-xs font-semibold tracking-wide text-brand uppercase">{t("Morning check-up")}</p>}
+      <AgentAnswer a={item.data} conversation="main" />
+    </MunshiRow>
+  );
+}
+
+/** A khata line in the thread: every entry, from chat or the + buttons, lands here with Undo. */
+function EntryLine({ e, at, onUndone }: { e: EntryEvent; at: string; onUndone: () => void }) {
+  const { t, lang } = useT();
+  const toast = useToast();
+  const { refresh } = useContext(DataVersion);
+  const I = ENTRY_ICON[e.entry_kind] ?? BookOpen;
+  const incoming = MONEY_IN.includes(e.entry_kind);
+  const undo = async () => {
+    try {
+      await post(`/api/entries/${e.entry_id}/undo`, {});
+      toast.show({ text: t("Undone") });
+      refresh();
+      onUndone();
+    } catch (x) {
+      toast.show({ text: x instanceof Error ? x.message : String(x), tone: "bad" });
+    }
+  };
+  return (
+    <div className="flex justify-center">
+      <div className={cx("flex max-w-[92%] items-center gap-2.5 rounded-2xl border border-dashed px-3 py-2 text-sm", e.undone ? "border-line text-muted line-through" : "border-brand/30 bg-surface")}>
+        <span className={cx("grid size-7 shrink-0 place-items-center rounded-full", incoming ? "bg-good-50 text-good" : "bg-caution-50 text-caution")}>
+          <I className="size-4" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="text-[0.65rem] font-semibold tracking-wide text-muted uppercase no-underline">{t("Written in khata")} · {new Date(at).toLocaleTimeString(lang === "hi" ? "hi-IN" : "en-IN", { hour: "numeric", minute: "2-digit" })}</span>
+          <span className="block font-medium text-ink">{e.message}</span>
+        </span>
+        {!e.undone && (
+          <button onClick={undo} className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold text-ink-2 hover:bg-surface-2" aria-label={t("Undo")}>
+            <RotateCcw className="size-3.5" /> {t("Undo")}
+          </button>
+        )}
+      </div>
+    </div>
   );
 }

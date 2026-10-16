@@ -225,7 +225,7 @@ def t_purchase(ctx: ToolContext, a: dict) -> dict:
     )
     if financing == "loan" and (p.loan_rate_pct is None or p.tenure_months is None):
         missing = [k for k, v in (("loan_rate_pct", p.loan_rate_pct), ("tenure_months", p.tenure_months)) if v is None]
-        return {"status": "needs_input", "message": "To check a loan, the interest rate and loan length from the lender's quote are needed. FinPilot does not assume loan terms.", "missing": missing}
+        return {"status": "needs_input", "message": "To check a loan, the interest rate and loan length from the lender's quote are needed. Munshi does not assume loan terms.", "missing": missing}
     r = simulate_purchase(
         ctx.ledger, ctx.balances, ctx.obligations, ctx.as_of, p,
         horizon_days=_num(a, "horizon_days", 30, 730, default=180, integer=True),
@@ -279,7 +279,7 @@ def t_propose(ctx: ToolContext, a: dict) -> dict:
     return {
         "status": "awaiting_human_approval",
         "approval_id": item,
-        "message": "Recorded in the approval queue. Nothing has been sent, paid or filed — a person must approve it, and even then FinPilot has no integration that executes it.",
+        "message": "Recorded in the approval queue. Nothing has been sent, paid or filed — a person must approve it, and even then Munshi has no integration that executes it.",
     }
 
 
