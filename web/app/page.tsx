@@ -107,7 +107,10 @@ export default function MunshiChat() {
     runCheckup();
   }, [thread?.checkup_due, busy, state?.source, runCheckup]);
 
-  useEffect(() => end.current?.scrollIntoView({ behavior: "smooth", block: "end" }), [thread?.items.length, live, pending]);
+  useEffect(() => {
+    // braces matter: newer browsers return a Promise from scrollIntoView, and an effect must return nothing (or a cleanup function)
+    end.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [thread?.items.length, live, pending]);
 
   const send = async (text: string) => {
     const q = text.trim();

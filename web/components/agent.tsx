@@ -343,7 +343,9 @@ export function ActionList({ actions, conversation, onChange }: { actions: Draft
   const { refresh } = useContext(DataVersion);
   const [items, setItems] = useState(actions);
   const [busy, setBusy] = useState(false);
-  useEffect(() => setItems(actions), [actions]);
+  useEffect(() => {
+    setItems(actions);
+  }, [actions]);
   const batch = items.filter((a) => a.state === "pending" && a.kind !== "send_reminder");
   const approveAll = async () => {
     setBusy(true);
