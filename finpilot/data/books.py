@@ -27,6 +27,7 @@ SCHEMA = [
     "CREATE TABLE IF NOT EXISTS memory (id INTEGER PRIMARY KEY AUTOINCREMENT, book TEXT, text TEXT, created_at TEXT)",
     "CREATE TABLE IF NOT EXISTS checkups (book TEXT, lang TEXT, day TEXT, ran_at TEXT, data TEXT, PRIMARY KEY (book, lang))",
     "CREATE TABLE IF NOT EXISTS autopilot_moves (book TEXT, id TEXT, state TEXT, at TEXT, PRIMARY KEY (book, id))",
+    "CREATE TABLE IF NOT EXISTS autopilot_snapshots (id INTEGER PRIMARY KEY AUTOINCREMENT, book TEXT, at TEXT, fingerprint TEXT, data TEXT)",
     "CREATE TABLE IF NOT EXISTS chat_log (id INTEGER PRIMARY KEY AUTOINCREMENT, book TEXT, at TEXT, role TEXT, kind TEXT, data TEXT)",
 ]
 
@@ -132,7 +133,7 @@ def update_goal(db: Path, book: str, goal_id: int, add: float | None = None, del
 
 
 DEFAULT_SETTINGS = {"gst_registered": "yes", "gst_rate_sales": "5", "gst_rate_purchases": "5", "gst_filing": "monthly", "language": "en",
-                    "business_type": "", "safety": ""}
+                    "business_type": "", "safety": "", "crew_last_run": ""}
 
 
 def settings(db: Path, book: str) -> dict[str, str]:
@@ -174,7 +175,7 @@ def pop_entry(db: Path, book: str, entry_id: str) -> dict | None:
 def reset_book(db: Path, book: str) -> None:
     """Forget everything the owner did in a book (used for 'Reset demo')."""
     with connect(db) as con:
-        for t in ("contacts", "promises", "cat_rules", "budgets", "goals", "settings", "entry_log", "agent_actions", "memory", "checkups", "chat_log", "autopilot_moves"):
+        for t in ("contacts", "promises", "cat_rules", "budgets", "goals", "settings", "entry_log", "agent_actions", "memory", "checkups", "chat_log", "autopilot_moves", "autopilot_snapshots"):
             con.execute(f"DELETE FROM {t} WHERE book = ?", (book,))
 
 
@@ -294,3 +295,16 @@ def set_move_state(db: Path, book: str, move_id: str, state: str | None) -> None
             con.execute("DELETE FROM autopilot_moves WHERE book = ? AND id = ?", (book, move_id))
         else:
             con.execute("INSERT OR REPLACE INTO autopilot_moves VALUES (?, ?, ?, ?)", (book, move_id, state, store.now()))
+
+
+def snapshot(db: Path, book: str, fingerprint: str, data: dict) -> tuple[dict | None, str | None]:
+    """Save this picture of the cash plan if the books changed since the last one. Returns the previous picture and when it was taken."""
+    with connect(db) as con:
+        rows = con.execute("SELECT at, fingerprint, data FROM autopilot_snapshots WHERE book = ? ORDER BY id DESC LIMIT 2", (book,)).fetchall()
+        if not rows or rows[0][1] != fingerprint:
+            con.execute("INSERT INTO autopilot_snapshots (book, at, fingerprint, data) VALUES (?, ?, ?, ?)", (book, store.now(), fingerprint, json.dumps(data)))
+            con.execute("DELETE FROM autopilot_snapshots WHERE book = ? AND id NOT IN (SELECT id FROM autopilot_snapshots WHERE book = ? ORDER BY id DESC LIMIT 2)", (book, book))
+            prev = rows[0] if rows else None
+        else:
+            prev = rows[1] if len(rows) > 1 else None
+    return (json.loads(prev[2]), prev[0]) if prev else (None, None)

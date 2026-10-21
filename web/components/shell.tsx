@@ -68,7 +68,7 @@ export function ThemeToggle({ className }: { className?: string }) {
 }
 
 const TABS = [
-  { href: "/", label: "Cash", I: Gauge },
+  { href: "/", label: "Today", I: Gauge },
   { href: "/timeline/", label: "Timeline", I: CalendarRange },
   { href: "/ask/", label: "Ask", I: MessageCircle },
   { href: "/khata/", label: "People", I: Users },

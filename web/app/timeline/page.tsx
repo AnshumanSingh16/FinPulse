@@ -61,7 +61,7 @@ export default function TimelinePage() {
       <div>
         <h1 className="text-2xl">{t("Cash timeline")}</h1>
         <p className="text-sm text-ink-2">
-          {t("Money in and out, week by week, for the next 13 weeks.")} {approved ? t("Includes the moves you approved.") : t("If nothing changes — approve moves on the Cash tab to see their effect.")}
+          {t("Money in and out, week by week, for the next 13 weeks.")} {approved ? t("Includes the moves you approved.") : t("If nothing changes — approve moves on the Today tab to see their effect.")}
         </p>
       </div>
       <ol className="space-y-2.5">
@@ -91,7 +91,7 @@ export default function TimelinePage() {
                 <div className="w-24 shrink-0 text-right">
                   <p className="text-[0.65rem] font-semibold tracking-wide text-muted uppercase">{t("Closing")}</p>
                   <p className={cx("num font-bold", neg ? "text-bad" : low ? "text-caution" : "text-ink")}>{short(w.closing)}</p>
-                  {low && <p className="inline-flex items-center gap-1 text-[0.65rem] font-semibold text-caution"><AlertTriangle className="size-3" /> {neg ? t("negative") : t("below safety")}</p>}
+                  {low && <p className="inline-flex items-center gap-1 text-[0.65rem] font-semibold text-caution"><AlertTriangle className="size-3" /> {neg ? t("negative") : t("below cushion")}</p>}
                 </div>
                 <ChevronDown className={cx("size-4 shrink-0 text-muted transition", isOpen && "rotate-180")} />
               </button>

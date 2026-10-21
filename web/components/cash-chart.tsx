@@ -27,7 +27,7 @@ export function CashChart({ baseline, plan, safety, planLabel }: { baseline: Poi
             <CartesianGrid vertical={false} stroke="var(--color-grid)" />
             <XAxis dataKey="date" tickFormatter={label} tick={{ fontSize: 11, fill: "var(--color-muted)" }} interval="preserveStartEnd" minTickGap={28} tickLine={false} axisLine={false} />
             <YAxis tickFormatter={tick} tick={{ fontSize: 11, fill: "var(--color-muted)" }} width={58} tickLine={false} axisLine={false} />
-            <ReferenceLine y={safety} stroke="var(--color-caution)" strokeDasharray="5 4" label={{ value: t("Safety level"), position: "insideTopRight", fontSize: 11, fill: "var(--color-caution)" }} />
+            <ReferenceLine y={safety} stroke="var(--color-caution)" strokeDasharray="5 4" label={{ value: t("Your cushion"), position: "insideTopRight", fontSize: 11, fill: "var(--color-caution)" }} />
             <ReferenceLine y={0} stroke="var(--color-bad)" strokeOpacity={0.5} />
             <Tooltip
               content={({ active, payload, label: l }) =>
@@ -52,7 +52,7 @@ export function CashChart({ baseline, plan, safety, planLabel }: { baseline: Poi
       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-2">
         <span className="inline-flex items-center gap-1.5"><span className="inline-block h-0.5 w-4 border-t-2 border-dashed border-muted" /> {t("If nothing is done")}</span>
         {!same && <span className="inline-flex items-center gap-1.5"><span className="inline-block h-0.5 w-4 bg-brand" /> {t(planLabel)}</span>}
-        <span className="inline-flex items-center gap-1.5"><span className="inline-block h-0.5 w-4 border-t-2 border-dashed border-caution" /> {t("Safety level")}</span>
+        <span className="inline-flex items-center gap-1.5"><span className="inline-block h-0.5 w-4 border-t-2 border-dashed border-caution" /> {t("Your cushion")}</span>
       </div>
     </div>
   );

@@ -10,6 +10,7 @@ import json
 import mimetypes
 import queue
 import threading
+import time
 import uuid
 from contextvars import ContextVar
 from pathlib import Path
@@ -30,7 +31,7 @@ from finpilot.engine import autopilot as ap
 from finpilot.engine.cash import cash_position, obligations_status
 from finpilot.engine.categorize import categorize_ledger
 
-from . import dataset, i18n, khata_views, smart_views, views
+from . import crew, dataset, i18n, khata_views, smart_views, views
 
 STATIC = Path(__file__).resolve().parents[1] / "web"
 
@@ -538,9 +539,7 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
 
         return forecast_cash_flow(d.ledger, d.balances, obl, d.as_of, ForecastOptions(horizon_days=91, include_run_rate=True, min_buffer=safety, extra_flows=extra))
 
-    @app.get("/api/autopilot")
-    def autopilot():
-        d = ds()
+    def _view(d: dataset.Dataset, lang: str = "en") -> dict:
         p, states = _plan(d)
         if p["status"] != "ok":
             return p | {"business": d.name.replace(" (fictional)", ""), "is_demo": d.is_demo}
@@ -548,7 +547,70 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
             m["state"] = states.get(m["id"], "open")
         p["moves"] = [m for m in p["moves"] if m["state"] != "dismissed"]
         p["evidence"] = views.evidence(p["evidence"], "How the autopilot works this out")
+        # What changed since the books last changed: a small picture is kept per book and compared.
+        prev, since = books.snapshot(db, d.book, f"{smart_views._fingerprint(d)}|{_safety(d)}", crew.picture(p))
+        p["changes"], p["changes_since"] = crew.changes(prev, crew.picture(p), lang), since
+        p["headline"] = crew.headline(p, lang)
         return p | {"business": d.name.replace(" (fictional)", ""), "is_demo": d.is_demo, "business_type": _btype(d), "default_safety": ap.default_safety(d.ledger, d.as_of) if len(d.ledger) else None}
+
+    @app.get("/api/autopilot")
+    def autopilot():
+        return _view(ds(), lg())
+
+    @app.post("/api/crew/stream")
+    def crew_stream():
+        """The agent crew, live: each agent's finding as it comes, then FinPilot's brief (written by the AI when it is on, and verified)."""
+        lang = lg()
+
+        def work(on_event) -> dict:
+            d = ds()
+            p = _view(d, lang)
+            if p["status"] != "ok":
+                return {"status": p["status"], "message": p.get("message", "")}
+            found = crew.steps(p, lang)
+            for st in found:
+                on_event({"type": "agent", "phase": "start", "agent": st["agent"], "name": st["name"], "doing": st["doing"]})
+                time.sleep(0.35)  # pacing so the owner can follow each agent; the work itself is already done
+                on_event({"type": "agent", "phase": "done", **st})
+            text, mode, verified, warnings = crew.brief(p, lang), "rule-based", True, []
+            if ai_status()["enabled"]:
+                on_event({"type": "agent", "phase": "start", "agent": "cfo", "name": "FinPilot", "doing": "Writing your brief…" if lang != "hi" else "आपके लिए सार लिख रहा हूँ…"})
+                ctx = ToolContext(d.ledger, d.obligations, d.balances, d.as_of, db, d.book, d.name.replace(" (fictional)", ""), lang)
+                run = orchestrator.ask(crew.BRIEF_QUESTION["hi" if lang == "hi" else "en"], ctx, d.name, settings(), client=client, lang=lang,
+                                       on_event=lambda e: on_event({**e, "agent": "cfo"}))
+                if run.mode == "ai" and run.answer and run.verified:
+                    text, mode, verified = run.answer, "ai", True
+                else:
+                    warnings = list(run.warnings)
+            books.set_settings(db, d.book, {"crew_last_run": store.now()})
+            return {"status": "ok", "steps": found, "brief": text, "mode": mode, "verified": verified, "warnings": warnings,
+                    "odds": p["odds"], "suggested": [m["id"] for m in p["moves"] if m["suggested"]]}
+
+        return _stream(work, lang)
+
+    @app.post("/api/autopilot/afford")
+    def autopilot_afford(body: dict = Body(...)):
+        """Can I pay this? Yes / yes if the agents' moves are approved / risky / not now — and the earliest safe day without moves."""
+        d = ds()
+        try:
+            amount = float(body.get("amount"))
+        except (TypeError, ValueError) as e:
+            raise HTTPException(400, "Enter an amount.") from e
+        if amount <= 0:
+            raise HTTPException(400, "Enter an amount above zero.")
+        when = body.get("date") or None
+        try:
+            if when is not None:
+                pd.Timestamp(when)
+        except ValueError as e:
+            raise HTTPException(400, "Enter a real date.") from e
+        label = str(body.get("label") or "Purchase")[:60]
+        states = books.move_states(db, d.book)
+        approved = frozenset(k for k, v in states.items() if v in ("approved", "done"))
+        r = ap.afford(d.ledger, d.balances, d.obligations, d.as_of, amount, when, label, safety=_safety(d), approved=approved)
+        if r.get("status") == "ok":
+            r["evidence"] = views.evidence(r["evidence"], "How this is worked out")
+        return r
 
     @app.post("/api/autopilot/moves/{move_id:path}")
     def autopilot_move(move_id: str, body: dict = Body(...)):
@@ -566,6 +628,11 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
                 r = khata_views.reminders(d, db, lg(), m["party"])
                 if r:
                     out |= {"next": "whatsapp", "text": r[0]["text"], "whatsapp": r[0]["whatsapp"]}
+            elif m["kind"] == "borrow":
+                biz = d.name.replace(" (fictional)", "")
+                text = (f"Dear Relationship Manager, {biz} would like to arrange a standby overdraft of {ap.fmt_inr(m['amount'])} against our current account "
+                        f"for the next three months, to cover the gap if a large customer payment is delayed. Could you share the terms and documents needed? Thank you.")
+                out |= {"next": "copy", "text": text}
             elif m["kind"] == "defer":
                 text = (f"Namaste {m['party']} team, could we please pay {m['items'][0]} ({ap.fmt_inr(m['amount'])}) on "
                         f"{pd.Timestamp(m['to_date']):%d %b} instead of {pd.Timestamp(m['from_date']):%d %b}? Thank you for your support. — {d.name.replace(' (fictional)', '')}")

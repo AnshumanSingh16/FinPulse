@@ -411,9 +411,53 @@ def t_autopilot(ctx: ToolContext, a: dict) -> dict:
         "with_moves_the_owner_approved": p["with_approved"] if approved else None,
         "main_causes_of_the_low_point": p["causes"], "invoices_not_counted_because_customer_is_late": p["at_risk"],
         "moves": [{"id": m["id"], "agent": m["agent"], "title": m["title"], "detail": m["detail"], "amount": m["amount"],
-                   "raises_lowest_balance_by": m["impact"], "suggested": m["suggested"], "owner_decision": states.get(m["id"], "none")} for m in p["moves"]],
+                   "raises_lowest_balance_by": m["impact"], "suggested": m["suggested"], "backup_only": m.get("backup", False),
+                   **({"odds_with_plan_and_backup": m["odds_with_plan"], "interest_if_fully_used": m["interest_if_used"]} if m.get("backup") else {}),
+                   "owner_decision": states.get(m["id"], "none")} for m in p["moves"]],
+        "spendable_today_without_going_below_safety": p["baseline"]["spendable_today"],
+        "odds_of_staying_above_safety": {"if_nothing_is_done": p["odds"]["baseline"]["p_safe"], "with_suggested_moves": p["odds"]["suggested"]["p_safe"],
+                                         "with_approved_moves": p["odds"]["approved"]["p_safe"] if p["odds"]["approved"] else None},
+        "odds_of_running_out": {"if_nothing_is_done": p["odds"]["baseline"]["p_short"], "with_suggested_moves": p["odds"]["suggested"]["p_short"]},
+        "bad_case_lowest_balance_1_in_10": p["odds"]["baseline"]["bad_case_lowest"],
+        "simulation": {"futures": p["odds"]["baseline"]["sims"], "combinations_scored": p["search"]["combinations"], "plans_stress_tested": p["search"]["stress_tested"],
+                       "assumptions": p["odds"]["assumptions"]},
+        "audit_rerun_matches_plan": p["audit"]["matches"],
         "evidence": _trim_evidence(p["evidence"]),
     }
+
+
+def t_plan_purchase(ctx: ToolContext, a: dict) -> dict:
+    _reject_unknown(a, {"amount", "date", "label"})
+    from finpilot.engine import autopilot as ap
+
+    amount = a.get("amount")
+    if not isinstance(amount, (int, float)) or isinstance(amount, bool) or amount <= 0:
+        raise ToolArgumentError("'amount' must be a positive number of rupees.")
+    when = _str(a, "date", 10)
+    if when:
+        try:
+            when_ts = pd.Timestamp(when)
+        except ValueError as e:
+            raise ToolArgumentError("'date' must be YYYY-MM-DD.") from e
+        if when_ts <= pd.Timestamp(ctx.as_of):
+            raise ToolArgumentError("'date' must be after the as-of date.")
+    label = _str(a, "label", 60) or "Purchase"
+    st = _settings(ctx)
+    try:
+        safety = float(st.get("safety")) if st.get("safety") else None
+    except ValueError:
+        safety = None
+    states = books.move_states(ctx.db_path, _book(ctx)) if ctx.db_path else {}
+    approved = frozenset(k for k, v in states.items() if v in ("approved", "done"))
+    r = ap.afford(ctx.ledger, ctx.balances, ctx.obligations, ctx.as_of, float(amount), when or None, label, safety=safety, approved=approved)
+    if r.get("status") != "ok":
+        return r
+    return {"status": "ok", "verdict": r["verdict"],
+            "verdict_meaning": {"yes": "safe without any moves", "yes_if": "safe if the listed moves are approved", "risky": "possible but the odds of staying above safety are low",
+                                "not_now": "would push cash below safety even with every move"}[r["verdict"]],
+            "amount": r["amount"], "date": r["date"], "label": r["label"], "safety_level": r["safety"],
+            "without_moves": r["without_moves"], "with_agents_moves": r["with_plan"], "earliest_safe_date_without_moves": r["earliest_safe_date_without_moves"],
+            "evidence": _trim_evidence(r["evidence"])}
 
 
 # ---------------------------------------------------------------- plan, memory, review queue
@@ -536,6 +580,12 @@ PLAN_TOOLS: list[Tool] = [
          "below safety or runs out), its main causes, invoices not counted because the customer is already late, and the agents' moves "
          "(collect, move a supplier bill, pause spending, set aside GST) each with how much it raises the lowest balance, and the owner's decisions.",
          _obj({}), t_autopilot),
+    Tool("plan_purchase",
+         "Can the business pay for something (a machine, a deposit, a big order) on a date and stay above its safety level? Re-runs the cash autopilot with the "
+         "payment included: verdict (yes / yes_if moves approved / risky / not_now), the lowest balance and the odds of staying safe without and with the agents' "
+         "moves, and the earliest date it could be paid without any moves. Prefer this over simulate_purchase for cash purchases.",
+         _obj({"amount": {"type": "number", "minimum": 1}, "date": {"type": "string", "description": "YYYY-MM-DD, default tomorrow"}, "label": {"type": "string"}}, ["amount"]),
+         t_plan_purchase),
     Tool("get_review_queue", "Bank lines that need a category (uncategorised, or incoming money only guessed as sales), grouped by party, with the current guess.",
          _obj({}), t_review_queue),
     Tool("draft_promise", "Prepare a note that a customer promised to pay (by a date, optionally an amount) for the owner to confirm. FinPilot then flags it if the date passes unpaid.",
