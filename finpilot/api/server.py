@@ -541,7 +541,14 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
         return forecast_cash_flow(d.ledger, d.balances, obl, d.as_of, ForecastOptions(horizon_days=91, include_run_rate=True, min_buffer=safety, extra_flows=extra))
 
     def _view(d: dataset.Dataset, lang: str = "en") -> dict:
-        monitor.check(db, d.book, d.obligations, d.as_of, books.move_states(db, d.book), lang, replan=lambda: _plan(d)[0])  # the agents keep watching
+        def replan(extra=frozenset()):
+            if not extra:
+                return _plan(d)[0]
+            ok = frozenset(k for k, v in books.move_states(db, d.book).items() if v in ("approved", "done")) | extra
+            return ap.plan(d.ledger, d.balances, d.obligations, d.as_of, safety=_safety(d), approved=ok,
+                           outcomes=books.reminder_outcomes(db, d.book), contingencies=False)
+
+        monitor.check(db, d.book, d.obligations, d.as_of, books.move_states(db, d.book), lang, replan=replan)  # the agents keep watching
         p, states = _plan(d)
         if p["status"] != "ok":
             return p | {"business": d.name.replace(" (fictional)", ""), "is_demo": d.is_demo}
@@ -654,8 +661,8 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
                 st = books.move_states(db, d.book)
                 ok = frozenset(k for k, v in st.items() if v in ("approved", "done"))
 
-                def replan():
-                    return ap.plan(tmp.ledger, tmp.balances, tmp.obligations, day, safety=_safety(d), approved=ok,
+                def replan(extra=frozenset()):
+                    return ap.plan(tmp.ledger, tmp.balances, tmp.obligations, day, safety=_safety(d), approved=ok | extra,
                                    outcomes=books.reminder_outcomes(db, d.book), contingencies=False)
 
                 for a in monitor.check(db, d.book, tmp.obligations, day, st, lang, replan=replan):

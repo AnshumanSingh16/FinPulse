@@ -55,7 +55,7 @@ def unwatch(db: Path, book: str, move_id: str) -> None:
 def check(db: Path, book: str, obligations: pd.DataFrame | None, as_of: pd.Timestamp, move_states: dict[str, str], lang: str = "en",
           replan=None) -> list[dict]:
     """Look at every open checkpoint. Returns the activity entries it logged (newest last).
-    `replan()` gives the planner's plan for the books as they are now; when a checkpoint is missed, Plan B is what it says
+    `replan(extra_approved=frozenset())` gives the planner's plan for the books as they are now (as if `extra_approved` were approved too); when a checkpoint is missed, Plan B is what it says
     (the same thing the owner's "Switch to Plan B" approves). Without it, the Plan B stored at approval time is described."""
     logged: list[dict] = []
     today = str(as_of.date())
@@ -119,7 +119,9 @@ def check(db: Path, book: str, obligations: pd.DataFrame | None, as_of: pd.Times
             what = ", ".join(_pretty(m["id"], lang) for m in todo) or _l(lang, "keep the moves you approved", "मंज़ूर कदम जारी रखें")
             if bk:
                 what += _l(lang, " + a {amt} standby overdraft", " + {amt} का स्टैंडबाय ओवरड्राफ़्ट", amt=short(bk["amount"]))
-            p_safe = bk["odds_with_plan"] if bk else fresh["odds"]["suggested"]["p_safe"]
+            # the odds with everything that would then be in place: what's approved already plus Plan B
+            after = replan(frozenset(m["id"] for m in todo) | ({bk["id"]} if bk else set()))
+            p_safe = (after.get("odds", {}).get("approved") or {}).get("p_safe", fresh["odds"]["suggested"]["p_safe"])
             log("planner", "caution", _l(lang, "Re-planned with today's books. Plan B needs your OK: {what}. Chance of staying safe with it: {p}.",
                                          "आज के खातों से दोबारा योजना बनाई। Plan B के लिए आपकी मंज़ूरी चाहिए: {what}। इससे सुरक्षित रहने की संभावना: {p}।",
                                          what=what, p=f"{p_safe:.0%}"), {"type": "plan_b"})

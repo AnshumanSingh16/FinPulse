@@ -1,4 +1,5 @@
 import "@fontsource-variable/inter";
+import "@fontsource-variable/fraunces";
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import { Providers } from "@/components/providers";

@@ -125,13 +125,17 @@ FINPILOT_PROVIDER=gemini        # optional when only one key is set
 
 ## A 3-minute tour (three demo businesses)
 
-1. Open the app. You're in **Pixel Pundit Studio**, a design agency. The top card reads **"Money runs out in 32 days"**, with ₹0 safe to spend and a 2% chance of staying safe.
-2. Tap **Fix it for me** and watch the crew report live. The plan depends on a hospital client that is 61 days late, so the Financing agent sizes a ₹5.5 L standby overdraft, which takes the odds to 90%. The Planner's report also includes Plan B.
-3. Tap **Approve the plan**. *"Your agents are watching: Kaveri Hospitals should pay by 10 Oct."*
-4. In **Watch your agents over time**, pick *"The late customer never pays"* and tap **+2 weeks**. On 10 Oct the agents flag the missed checkpoint, learn that Kaveri is less likely to pay (60% → 48%), re-plan, and ask you to approve Plan B. Tap **Approve Plan B**, then **+1 month** to watch the overdraft drawn on salary day.
-5. Try *"The late customer pays after the reminder"* instead (after **Back to the start**). Kaveri pays on 5 Oct, and the agents learn the other way (60% → 68%).
-6. **How accurate is this?** opens the Track record. Switch to **Brew & Bun Café** for the strongest numbers: 22 of 22 real dips flagged, and an 82% smaller miss on the tightest day than guessing.
-7. **Can I afford it?** Try ₹2,00,000 next week. **Settings** (⚙) lets you switch to Hindi (the agents speak Hindi too), turn on AI so the Strategist suggests its own ideas, or use your own books.
+The home screen is a **CFO desk**:
+- **On the left:** a conversation with your CFO. It opens with a three-line briefing and one clear next step.
+- **On the right:** the **cockpit**. It shows safe to spend today, days of runway, the 90-day cash line, the chance you stay safe, and what the agents are watching. On a phone it folds into a strip at the top.
+
+1. You're in **Pixel Pundit Studio**, a design agency. The CFO says *"You'll run out of money in 32 days — on 1 Nov"* and that it has a fix.
+2. Click **Show me the fix**. The agent crew works live, then hands you **The fix**: numbered steps, the odds going from 0% to 90%, and a safety-net checkbox for the standby overdraft.
+3. Click **Approve the fix**. The cockpit now shows what the agents are watching.
+4. Click **Fast-forward 2 weeks**, then choose *"Kaveri Hospitals never pays"*. You'll see the missed checkpoint, the learning (60% → 48%) and the re-plan. Click **Approve Plan B**.
+5. Ask **Why?** to see the bills behind the dip, the chart and how it's worked out. Ask **Can I afford something?** for a yes, yes-if, risky or not-now verdict, and **How sure are you?** for the track record.
+6. Type anything, in English, Hindi or Hinglish. The tool-using agent answers, checks every figure, and can draft entries and reminders for you to confirm.
+7. The header gives you **Timeline**, **People**, **Track record**, the business switcher (the café and the masala maker are other demos), हिं, and **Settings**.
 
 ## Your own data
 

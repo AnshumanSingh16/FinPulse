@@ -2,23 +2,23 @@
 
 @theme {
   --font-sans: "Inter Variable", "Nirmala UI", "Noto Sans Devanagari", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-display: "Inter Variable", "Nirmala UI", "Noto Sans Devanagari", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fraunces Variable", "Nirmala UI", "Noto Serif Devanagari", Georgia, serif;
 
-  /* Light, warm "modern khata": paper canvas, white cards, emerald brand, saffron accent */
-  --color-canvas: #f6f4ef;
+  /* "Private CFO": crisp paper, deep ink, one confident emerald; a dark cockpit for the live numbers */
+  --color-canvas: #fafaf7;
   --color-surface: #ffffff;
-  --color-surface-2: #f2f0ea;
+  --color-surface-2: #f3f3ee;
   --color-elevated: #ffffff;
-  --color-line: #e6e2d9;
-  --color-ink: #1c1d1f;
-  --color-ink-2: #565a60;
-  --color-muted: #7d8187;
+  --color-line: #e7e6df;
+  --color-ink: #0f1512;
+  --color-ink-2: #4a524e;
+  --color-muted: #7b837f;
 
-  --color-brand: #0d7a5f;
-  --color-brand-600: #0a6650;
-  --color-brand-50: #e3f2ec;
-  --color-gold: #b86e00; /* saffron accent: highlights, active tab, links on the demo banner */
-  --color-night: #1c1d1f;
+  --color-brand: #0b6b4e;
+  --color-brand-600: #085a41;
+  --color-brand-50: #e6f3ed;
+  --color-gold: #b86e00;
+  --color-night: #0f1512;
   --color-on-brand: #ffffff;
 
   --color-good: #157a3e;
@@ -30,11 +30,20 @@
   --color-info: #2160c4;
   --color-info-50: #e8f0fc;
 
-  /* chart series validated on the light surface: money in / money out */
   --color-in: #2a78d6;
   --color-out: #eb6834;
-  --color-grid: #ece8df;
-  --color-track: #ebe7de;
+  --color-grid: #ecebe4;
+  --color-track: #ebeae3;
+
+  /* the cockpit (always dark) */
+  --color-pit: #0a1210;
+  --color-pit-2: #111d19;
+  --color-pit-line: #1f2e29;
+  --color-pit-ink: #eef4f1;
+  --color-pit-muted: #8fa39b;
+  --color-glow: #3ee6a8;
+  --color-ember: #ff8a5c;
+  --color-amber: #ffc861;
 
   --radius-card: 1.25rem;
   --shadow-card: 0 1px 2px rgb(28 29 31 / 0.05), 0 4px 16px rgb(28 29 31 / 0.04);
@@ -78,8 +87,32 @@ body {
 
 h1, .display {
   font-family: var(--font-display);
-  font-weight: 750;
-  letter-spacing: -0.025em;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-optical-sizing: auto;
+}
+.serif { font-family: var(--font-display); font-optical-sizing: auto; }
+
+/* the CFO desk */
+.pit {
+  background: radial-gradient(120% 60% at 100% 0%, rgb(62 230 168 / 0.10) 0%, transparent 60%), linear-gradient(180deg, var(--color-pit-2), var(--color-pit));
+  color: var(--color-pit-ink);
+}
+.pit-card { background: rgb(255 255 255 / 0.035); border: 1px solid var(--color-pit-line); border-radius: 1.1rem; }
+.glow-text { color: var(--color-glow); text-shadow: 0 0 24px rgb(62 230 168 / 0.35); }
+.ember-text { color: var(--color-ember); text-shadow: 0 0 24px rgb(255 138 92 / 0.3); }
+.amber-text { color: var(--color-amber); text-shadow: 0 0 24px rgb(255 200 97 / 0.25); }
+.paper-grid {
+  background-image: radial-gradient(rgb(15 21 18 / 0.05) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+@keyframes breathe { 0%, 100% { box-shadow: 0 0 0 0 rgb(62 230 168 / 0.45); } 50% { box-shadow: 0 0 0 6px rgb(62 230 168 / 0); } }
+.breathe { animation: breathe 1.8s ease-in-out infinite; }
+@keyframes scan { from { background-position: -200% 0; } to { background-position: 200% 0; } }
+.working {
+  background: linear-gradient(90deg, transparent 0%, rgb(11 107 78 / 0.12) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: scan 1.6s linear infinite;
 }
 
 .eyebrow {

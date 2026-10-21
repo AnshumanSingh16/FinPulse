@@ -44,17 +44,20 @@ Building the backtest **found four bugs in our own forecast**, now fixed:
 
 Each fix is tested. The demo histories are simulated, so the page says so. It also says plainly where the simulated range is too narrow.
 
-## The 3-minute demo
+## The 3-minute demo (laptop)
 
-1. Open **Pixel Pundit Studio** (an agency). The top reads *"Money runs out in 32 days"*, with a 2% chance of staying safe.
-2. Tap **Fix it for me** and watch 11 agents report live. The Planner tests 8 combinations. The Financing agent sees the plan depends on a hospital client that is 61 days late, so it sizes a ₹5.5 L standby overdraft, which takes the odds to 90%. The Auditor confirms the numbers.
-3. Tap **Approve the plan**. *"Your agents are watching: Kaveri should pay by 10 Oct."*
-4. Under **Watch your agents over time**, pick *"The late customer never pays"* and tap **+2 weeks**. Days roll by. On 10 Oct the Collections agent flags the missed checkpoint, the Risk analyst lowers Kaveri's odds (60% → 48%), and the Planner re-plans with today's books and asks to switch to Plan B.
-5. Tap **Approve Plan B**. Then try **+1 month**: on salary day the Financing agent draws on the overdraft to stay above the cushion.
-6. Open **How accurate is this?** to see the Track record.
-7. Bonus:
-   - Switch to Hindi: the whole crew speaks Hindi.
-   - Turn on a free Gemini key: the AI Strategist proposes and tests its own ideas.
+The home screen is a **CFO desk**. On the left is one conversation with your CFO. On the right is a dark **cockpit** with the live numbers: safe to spend today, days of runway, the 90-day cash line, the chance you stay safe, and what the agents are watching.
+
+1. Open **Pixel Pundit Studio**. The CFO opens with one sentence: *"You'll run out of money in 32 days — on 1 Nov."* It has found a fix that takes the odds from 0% to 41%, and to 90% with a safety net.
+2. Click **Show me the fix**. The agents work live: Forecaster, Risk analyst (1,000 futures), Collections, Payables, Spending, Tax, Deals, Planner (scores every combination), Financing and Auditor. Their findings collapse into **The fix**: numbered steps, 0% → 90%, and a safety-net checkbox.
+3. Click **Approve the fix**. The cockpit flips to *"Watching: Kaveri by 10 Oct"*. The bank letter is copied, and the WhatsApp reminder is ready for you to send.
+4. Click **Fast-forward 2 weeks**, then *"Kaveri Hospitals never pays"*. Days roll by. On 10 Oct the Collections agent flags the missed checkpoint, the Risk analyst learns (60% → 48%), and the Planner re-plans with today's books.
+5. Click **Approve Plan B**. The odds go back to 90%.
+6. Ask **How sure are you?** The CFO shows its track record on the business's own past weeks.
+7. Type any question, for example *"Who pays me late?"*. The tool-using agent answers, with every figure checked.
+8. Bonus:
+   - Switch to हिं: the whole desk speaks Hindi.
+   - Add a free Gemini key: the AI Strategist proposes and tests its own ideas.
 
 ## How it's built
 

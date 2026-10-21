@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarRange, ChevronDown, Gauge, Languages, MessageCircle, Monitor, Moon, Navigation2, Settings, Sun, Users } from "lucide-react";
+import { CalendarRange, ChevronDown, Languages, Menu, MessageCircle, Monitor, Moon, Navigation2, Settings, Sun, Target, Users, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useContext, useEffect, useState } from "react";
@@ -67,11 +67,11 @@ export function ThemeToggle({ className }: { className?: string }) {
   );
 }
 
-const TABS = [
-  { href: "/", label: "Today", I: Gauge },
+const LINKS = [
+  { href: "/", label: "Desk", I: MessageCircle },
   { href: "/timeline/", label: "Timeline", I: CalendarRange },
-  { href: "/ask/", label: "Ask", I: MessageCircle },
   { href: "/khata/", label: "People", I: Users },
+  { href: "/proof/", label: "Track record", I: Target },
 ];
 
 function isOn(path: string, href: string) {
@@ -83,41 +83,52 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const { t } = useT();
   const { state } = useContext(DataVersion);
   const [pick, setPick] = useState(false);
+  const [menu, setMenu] = useState(false);
+  const desk = path === "/";
   const isChat = path.startsWith("/ask");
+  useEffect(() => {
+    setMenu(false);
+  }, [path]);
   return (
-    <div className={cx("mx-auto flex w-full max-w-4xl flex-col", isChat ? "h-dvh" : "min-h-dvh")}>
-      <header className="no-print sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b border-line bg-canvas/90 px-3 backdrop-blur sm:px-4">
+    <div className={cx("flex w-full flex-col", desk || isChat ? "h-dvh" : "min-h-dvh")}>
+      <header className="no-print sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b border-line bg-canvas/90 px-3 backdrop-blur sm:px-5">
         <Link href="/" className="flex items-center gap-2" aria-label="FinPilot">
           <BrandMark size="sm" />
-          <span className="hidden text-lg font-bold tracking-tight md:inline">FinPilot</span>
+          <span className="serif hidden text-xl font-semibold tracking-tight sm:inline">FinPilot</span>
         </Link>
-        <button onClick={() => setPick(true)} className="ml-1 inline-flex min-w-0 items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-sm font-semibold shadow-sm hover:border-brand" aria-label={t("Switch business")}>
+        <button onClick={() => setPick(true)} className="ml-1 inline-flex min-w-0 items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-sm font-semibold hover:border-brand" aria-label={t("Switch business")}>
           <span className="truncate">{state?.business.replace(" (fictional)", "") ?? "…"}</span>
           {state?.is_demo && <span className="rounded-full bg-caution-50 px-1.5 text-[0.65rem] font-bold text-caution uppercase">{t("demo")}</span>}
           <ChevronDown className="size-4 shrink-0 text-muted" />
         </button>
-        <nav className="mx-auto hidden rounded-full border border-line bg-surface p-1 sm:inline-flex" aria-label="Main">
-          {TABS.map(({ href, label, I }) => (
+        <nav className="ml-auto hidden items-center gap-1 md:flex" aria-label="Main">
+          {LINKS.map(({ href, label }) => (
             <Link key={href} href={href} aria-current={isOn(path, href) ? "page" : undefined}
-              className={cx("inline-flex h-8 items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold transition", isOn(path, href) ? "bg-brand text-on-brand shadow-sm" : "text-ink-2 hover:text-ink")}>
-              <I className="size-4" aria-hidden /> {t(label)}
+              className={cx("rounded-full px-3 py-1.5 text-sm font-medium transition", isOn(path, href) ? "bg-ink text-canvas" : "text-ink-2 hover:text-ink")}>
+              {t(label)}
             </Link>
           ))}
         </nav>
+        <LangToggle className="ml-auto hidden sm:inline-flex md:ml-2" />
         <Link href="/settings/" aria-label={t("Settings")}
-          className={cx("ml-auto grid size-10 shrink-0 place-items-center rounded-full transition hover:bg-surface-2 sm:ml-0", path.startsWith("/settings") ? "text-brand" : "text-ink-2")}>
+          className={cx("hidden size-10 shrink-0 place-items-center rounded-full transition hover:bg-surface-2 md:grid", path.startsWith("/settings") ? "text-brand" : "text-ink-2")}>
           <Settings className="size-5" />
         </Link>
+        <button onClick={() => setMenu(!menu)} aria-label={t("Menu")} aria-expanded={menu} className="ml-auto grid size-10 place-items-center rounded-full text-ink-2 hover:bg-surface-2 sm:ml-1 md:hidden">
+          {menu ? <X className="size-5" /> : <Menu className="size-5" />}
+        </button>
+        {menu && (
+          <div className="absolute top-14 right-3 z-40 w-56 rounded-2xl border border-line bg-surface p-1.5 shadow-xl md:hidden">
+            {[...LINKS, { href: "/settings/", label: "Settings", I: Settings }].map(({ href, label, I }) => (
+              <Link key={href} href={href} className={cx("flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium", isOn(path, href) ? "bg-brand-50 text-brand" : "text-ink hover:bg-surface-2")}>
+                <I className="size-4" /> {t(label)}
+              </Link>
+            ))}
+            <div className="px-3 py-2 sm:hidden"><LangToggle /></div>
+          </div>
+        )}
       </header>
-      <main className={cx("flex w-full flex-1 flex-col", isChat ? "min-h-0 pb-16 sm:pb-0" : "px-4 pt-5 pb-24 sm:px-5 sm:pb-16")}>{children}</main>
-      <nav className="no-print fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden" aria-label="Main">
-        {TABS.map(({ href, label, I }) => (
-          <Link key={href} href={href} aria-current={isOn(path, href) ? "page" : undefined}
-            className={cx("flex h-14 flex-col items-center justify-center gap-0.5 text-[0.7rem] font-semibold", isOn(path, href) ? "text-brand" : "text-muted")}>
-            <I className="size-5" aria-hidden /> {t(label)}
-          </Link>
-        ))}
-      </nav>
+      <main className={cx("flex w-full flex-1 flex-col", desk ? "min-h-0" : isChat ? "mx-auto min-h-0 max-w-3xl" : "mx-auto max-w-4xl px-4 pt-5 pb-16 sm:px-5")}>{children}</main>
       <BusinessSheet open={pick} onClose={() => setPick(false)} />
     </div>
   );
