@@ -1046,7 +1046,13 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
 
     @app.post("/api/upload/import")
     async def import_file(kind: str = Form(...), file: UploadFile = File(...), mapping: str = Form("{}"), business: str = Form(""),
-                          invoice_kind: str = Form(""), incoming_is_sales: bool = Form(True), drop_duplicates: bool = Form(False)):
+                          invoice_kind: str = Form(""), incoming_is_sales: str = Form("true"), drop_duplicates: str = Form("false")):
+        # form flags parsed by hand: FastAPI versions disagree on how a missing/blank bool form field is read
+        def flag(v: str, default: bool) -> bool:
+            v = (v or "").strip().lower()
+            return default if v == "" else v in ("1", "true", "yes", "on")
+
+        incoming_is_sales, drop_duplicates = flag(incoming_is_sales, True), flag(drop_duplicates, False)
         table = _table(kind)
         data = await _read(file)
         raw = loader.read_table(data, file.filename or "upload.csv")

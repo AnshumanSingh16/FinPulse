@@ -146,8 +146,8 @@ def run_rate_split(ledger: pd.DataFrame, obligations: pd.DataFrame | None, as_of
     if obligations is not None and len(obligations):
         pend = obligations[obligations["status"] == "pending"]
         pend_pairs = set(zip(pend["category"].astype(str), pend["counterparty"].astype(str)))
-    pair = ledger["category"].astype(str) + "\x00" + ledger["counterparty"].astype(str)
-    covered_mask = ~ledger["txn_id"].isin(billed_ids) & pair.isin({f"{c}\x00{p}" for c, p in pend_pairs})
+    pair = pd.MultiIndex.from_arrays([ledger["category"].astype(str), ledger["counterparty"].astype(str)])
+    covered_mask = ~ledger["txn_id"].isin(billed_ids) & pair.isin(list(pend_pairs))
 
     def part(mask) -> pd.Series:
         if not mask.any():
