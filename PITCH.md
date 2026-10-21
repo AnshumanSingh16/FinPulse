@@ -65,3 +65,23 @@ The home screen is a **CFO desk**. On the left is one conversation with your CFO
 - An LLM (Claude or Gemini, optional) plans, calls 32 approved tools, and writes in plain words. A verifier checks every number it writes.
 - Next.js front end, works on phones, English and Hindi.
 - Runs offline: with no AI key, the crew, planner, monitor and track record all still work.
+
+## Questions judges ask (also in the app: **Q&A** in the header)
+
+| Question | Answer, and where to see it |
+|---|---|
+| Isn't this just a chatbot? | 11 agents, each with one job, that plan, act within limits, keep watching after approval, learn and check each other. The chat is just the interface. *Desk → Show me the fix* |
+| Why did it pick this plan? | **Why this plan?** on the fix lists every alternative the planner compared: moves, effort, tightest day and odds, with the chosen one highlighted. |
+| What about things the data can't know (Diwali, a big order, a purchase)? | **Tell me what's coming** adds the event to every forecast, plan and affordability check. It is shown in the cockpit and logged. |
+| What if the customer still doesn't pay? | Checkpoints and Plan B. Use *Fast-forward 2 weeks → "never pays"* to see it. |
+| How do we know it's accurate? | **Track record**: weekly backtests on the business's own past, with weaknesses shown. |
+| Can the AI invent numbers? | Every figure in an AI answer must match a tool result, or the answer is corrected or flagged. The Strategist's ideas must pass `test_move` before they're mentioned. |
+| Will it move money or message customers by itself? | Never. It drafts and you send. Every agent action and owner decision is in the **audit log** (Settings → Download, CSV). |
+| Does it actually get money in faster? | Reminders include the business's **UPI pay link** (`upi://pay…`), so the customer can pay with one tap. |
+| Can a shopkeeper who doesn't type use it? | Yes: Hindi throughout, **voice input**, a **read-aloud** briefing, and WhatsApp-ready messages. |
+| What's the measurable impact? | The cockpit shows **Your agents' impact**: what the approved plan adds to the tightest day, and the change in odds. |
+| Where does the data live / DPDP? | Locally. AI is off until the owner consents, and then only the figures for that answer are sent. Deletion is one tap. This is a design choice, not a legal certification. |
+| Market size? | About 6.3 crore MSMEs (Ministry of MSME Annual Report 2020–21). Delayed payments to MSMEs were estimated at about ₹10.7 lakh crore (GAME & FISME, 2022). |
+| Business model? | Proposed: free for one business, paid for accountants and multi-branch owners, and consented lender referrals for the backup (overdraft, invoice discounting via TReDS). Not live. |
+| Competition? | Khatabook, Vyapar, Tally and Zoho record the past. Float and Fathom forecast for accountants. FinPilot looks ahead and acts, for the owner, in Hindi. |
+| Limits? | Simulated demo histories; no pilot yet; no live bank feed or WhatsApp API; the simulated range is too narrow on some businesses; AI paths tested only with a scripted model. |

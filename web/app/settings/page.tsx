@@ -1,15 +1,15 @@
 "use client";
 
-import { Bot, Brain, Briefcase, ChevronRight, Database, FileText, Languages, MessageSquareX, Palette, Target } from "lucide-react";
+import { Bot, Brain, Briefcase, ChevronRight, Database, Download, FileText, HelpCircle, IndianRupee, Languages, MessageSquareX, Palette, Target } from "lucide-react";
 import Link from "next/link";
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { MemorySheet } from "@/components/agent";
 import { AiSetupSheet } from "@/components/ai-setup";
 import { DataVersion } from "@/components/data-version";
 import { useToast } from "@/components/fx";
 import { BrandMark, LangToggle, ThemeToggle } from "@/components/shell";
 import { cx } from "@/components/ui";
-import { del, post } from "@/lib/api";
+import { API, del, get, post } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 
 function Row({ I, title, sub, right, onClick, href, danger }: { I: React.ElementType; title: string; sub?: string; right?: React.ReactNode; onClick?: () => void; href?: string; danger?: boolean }) {
@@ -62,6 +62,10 @@ export default function SettingsPage() {
         )}
         <Row I={Bot} title={t("FinPilot's brain")} sub={state?.ai.enabled ? t("AI on — {provider}", { provider: state.ai.provider_label }) : t("Built-in answers (offline). Add a free Gemini key to understand anything.")} onClick={() => setAi(true)} />
         <Row I={Brain} title={t("What FinPilot remembers")} sub={t("Preferences you told it, like who not to remind")} onClick={() => setMemory(true)} />
+        <UpiRow />
+        <Row I={Download} title={t("Download the audit log")} sub={t("Every agent action and every decision you made, as a spreadsheet for your accountant")}
+          onClick={() => { window.location.href = `${API}/api/audit.csv`; }} />
+        <Row I={HelpCircle} title={t("Questions judges ask")} sub={t("What FinPilot is, how it decides, and what it won't do")} href="/about/" />
         <Row I={Target} title={t("Track record")} sub={t("How accurate FinPilot would have been on your past weeks")} href="/proof/" />
         <Row I={FileText} title={t("Monthly report for your CA")} sub={t("Profit, costs, GST estimate — print or save as PDF")} href="/reports/" />
       </div>
@@ -84,6 +88,36 @@ export default function SettingsPage() {
       <p className="text-center text-xs text-muted">{t("FinPilot prepares, you approve. It never pays, sends or files anything by itself. Not financial advice.")}</p>
       <AiSetupSheet open={ai} onClose={() => setAi(false)} />
       <MemorySheet open={memory} onClose={() => setMemory(false)} />
+    </div>
+  );
+}
+
+function UpiRow() {
+  const { t } = useT();
+  const toast = useToast();
+  const [v, setV] = useState("");
+  const [saved, setSaved] = useState("");
+  useEffect(() => {
+    get<{ upi_id?: string }>("/api/settings").then((x) => { setV(x.upi_id ?? ""); setSaved(x.upi_id ?? ""); }).catch(() => {});
+  }, []);
+  const save = async () => {
+    try {
+      await post("/api/settings", { upi_id: v.trim() });
+      setSaved(v.trim());
+      toast.show({ text: t("UPI ID saved — reminders now include a pay link"), tone: "good" });
+    } catch (e) {
+      toast.show({ text: e instanceof Error ? e.message : String(e), tone: "bad" });
+    }
+  };
+  return (
+    <div className="flex flex-wrap items-center gap-3 px-4 py-3.5">
+      <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-brand-50 text-brand"><IndianRupee className="size-5" /></span>
+      <span className="min-w-0 flex-1">
+        <span className="block font-semibold">{t("Your UPI ID")}</span>
+        <span className="block text-sm text-ink-2">{t("Added to every payment reminder as a one-tap pay link")}</span>
+      </span>
+      <input value={v} onChange={(e) => setV(e.target.value)} placeholder="yourshop@okhdfc" aria-label={t("Your UPI ID")} className="h-9 w-44 rounded-full border border-line bg-surface px-3 text-sm" />
+      <button onClick={save} disabled={v.trim() === saved} className="h-9 rounded-full bg-ink px-3 text-sm font-semibold text-canvas disabled:opacity-30">{t("Save")}</button>
     </div>
   );
 }

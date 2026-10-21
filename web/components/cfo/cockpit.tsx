@@ -127,6 +127,31 @@ export function Cockpit({ p, onCushion, compact }: { p: Plan; onCushion: () => v
         <p className="mt-2 text-xs text-pit-muted">{t("across {n} simulated futures, from how your customers really pay", { n: odds.sims.toLocaleString("en-IN") })}</p>
       </div>
 
+      {anyApproved && p.with_approved.lowest - p.baseline.lowest > 1 && (
+        <div className="pit-card p-4">
+          <p className="text-xs tracking-[0.14em] text-pit-muted uppercase">{t("Your agents' impact")}</p>
+          <p className="serif mt-1 text-2xl glow-text">+{short(p.with_approved.lowest - p.baseline.lowest)}</p>
+          <p className="text-xs text-pit-muted">
+            {t("on your tightest day")} · {t("odds {a} → {b}", { a: pct(p.odds.baseline.p_safe), b: pct(odds.p_safe) })}
+            {p.baseline.runs_out && !p.with_approved.runs_out ? ` · ${t("no longer runs out")}` : ""}
+          </p>
+        </div>
+      )}
+
+      {p.events.length > 0 && (
+        <div className="pit-card p-4">
+          <p className="text-xs tracking-[0.14em] text-pit-muted uppercase">{t("Coming up (you told me)")}</p>
+          <ul className="mt-2 space-y-1.5 text-sm">
+            {p.events.map((e) => (
+              <li key={e.id} className="flex items-center justify-between gap-2">
+                <span className="truncate">{e.label}</span>
+                <span className={cx("shrink-0 text-xs", e.amount > 0 ? "text-glow" : "text-ember")}>{e.amount > 0 ? "+" : "−"}{short(Math.abs(e.amount))} · {day(e.date, lang)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="pit-card p-4">
         <p className="flex items-center gap-2 text-xs tracking-[0.14em] text-pit-muted uppercase"><Eye className="size-3.5" /> {t("Watching")}</p>
         {p.watching.length ? (

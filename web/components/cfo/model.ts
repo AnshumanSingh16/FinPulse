@@ -80,7 +80,9 @@ export interface Plan {
   watching: { move_id: string; party: string; checkpoint: string; kind: string }[];
   activity: Activity[];
   clock: { date: string; days_moved: number };
-  search: { combinations: number; stress_tested: number; sims_each: number };
+  search: { combinations: number; stress_tested: number; sims_each: number;
+            plans: { moves: string[]; cost: number; lowest: number; reaches_safety: boolean; p_safe: number }[] };
+  events: { id: number; date: string; amount: number; label: string }[];
   evidence: Evidence;
 }
 
@@ -123,4 +125,14 @@ export function standing(p: Plan): "out" | "tight" | "unsure" | "ok" {
 export function currentOdds(p: Plan) {
   const anyApproved = p.moves.some((m) => m.state !== "open");
   return anyApproved && p.odds.approved ? p.odds.approved : p.odds.baseline;
+}
+
+/** Short name for a move id, for comparison tables. */
+export function moveShort(id: string, p: Plan, t: T, lang: string) {
+  const m = p.moves.find((x) => x.id === id);
+  if (m) return moveTitle(m, t, lang);
+  const [kind, rest] = [id.split(":")[0], id.slice(id.indexOf(":") + 1)];
+  if (kind === "collect") return t("collect from {who}", { who: rest });
+  if (kind === "pause") return rest === "Owner Drawings" ? t("pause owner drawings") : t("pause marketing");
+  return id;
 }

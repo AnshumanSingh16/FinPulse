@@ -115,18 +115,31 @@ def person(ds: Dataset, db: Path, name: str, lang: str = "en") -> dict:
     }
 
 
-def reminder_text(ds: Dataset, name: str, items: list[dict], lang: str = "en") -> str:
+# Clearly fictional UPI IDs for the demo businesses ("@demo" is not a real bank handle).
+DEMO_UPI = {"demo": "annapurnamasala@demo", "demo_agency": "pixelpundit@demo", "demo_cafe": "brewandbun@demo"}
+
+
+def upi_link(upi_id: str, shop: str, amount: float, note: str) -> str:
+    """A UPI deep link: on a phone, tapping it opens any UPI app with the payee and amount filled in."""
+    return f"upi://pay?pa={quote(upi_id)}&pn={quote(shop)}&am={amount:.2f}&cu=INR&tn={quote(note[:40])}"
+
+
+def reminder_text(ds: Dataset, name: str, items: list[dict], lang: str = "en", upi_id: str = "") -> str:
     shop = ds.name.replace(" (fictional)", "")
     total = money(sum(i["amount"] for i in items))
+    pay = ""
+    if upi_id:
+        link = upi_link(upi_id, shop, total, ", ".join(i["item_id"] for i in items))
+        pay = (f"\n\nUPI से तुरंत भुगतान करें: {upi_id}\n{link}" if lang == "hi" else f"\n\nPay instantly by UPI: {upi_id}\n{link}")
     if lang == "hi":
         lines = "\n".join(f"• {i['item_id']}: {fmt_inr(i['amount'])}, देय {day_full(i['due_date'], 'hi')}" for i in items)
         return (f"नमस्ते {name} जी,\n\n{shop} की ओर से एक विनम्र याद दिलाना। ये बिल अब बकाया हैं:\n{lines}\n\n"
-                f"कुल: {fmt_inr(total)}. कृपया जल्द से जल्द भुगतान कर दें। किसी बिल की कॉपी चाहिए तो बताइए।\n\nधन्यवाद!")
+                f"कुल: {fmt_inr(total)}. कृपया जल्द से जल्द भुगतान कर दें। किसी बिल की कॉपी चाहिए तो बताइए।{pay}\n\nधन्यवाद!")
     lines = "\n".join(f"• {i['item_id']}: {fmt_inr(i['amount'])}, due {day_full(i['due_date'])}" for i in items)
     return (f"Namaste {name} team,\n\nA friendly reminder from {shop}. The following "
             f"{'invoices are' if len(items) > 1 else 'invoice is'} now overdue:\n{lines}\n\n"
             f"Total: {fmt_inr(total)}. Could you please arrange the payment at the earliest? "
-            "Do let us know if you need a copy of any invoice.\n\nThank you!")
+            f"Do let us know if you need a copy of any invoice.{pay}\n\nThank you!")
 
 
 def whatsapp(text: str, phone: str | None) -> str:
@@ -142,7 +155,7 @@ def reminders(ds: Dataset, db: Path, lang: str = "en", only: str | None = None) 
         if only and name != only:
             continue
         items = [{"item_id": r.item_id, "amount": float(r.amount), "due_date": str(r.due_date.date())} for r in g.sort_values("due_date").itertuples()]
-        text = reminder_text(ds, name, items, lang)
+        text = reminder_text(ds, name, items, lang, upi_id=books.settings(db, ds.book).get("upi_id", "") or DEMO_UPI.get(ds.book, ""))
         out.append({"customer": name, "total": money(g["amount"].sum()), "invoices": items, "text": text,
                     "phone": phones.get(name), "whatsapp": whatsapp(text, phones.get(name)),
                     "oldest_days_late": int((ds.as_of - g["due_date"].min()).days)})

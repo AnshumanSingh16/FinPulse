@@ -412,7 +412,7 @@ def _week_items(its: pd.DataFrame) -> list[dict]:
 
 
 def afford(ledger, balances, obligations, as_of, amount: float, when=None, label: str = "Purchase", safety: float | None = None,
-           approved: set[str] | frozenset = frozenset(), settings: Settings | None = None) -> dict:
+           approved: set[str] | frozenset = frozenset(), settings: Settings | None = None, commitments: list[dict] | tuple = ()) -> dict:
     """Can the business pay `amount` on `when` (default tomorrow) and stay above safety? If not, which moves make it work,
     and what is the earliest day it could be paid without any moves."""
     s = settings or Settings()
@@ -421,10 +421,10 @@ def afford(ledger, balances, obligations, as_of, amount: float, when=None, label
     if day > a + pd.Timedelta(days=s.horizon_days):
         return {"status": "out_of_range", "message": f"Pick a date within the next {s.horizon_days} days."}
     buy = [{"date": day, "amount": -float(amount), "label": label, "source": "purchase", "category": "Purchase"}]
-    now = plan(ledger, balances, obligations, as_of, safety, approved, s)
+    now = plan(ledger, balances, obligations, as_of, safety, approved, s, commitments=list(commitments), contingencies=False)
     if now["status"] != "ok":
         return now
-    p = plan(ledger, balances, obligations, as_of, now["safety"], approved, s, commitments=buy)
+    p = plan(ledger, balances, obligations, as_of, now["safety"], approved, s, commitments=list(commitments) + buy, contingencies=False)
     safety = p["safety"]
     without = {**p["baseline"], "p_safe": p["odds"]["baseline"]["p_safe"], "p_short": p["odds"]["baseline"]["p_short"]}
     plan_moves = [m for m in p["moves"] if m["suggested"] and m["kind"] != "reserve"]

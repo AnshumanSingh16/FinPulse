@@ -9,6 +9,7 @@ import copy
 import json
 import mimetypes
 import queue
+import re
 import threading
 import time
 import uuid
@@ -523,11 +524,13 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
         states = books.move_states(db, d.book)
         approved = frozenset(k for k, v in states.items() if v in ("approved", "done"))
         outcomes = books.reminder_outcomes(db, d.book)
-        key = (smart_views._fingerprint(d), _safety(d), approved, tuple(sorted(outcomes.items())))
+        coming = _coming(d)
+        key = (smart_views._fingerprint(d), _safety(d), approved, tuple(sorted(outcomes.items())), tuple((c["date"], c["amount"], c["label"]) for c in coming))
         if key not in _AP_CACHE:
             if len(_AP_CACHE) > 16:
                 _AP_CACHE.clear()
-            p = ap.plan(d.ledger, d.balances, d.obligations, d.as_of, safety=_safety(d), approved=approved, outcomes=outcomes)
+            p = ap.plan(d.ledger, d.balances, d.obligations, d.as_of, safety=_safety(d), approved=approved, outcomes=outcomes,
+                        commitments=[{"date": pd.Timestamp(c["date"]), "amount": c["amount"], "label": c["label"], "source": f"event:{c['id']}", "category": "Known event"} for c in coming])
             if p["status"] == "ok":
                 basis = ap.apply([m for m in p["moves"] if m["approved"] and m["kind"] != "reserve"], d.obligations, d.as_of, ap.Settings())[0]
                 f = forecast_for_timeline(d, p["safety"], basis, ap.at_risk(d.obligations, d.as_of)[0])
@@ -539,6 +542,69 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
         from finpilot.engine.forecast import ForecastOptions, forecast_cash_flow
 
         return forecast_cash_flow(d.ledger, d.balances, obl, d.as_of, ForecastOptions(horizon_days=91, include_run_rate=True, min_buffer=safety, extra_flows=extra))
+
+    def _coming(d: dataset.Dataset) -> list[dict]:
+        """Events the owner told FinPilot about that are still ahead (within the 90 days)."""
+        end = d.as_of + pd.Timedelta(days=ap.Settings().horizon_days)
+        return [e for e in books.events(db, d.book) if d.as_of < pd.Timestamp(e["date"]) <= end]
+
+    @app.get("/api/events")
+    def list_events():
+        d = ds()
+        return {"events": books.events(db, d.book), "today": str(d.as_of.date())}
+
+    @app.post("/api/events")
+    def add_event(body: dict = Body(...)):
+        """Something the owner knows is coming: festive sales, a big order, a planned purchase. Counted in every forecast and plan."""
+        d = ds()
+        label = str(body.get("label") or "").strip()[:80]
+        if not label:
+            raise HTTPException(400, "Say what it is, e.g. 'Diwali sales' or 'New laptop'.")
+        try:
+            amount = float(body.get("amount"))
+        except (TypeError, ValueError) as e:
+            raise HTTPException(400, "Enter an amount.") from e
+        if amount == 0 or abs(amount) > 1e9:
+            raise HTTPException(400, "Enter an amount (money coming in, or going out).")
+        if str(body.get("direction", "out")) == "out":
+            amount = -abs(amount)
+        else:
+            amount = abs(amount)
+        try:
+            when = pd.Timestamp(str(body.get("date")))
+        except ValueError as e:
+            raise HTTPException(400, "Enter a real date.") from e
+        if not d.as_of < when <= d.as_of + pd.Timedelta(days=ap.Settings().horizon_days):
+            raise HTTPException(400, "Pick a date within the next 90 days.")
+        eid = books.add_event(db, d.book, str(when.date()), amount, label)
+        books.log_activity(db, d.book, str(d.as_of.date()), "forecaster", "info",
+                           (f"Added to the forecast: {label} ({'+' if amount > 0 else '−'}{views.short(abs(amount))}) on {views.day(when, lg())}." if lg() != "hi"
+                            else f"अनुमान में जोड़ा: {label} ({'+' if amount > 0 else '−'}{views.short(abs(amount))}), {views.day(when, lg())}।"))
+        return {"id": eid, "events": books.events(db, d.book)}
+
+    @app.delete("/api/events/{event_id}")
+    def remove_event(event_id: int):
+        d = ds()
+        books.delete_event(db, d.book, event_id)
+        return {"events": books.events(db, d.book)}
+
+    @app.get("/api/audit.csv")
+    def audit_csv():
+        """Every agent action and every owner decision, for an accountant or auditor."""
+        import csv
+        import io
+
+        from fastapi.responses import Response
+
+        d = ds()
+        buf = io.StringIO()
+        w = csv.writer(buf)
+        w.writerow(["recorded_at", "book_date", "who", "kind", "what"])
+        for r in books.audit(db, d.book):
+            w.writerow([r["at"], r["book_date"], r["who"], r["kind"], r["what"]])
+        name = re.sub(r"[^a-z0-9]+", "-", d.name.lower()).strip("-") or "finpilot"
+        return Response(buf.getvalue().encode("utf-8-sig"), media_type="text/csv",
+                        headers={"Content-Disposition": f'attachment; filename="{name}-audit-log.csv"'})
 
     def _view(d: dataset.Dataset, lang: str = "en") -> dict:
         def replan(extra=frozenset()):
@@ -557,11 +623,12 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
         p["moves"] = [m for m in p["moves"] if m["state"] != "dismissed"]
         p["evidence"] = views.evidence(p["evidence"], "How the autopilot works this out")
         # What changed since the books last changed: a small picture is kept per book and compared.
-        prev, since = books.snapshot(db, d.book, f"{smart_views._fingerprint(d)}|{_safety(d)}", crew.picture(p))
+        prev, since = books.snapshot(db, d.book, f"{smart_views._fingerprint(d)}|{_safety(d)}|{[(c['date'], c['amount']) for c in _coming(d)]}", crew.picture(p))
         p["changes"], p["changes_since"] = crew.changes(prev, crew.picture(p), lang), since
         p["headline"] = crew.headline(p, lang)
         p["activity"] = books.activity(db, d.book, 25)
         p["watching"] = [{"move_id": w["move_id"], "party": w["party"], "checkpoint": w["checkpoint"], "kind": w["kind"]} for w in books.watches(db, d.book)]
+        p["events"] = _coming(d)
         p["clock"] = {"date": str(d.as_of.date()), "days_moved": int((d.as_of - pd.Timestamp(dataset.DEMO_AS_OF)).days) if d.is_demo else 0}
         return p | {"business": d.name.replace(" (fictional)", ""), "is_demo": d.is_demo, "business_type": _btype(d), "default_safety": ap.default_safety(d.ledger, d.as_of) if len(d.ledger) else None}
 
@@ -735,7 +802,8 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
         label = str(body.get("label") or "Purchase")[:60]
         states = books.move_states(db, d.book)
         approved = frozenset(k for k, v in states.items() if v in ("approved", "done"))
-        r = ap.afford(d.ledger, d.balances, d.obligations, d.as_of, amount, when, label, safety=_safety(d), approved=approved)
+        coming = [{"date": pd.Timestamp(c["date"]), "amount": c["amount"], "label": c["label"], "source": f"event:{c['id']}", "category": "Known event"} for c in _coming(d)]
+        r = ap.afford(d.ledger, d.balances, d.obligations, d.as_of, amount, when, label, safety=_safety(d), approved=approved, commitments=coming)
         if r.get("status") == "ok":
             r["evidence"] = views.evidence(r["evidence"], "How this is worked out")
         return r
@@ -1288,6 +1356,11 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
             elif k == "language" and v in i18n.LANGS:
                 clean[k] = v
             elif k == "business_type" and (v in BUSINESS_TYPES or v == ""):
+                clean[k] = v
+            elif k == "upi_id":
+                v = str(v).strip()
+                if v and not re.fullmatch(r"[\w.\-]{2,64}@[A-Za-z][\w]{1,32}", v):
+                    raise HTTPException(400, "A UPI ID looks like name@bank.")
                 clean[k] = v
         books.set_settings(db, d.book, clean)
         if body.get("business_name") and not d.is_demo:

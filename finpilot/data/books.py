@@ -33,6 +33,7 @@ SCHEMA = [
     "CREATE TABLE IF NOT EXISTS agent_activity (id INTEGER PRIMARY KEY AUTOINCREMENT, book TEXT, book_date TEXT, at TEXT, agent TEXT, tone TEXT, text TEXT, action TEXT)",
     "CREATE TABLE IF NOT EXISTS reminder_outcomes (id INTEGER PRIMARY KEY AUTOINCREMENT, book TEXT, party TEXT, sent_on TEXT, result TEXT, resolved_on TEXT)",
     "CREATE TABLE IF NOT EXISTS move_dates (book TEXT, id TEXT, book_date TEXT, PRIMARY KEY (book, id))",
+    "CREATE TABLE IF NOT EXISTS known_events (id INTEGER PRIMARY KEY AUTOINCREMENT, book TEXT, date TEXT, amount REAL, label TEXT, created_at TEXT)",
     "CREATE TABLE IF NOT EXISTS chat_log (id INTEGER PRIMARY KEY AUTOINCREMENT, book TEXT, at TEXT, role TEXT, kind TEXT, data TEXT)",
 ]
 
@@ -138,7 +139,7 @@ def update_goal(db: Path, book: str, goal_id: int, add: float | None = None, del
 
 
 DEFAULT_SETTINGS = {"gst_registered": "yes", "gst_rate_sales": "5", "gst_rate_purchases": "5", "gst_filing": "monthly", "language": "en",
-                    "business_type": "", "safety": "", "crew_last_run": "", "overdraft_drawn": ""}
+                    "business_type": "", "safety": "", "crew_last_run": "", "overdraft_drawn": "", "upi_id": ""}
 
 
 def settings(db: Path, book: str) -> dict[str, str]:
@@ -181,7 +182,7 @@ def reset_book(db: Path, book: str) -> None:
     """Forget everything the owner did in a book (used for 'Reset demo')."""
     with connect(db) as con:
         for t in ("contacts", "promises", "cat_rules", "budgets", "goals", "settings", "entry_log", "agent_actions", "memory", "checkups", "chat_log", "autopilot_moves", "autopilot_snapshots",
-                  "watches", "agent_activity", "reminder_outcomes", "move_dates"):
+                  "watches", "agent_activity", "reminder_outcomes", "move_dates", "known_events"):
             con.execute(f"DELETE FROM {t} WHERE book = ?", (book,))
 
 
@@ -392,3 +393,45 @@ def set_move_date(db: Path, book: str, move_id: str, book_date: str | None) -> N
 def move_dates(db: Path, book: str) -> dict[str, str]:
     with connect(db) as con:
         return dict(con.execute("SELECT id, book_date FROM move_dates WHERE book = ?", (book,)).fetchall())
+
+
+# ---------------------------------------------------------------- things the owner knows are coming (festive sales, a big order, a purchase)
+
+
+def add_event(db: Path, book: str, date: str, amount: float, label: str) -> int:
+    with connect(db) as con:
+        cur = con.execute("INSERT INTO known_events (book, date, amount, label, created_at) VALUES (?,?,?,?,?)", (book, date, float(amount), label, store.now()))
+        return int(cur.lastrowid)
+
+
+def events(db: Path, book: str) -> list[dict]:
+    with connect(db) as con:
+        rows = con.execute("SELECT id, date, amount, label FROM known_events WHERE book = ? ORDER BY date", (book,)).fetchall()
+    return [{"id": r[0], "date": r[1], "amount": r[2], "label": r[3]} for r in rows]
+
+
+def delete_event(db: Path, book: str, event_id: int) -> None:
+    with connect(db) as con:
+        con.execute("DELETE FROM known_events WHERE book = ? AND id = ?", (book, event_id))
+
+
+# ---------------------------------------------------------------- audit trail
+
+
+def audit(db: Path, book: str) -> list[dict]:
+    """Everything the agents did and everything the owner decided, oldest first."""
+    out: list[dict] = []
+    with connect(db) as con:
+        for at, bd, agent, tone, text in con.execute("SELECT at, book_date, agent, tone, text FROM agent_activity WHERE book = ?", (book,)):
+            out.append({"at": at, "book_date": bd, "who": f"agent:{agent}", "what": text, "kind": tone})
+        dates = dict(con.execute("SELECT id, book_date FROM move_dates WHERE book = ?", (book,)).fetchall())
+        for mid, state, at in con.execute("SELECT id, state, at FROM autopilot_moves WHERE book = ?", (book,)):
+            out.append({"at": at, "book_date": dates.get(mid, ""), "who": "owner", "what": f"{state}: {mid}", "kind": "decision"})
+        for at, kind, summary, undone in con.execute("SELECT at, kind, summary, undone FROM entry_log WHERE book = ?", (book,)):
+            out.append({"at": at, "book_date": "", "who": "owner", "what": f"entry ({kind}): {summary}" + (" — undone" if undone else ""), "kind": "entry"})
+        for at, kind, title, state, decided in con.execute("SELECT created_at, kind, title, state, decided_at FROM agent_actions WHERE book = ?", (book,)):
+            out.append({"at": decided or at, "book_date": "", "who": "owner" if decided else "agent:assistant", "what": f"{kind} draft '{title}' — {state}", "kind": "draft"})
+        for date, amount, label, at in con.execute("SELECT date, amount, label, created_at FROM known_events WHERE book = ?", (book,)):
+            out.append({"at": at, "book_date": "", "who": "owner", "what": f"told FinPilot: {label} {amount:+,.0f} on {date}", "kind": "event"})
+    out.sort(key=lambda r: r["at"] or "")
+    return out

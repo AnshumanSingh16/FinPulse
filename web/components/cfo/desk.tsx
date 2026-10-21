@@ -1,7 +1,8 @@
 "use client";
 
 import {
-  AlertTriangle, ArrowUp, Banknote, Check, CheckCheck, ChevronDown, CircleCheck, Clock, FastForward, HandCoins, Landmark, Loader2, PauseCircle, Percent, Sparkles,
+  AlertTriangle, ArrowUp, Banknote, Check, CheckCheck, ChevronDown, CircleCheck, Clock, FastForward, HandCoins, Landmark, Loader2, Mic, PauseCircle, Percent,
+  Sparkles, Volume2,
 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -19,9 +20,9 @@ import { get, post } from "@/lib/api";
 import { inr, short } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 import { Cockpit } from "./cockpit";
-import { currentOdds, day, moveDetail, moveTitle, pct, standing, type Activity, type Move, type Plan, type T } from "./model";
+import { currentOdds, day, moveDetail, moveShort, moveTitle, pct, standing, type Activity, type Move, type Plan, type T } from "./model";
 
-type Kind = "brief" | "user" | "cfo" | "crew" | "plan" | "why" | "afford" | "proof" | "sim" | "answer";
+type Kind = "brief" | "user" | "cfo" | "crew" | "plan" | "why" | "afford" | "proof" | "sim" | "answer" | "event";
 interface Msg {
   id: number;
   k: Kind;
@@ -82,9 +83,13 @@ export function CfoDesk() {
   const asked = useRef(false);
   useEffect(() => {
     const q = params.get("q");
-    if (q && p && !asked.current) {
+    const d = params.get("do");
+    if ((q || d) && p && p.status === "ok" && !asked.current) {
       asked.current = true;
-      ask(q);
+      if (q) ask(q);
+      const labels: Record<string, string> = { fix: t("Show me the fix"), why: t("Why?"), afford: t("Can I afford something?"), proof: t("How sure are you?"),
+        sim: t("Fast-forward 2 weeks"), event: t("Tell me what's coming") };
+      if (d && labels[d]) act(d, labels[d]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params, p]);
@@ -109,6 +114,7 @@ export function CfoDesk() {
     else if (key === "afford") add({ k: "afford" });
     else if (key === "proof") add({ k: "proof" });
     else if (key === "sim") add({ k: "sim" });
+    else if (key === "event") add({ k: "event" });
     else if (key === "planb") {
       setBusy(true);
       try {
@@ -180,6 +186,10 @@ export function CfoDesk() {
                         actions: planB ? [{ key: "planb", label: t("Approve Plan B"), primary: true }, ...followUps(x, t).map((a) => ({ ...a, primary: false }))] : followUps(x, t) });
                 }} />}
                 {m.k === "answer" && <Answer question={m.question ?? ""} onDone={load} />}
+                {m.k === "event" && <Coming p={p} onAdded={async (label) => {
+                  const x = await load();
+                  add({ k: "cfo", strong: t("Added “{label}” to your forecast.", { label }), text: x ? headlineFor(x, t, lang) : undefined, actions: x && fixAvailable(x) ? [{ key: "fix", label: t("Show me the fix"), primary: true }] : followUps(x, t) });
+                }} />}
               </div>
             ))}
             <div ref={end} />
@@ -198,6 +208,7 @@ export function CfoDesk() {
             <form onSubmit={(e) => { e.preventDefault(); ask(input); }} className="flex items-center gap-2 rounded-2xl border border-line bg-surface p-1.5 pl-4 shadow-sm focus-within:border-ink">
               <input value={input} onChange={(e) => setInput(e.target.value)} placeholder={t("Ask your CFO anything — “Who pays me late?”")}
                 className="h-10 w-full bg-transparent text-[0.95rem] outline-none placeholder:text-muted" aria-label={t("Ask your CFO")} />
+              <MicButton onText={ask} />
               <button type="submit" disabled={!input.trim()} aria-label={t("Send")} className="grid size-10 shrink-0 place-items-center rounded-xl bg-ink text-canvas transition disabled:opacity-30">
                 <ArrowUp className="size-5" />
               </button>
@@ -252,6 +263,7 @@ function suggestions(p: Plan, t: T): Act[] {
   if (fixAvailable(p)) out.push({ key: "fix", label: t("Show me the fix") });
   out.push({ key: "why", label: t("Why?") });
   out.push({ key: "afford", label: t("Can I afford something?") });
+  out.push({ key: "event", label: t("Tell me what's coming") });
   if (p.is_demo) out.push({ key: "sim", label: t("Fast-forward 2 weeks") });
   out.push({ key: "proof", label: t("How sure are you?") });
   return out;
@@ -295,6 +307,7 @@ function Briefing({ p, onAct }: { p: Plan; onAct: (k: string, l: string) => void
         {headlineFor(p, t, lang)}
       </p>
       {lines.map((l, i) => <p key={i} className="mt-3 text-[1.05rem] leading-relaxed text-ink-2">{l}</p>)}
+      <Listen text={[`${hello}, ${p.business}.`, headlineFor(p, t, lang), ...lines].join(" ")} />
       <Actions acts={[primary, ...secondary]} onAct={onAct} />
     </Cfo>
   );
@@ -491,6 +504,7 @@ function PlanCard({ p, onApproved }: { p: Plan; onApproved: (msg: string) => voi
           </li>
         )}
       </ol>
+      <WhyThisPlan p={p} chosen={steps.filter((m) => m.kind !== "reserve").map((m) => m.id)} />
       <div className="flex flex-wrap items-center gap-3 border-t border-line px-5 py-4">
         {done ? (
           <p className="flex items-center gap-2 font-semibold text-good"><CircleCheck className="size-5" /> {t("Approved")}</p>
@@ -774,5 +788,173 @@ function CushionSheet({ open, onClose, current, suggested, onSaved }: { open: bo
         <Button variant="ghost" onClick={() => save(null)}>{t("Use suggested")}</Button>
       </div>
     </Sheet>
+  );
+}
+
+// ---------------------------------------------------------------- why this plan (the planner's working, shown)
+
+function WhyThisPlan({ p, chosen }: { p: Plan; chosen: string[] }) {
+  const { t, lang } = useT();
+  const [open, setOpen] = useState(false);
+  const key = (ids: string[]) => [...ids].sort().join("|");
+  const mine = key(chosen);
+  const rows = [...p.search.plans].sort((a, b) => b.p_safe - a.p_safe || a.cost - b.cost).slice(0, 6);
+  if (!rows.length) return null;
+  return (
+    <div className="border-t border-line px-5 py-3">
+      <button onClick={() => setOpen(!open)} className="flex items-center gap-1.5 text-sm font-semibold text-brand" aria-expanded={open}>
+        {t("Why this plan?")} <ChevronDown className={cx("size-4 transition", open && "rotate-180")} />
+      </button>
+      {open && (
+        <div className="mt-2">
+          <p className="text-sm text-ink-2">
+            {t("I scored all {c} combinations of moves and played the best {k} out in {n} futures each. I pick the best odds — and among plans about as safe, the one that asks least of you.",
+              { c: p.search.combinations, k: p.search.stress_tested, n: p.search.sims_each.toLocaleString("en-IN") })}
+          </p>
+          <div className="mt-2 overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="text-xs text-muted">
+                <tr><th className="py-1 pr-3 font-medium">{t("Plan")}</th><th className="py-1 pr-3 font-medium">{t("Effort")}</th><th className="py-1 pr-3 font-medium">{t("Tightest day")}</th><th className="py-1 font-medium">{t("Odds")}</th></tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {rows.map((r, i) => {
+                  const me = key(r.moves) === mine;
+                  return (
+                    <tr key={i} className={cx(me && "bg-brand-50 font-semibold")}>
+                      <td className="py-1.5 pr-3">{r.moves.length ? r.moves.map((id) => moveShort(id, p, t, lang)).join(" + ") : t("Do nothing")}{me && <span className="ml-1.5 text-xs text-brand">← {t("chosen")}</span>}</td>
+                      <td className="py-1.5 pr-3 text-ink-2">{"●".repeat(Math.min(r.cost, 8)) || "—"}</td>
+                      <td className={cx("num py-1.5 pr-3", r.reaches_safety ? "text-ink" : "text-bad")}>{short(r.lowest)}</td>
+                      <td className="num py-1.5">{pct(r.p_safe)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------- tell me what's coming
+
+function Coming({ p, onAdded }: { p: Plan; onAdded: (label: string) => void }) {
+  const { t } = useT();
+  const toast = useToast();
+  const [label, setLabel] = useState("");
+  const [dir, setDir] = useState<"in" | "out">("in");
+  const [amount, setAmount] = useState("");
+  const [days, setDays] = useState(21);
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+  const examples = [
+    { l: t("Diwali sales boost"), d: "in" as const }, { l: t("A big order is coming"), d: "in" as const },
+    { l: t("New machine / equipment"), d: "out" as const }, { l: t("Festival bonus for staff"), d: "out" as const },
+  ];
+  const save = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!label.trim() || !Number(amount)) return;
+    setBusy(true);
+    const d = new Date(new Date(p.as_of + "T00:00:00").getTime() + days * 86400000);
+    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    try {
+      await post("/api/events", { label: label.trim(), amount: Number(amount), direction: dir, date: iso });
+      setDone(true);
+      onAdded(label.trim());
+    } catch (x) {
+      toast.show({ text: x instanceof Error ? x.message : String(x), tone: "bad" });
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Cfo>
+      <p className="serif text-xl font-semibold">{t("What do you know that your books don't?")}</p>
+      <p className="mt-1 text-ink-2">{t("A festival rush, a big order, a purchase you're planning — I'll put it into every forecast and plan.")}</p>
+      <form onSubmit={save} className={cx("mt-3 space-y-2.5 rounded-2xl border border-line bg-surface p-4", done && "pointer-events-none opacity-50")}>
+        <div className="flex flex-wrap gap-2">
+          {examples.map((x) => (
+            <button key={x.l} type="button" onClick={() => { setLabel(x.l); setDir(x.d); }} className="rounded-full border border-line px-3 py-1 text-xs font-medium text-ink-2 hover:border-ink">{x.l}</button>
+          ))}
+        </div>
+        <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder={t("What is it?")} className="h-11 w-full rounded-xl border border-line bg-surface px-3 outline-none focus:border-ink" aria-label={t("What is it?")} />
+        <div className="flex flex-wrap items-center gap-2">
+          {(["in", "out"] as const).map((x) => (
+            <button key={x} type="button" onClick={() => setDir(x)} className={cx("rounded-full border px-3 py-1.5 text-sm font-medium", dir === x ? "border-ink bg-ink text-canvas" : "border-line text-ink-2")}>
+              {x === "in" ? t("Money coming in") : t("Money going out")}
+            </button>
+          ))}
+        </div>
+        <MoneyInput value={amount} onChange={setAmount} placeholder={t("Amount")} />
+        <div className="flex flex-wrap items-center gap-2">
+          {[7, 21, 45, 75].map((d) => (
+            <button key={d} type="button" onClick={() => setDays(d)} className={cx("rounded-full border px-3 py-1.5 text-sm font-medium", days === d ? "border-ink bg-ink text-canvas" : "border-line text-ink-2")}>
+              {t("in {n} days", { n: d })}
+            </button>
+          ))}
+          <Button type="submit" size="sm" className="ml-auto" disabled={busy || !label.trim() || !Number(amount)}>{t("Add to forecast")}</Button>
+        </div>
+      </form>
+    </Cfo>
+  );
+}
+
+// ---------------------------------------------------------------- voice: speak to the CFO, hear the briefing
+
+type Rec = { lang: string; onresult: (e: { results: { [i: number]: { [j: number]: { transcript: string } } } }) => void; onend: () => void; start: () => void };
+
+function MicButton({ onText }: { onText: (s: string) => void }) {
+  const { t, lang } = useT();
+  const [on, setOn] = useState(false);
+  const [ok, setOk] = useState(false);
+  useEffect(() => {
+    const W = window as unknown as { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown };
+    setOk(Boolean(W.SpeechRecognition ?? W.webkitSpeechRecognition));
+  }, []);
+  if (!ok) return null;
+  const start = () => {
+    const W = window as unknown as { SpeechRecognition?: new () => Rec; webkitSpeechRecognition?: new () => Rec };
+    const SR = (W.SpeechRecognition ?? W.webkitSpeechRecognition)!;
+    const r = new SR();
+    r.lang = lang === "hi" ? "hi-IN" : "en-IN";
+    r.onresult = (e) => onText(e.results[0][0].transcript);
+    r.onend = () => setOn(false);
+    setOn(true);
+    r.start();
+  };
+  return (
+    <button type="button" onClick={start} aria-label={t("Speak")} className={cx("grid size-10 shrink-0 place-items-center rounded-xl transition", on ? "animate-pulse bg-bad text-white" : "text-ink-2 hover:bg-surface-2")}>
+      <Mic className="size-5" />
+    </button>
+  );
+}
+
+function Listen({ text }: { text: string }) {
+  const { t, lang } = useT();
+  const [ok, setOk] = useState(false);
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    setOk(typeof window !== "undefined" && "speechSynthesis" in window);
+  }, []);
+  if (!ok) return null;
+  const say = () => {
+    const s = window.speechSynthesis;
+    if (on) {
+      s.cancel();
+      setOn(false);
+      return;
+    }
+    const u = new SpeechSynthesisUtterance(text.replace(/₹/g, lang === "hi" ? "रुपये " : "rupees ").replace(/ L\b/g, lang === "hi" ? " लाख" : " lakh"));
+    u.lang = lang === "hi" ? "hi-IN" : "en-IN";
+    u.rate = 0.98;
+    u.onend = () => setOn(false);
+    setOn(true);
+    s.speak(u);
+  };
+  return (
+    <button onClick={say} className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-ink-2 hover:text-ink">
+      <Volume2 className="size-4" /> {on ? t("Stop") : t("Listen")}
+    </button>
   );
 }
