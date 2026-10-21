@@ -28,11 +28,15 @@ from finpilot.engine import risk
 SAFETY_SHARE = 0.5  # default safety level: about two weeks of running costs
 DEFERRABLE = {"raw materials", "packaging", "logistics", "purchases", "professional fees", "marketing", "office supplies", "repairs & maintenance", "travel"}
 PAUSABLE = {"Owner Drawings": "Pause owner drawings", "Marketing": "Pause marketing spend"}
-AGENT = {"collect": "collections", "defer": "payables", "pause": "spending", "reserve": "tax", "borrow": "financing"}
+AGENT = {"collect": "collections", "defer": "payables", "pause": "spending", "reserve": "tax", "borrow": "financing", "discount": "deals"}
+DISCOUNT = 0.02          # early-payment discount the deals agent may offer
+DISCOUNT_PAY_IN_DAYS = 7
+DISCOUNT_MIN = 50_000    # only invoices worth a phone call
+CHECKPOINT_DAYS = {"collect": 10, "defer": 4, "discount": 5}  # when to decide a move has not worked
 BACKUP_RATE = 0.14   # assumed yearly interest on a standby overdraft, to show what the backup would cost if fully used
 BACKUP_STEP = 25_000
 # How much a move asks of the owner: collecting money already owed is easiest; cutting their own drawings is hardest.
-EFFORT = {"collect": 1, "defer": 2, "pause:Marketing": 2, "pause:Owner Drawings": 3, "borrow": 4}
+EFFORT = {"collect": 1, "defer": 2, "discount": 2, "pause:Marketing": 2, "pause:Owner Drawings": 3, "borrow": 4}
 TARGET_ODDS = 0.8      # the planner aims for cash to stay above safety in at least this share of simulated futures
 ODDS_TOLERANCE = 0.03  # plans within this many points of the best odds count as equally safe; the easier one wins
 MAX_SEARCH_MOVES = 12
@@ -100,7 +104,8 @@ def default_safety(ledger: pd.DataFrame, as_of) -> float:
 
 def _forecast(ledger, balances, obligations, as_of, horizon, safety, extra=None, obl=None):
     return forecast_cash_flow(ledger, balances, obligations if obl is None else obl, as_of,
-                              ForecastOptions(horizon_days=horizon, include_run_rate=True, min_buffer=safety, extra_flows=extra or []))
+                              ForecastOptions(horizon_days=horizon, include_run_rate=True, min_buffer=safety, extra_flows=extra or [],
+                                              customer_delays=True, billing_cycles=True, recurring=True))
 
 
 def candidates(ledger, balances, obligations, as_of, base: dict, s: Settings) -> list[dict]:
@@ -127,6 +132,17 @@ def candidates(ledger, balances, obligations, as_of, base: dict, s: Settings) ->
                         "from_date": str(r.due_date.date()), "to_date": str(new.date()),
                         "title": f"Ask {r.counterparty} to move {r.item_id} to {new:%d %b}",
                         "detail": f"{fmt_inr(r.amount)} due {r.due_date:%d %b}. Assumes they agree to {s.defer_days} more days."})
+        # Deals agent: a reliable customer's invoice due after the tight days, paid early for a small discount.
+        trouble = pd.Timestamp(base["first_negative_date"] or base["first_date_below_buffer"] or base["lowest_balance_date"])
+        late_now = set(pend[(pend["kind"] == "receivable") & (pend["due_date"] < a)]["counterparty"])
+        later = pend[(pend["kind"] == "receivable") & (pend["due_date"] > trouble) & (pend["due_date"] <= a + pd.Timedelta(days=s.horizon_days))
+                     & (pend["due_date"] > a + pd.Timedelta(days=DISCOUNT_PAY_IN_DAYS + 3)) & (pend["amount"] >= DISCOUNT_MIN) & ~pend["counterparty"].isin(late_now)]
+        for r in later.sort_values("amount", ascending=False).head(3).itertuples():
+            by = a + pd.Timedelta(days=DISCOUNT_PAY_IN_DAYS)
+            out.append({"id": f"discount:{r.item_id}", "kind": "discount", "party": r.counterparty, "amount": money(r.amount * (1 - DISCOUNT)), "items": [r.item_id],
+                        "invoice": money(r.amount), "cost": money(r.amount * DISCOUNT), "from_date": str(r.due_date.date()), "to_date": str(by.date()),
+                        "title": f"Offer {r.counterparty} {DISCOUNT:.0%} off to pay {r.item_id} by {by:%d %b}",
+                        "detail": f"{fmt_inr(r.amount)} due {r.due_date:%d %b}. Costs {fmt_inr(r.amount * DISCOUNT)}; assumes they accept."})
     rr = run_rate(ledger, a)
     for cat, title in PAUSABLE.items():
         row = rr[rr["category"] == cat]
@@ -159,6 +175,9 @@ def apply(moves: list[dict], obligations: pd.DataFrame | None, as_of, s: Setting
             was = max(pd.Timestamp(m["from_date"]), a + pd.Timedelta(days=1))
             extra.append({"date": was, "amount": m["amount"], "label": f"{m['items'][0]} moved out", "source": m["id"], "category": "Moved bill"})
             extra.append({"date": pd.Timestamp(m["to_date"]), "amount": -m["amount"], "label": f"{m['items'][0]} paid later", "source": m["id"], "category": "Moved bill"})
+        elif m["kind"] == "discount":
+            extra.append({"date": pd.Timestamp(m["to_date"]), "amount": m["amount"], "label": f"{m['items'][0]} paid early", "source": m["id"], "category": "Early payment"})
+            extra.append({"date": pd.Timestamp(m["from_date"]), "amount": -m["invoice"], "label": f"{m['items'][0]} not due any more", "source": m["id"], "category": "Early payment"})
         elif m["kind"] == "borrow":
             extra.append({"date": a + pd.Timedelta(days=1), "amount": m["amount"], "label": m["title"], "source": m["id"], "category": "Overdraft"})
         elif m["kind"] == "pause":
@@ -187,8 +206,9 @@ def _series(f: dict, step: int = 1) -> list[dict]:
 
 
 def plan(ledger, balances, obligations, as_of, safety: float | None = None, approved: set[str] | frozenset = frozenset(), settings: Settings | None = None,
-         commitments: list[dict] | tuple = ()) -> dict:
-    """`commitments` are extra flows the owner is considering (e.g. a purchase): included in every forecast, simulation and plan."""
+         commitments: list[dict] | tuple = (), outcomes: dict[str, tuple[int, int]] | None = None, contingencies: bool = True) -> dict:
+    """`commitments` are extra flows the owner is considering (e.g. a purchase): included in every forecast, simulation and plan.
+    `outcomes`: per customer (reminders sent, paid after a reminder) — what the agents have learned so far."""
     commitments = list(commitments)
     s = settings or Settings()
     safety = default_safety(ledger, as_of) if safety is None else float(safety)
@@ -214,42 +234,40 @@ def plan(ledger, balances, obligations, as_of, safety: float | None = None, appr
     # The planner: every combination of moves is scored exactly (moves add up day by day), then the most promising plans are
     # stress-tested in the same simulated futures. It picks the plan with the best odds of staying above safety, and among
     # plans about as safe, the one that asks least of the owner.
-    model = risk.build(ledger, obligations, as_of, base, stuck_parties(obligations, as_of))
+    model = risk.build(ledger, obligations, as_of, base, stuck_parties(obligations, as_of), outcomes)
     pool = [m for m in moves if m["kind"] != "reserve"][:MAX_SEARCH_MOVES]
-    masks = np.array(list(product((0, 1), repeat=len(pool))), dtype=float) if pool else np.zeros((1, 0))
-    D = np.array([m["_delta"] for m in pool]) if pool else np.zeros((0, H + 1))
-    lows = (B[None, :] + masks @ D).min(axis=1)
-    costs = masks @ np.array([effort(m) for m in pool], dtype=float) if pool else np.zeros(1)
-    feasible = np.where(lows >= safety)[0]
-    order = feasible[np.lexsort((-lows[feasible], costs[feasible]))] if len(feasible) else np.argsort(-lows)
-    picks = list(range(len(masks))) if len(masks) <= 2 * STRESS_TESTED else list(dict.fromkeys([0, *order[:STRESS_TESTED - 1].tolist(), len(masks) - 1]))
 
-    def odds_for(ids: set[str], extra_moves: list[dict] = ()) -> dict:
+    def odds_for(ids: set[str], extra_moves: list[dict] = (), fails: frozenset = frozenset()) -> dict:
         chosen = [m for m in [*moves, *extra_moves] if m["id"] in ids and m["kind"] != "reserve"]
-        extra = sum((m["_delta"] for m in chosen if m["kind"] != "collect"), np.zeros(H + 1))
-        return risk.simulate(model, safety, extra, frozenset(m["party"] for m in chosen if m["kind"] == "collect"))
+        extra = sum((m["_delta"] for m in chosen if m["kind"] not in ("collect", "discount")), np.zeros(H + 1))
+        pulled = {m["items"][0]: (DISCOUNT_PAY_IN_DAYS, 1 - DISCOUNT) for m in chosen if m["kind"] == "discount"}
+        return risk.simulate(model, safety, extra, frozenset(m["party"] for m in chosen if m["kind"] == "collect"), fails=fails, pulled=pulled)
 
-    tested = []
-    for i in picks:
-        ids = {pool[k]["id"] for k in range(len(pool)) if masks[i][k]}
-        o = odds_for(ids)
-        tested.append({"moves": [pool[k]["id"] for k in range(len(pool)) if masks[i][k]], "cost": int(costs[i]), "lowest": money(lows[i]),
-                       "reaches_safety": bool(lows[i] >= safety), "p_safe": o["p_safe"], "p_short": o["p_short"], "_odds": o})
-    good = [t for t in tested if t["reaches_safety"]] or tested
-    best = max(t["p_safe"] for t in good)
-    if best >= TARGET_ODDS:
-        close = [t for t in good if t["p_safe"] >= TARGET_ODDS]
-    else:
-        close = [t for t in good if t["p_safe"] >= best - ODDS_TOLERANCE]
-    if any(t["reaches_safety"] for t in tested):
-        chosen = min(close, key=lambda t: (t["cost"], -t["p_safe"], -t["lowest"]))
-    else:  # nothing gets there: take the most protection available
-        chosen = max(close, key=lambda t: (t["lowest"], -t["cost"]))
-    suggested = [*chosen["moves"], *[m["id"] for m in moves if m["kind"] == "reserve"]]
-    # The financing agent: if even the best plan leaves real risk, size a standby overdraft from the bad futures (1 in 10),
-    # so the owner can arrange it now rather than in a hurry. It is a backup, never part of the suggested plan.
-    if chosen["p_safe"] < TARGET_ODDS:
-        need = max(2 * BACKUP_STEP, float(np.ceil(max(safety - chosen["_odds"]["bad_case_lowest"], 0) / BACKUP_STEP) * BACKUP_STEP))
+    def search(pool: list[dict], fails: frozenset = frozenset(), limit: int = STRESS_TESTED) -> tuple[list[dict], dict, int]:
+        masks = np.array(list(product((0, 1), repeat=len(pool))), dtype=float) if pool else np.zeros((1, 0))
+        D = np.array([m["_delta"] for m in pool]) if pool else np.zeros((0, H + 1))
+        lows = (B[None, :] + masks @ D).min(axis=1)
+        costs = masks @ np.array([effort(m) for m in pool], dtype=float) if pool else np.zeros(1)
+        feasible = np.where(lows >= safety)[0]
+        order = feasible[np.lexsort((-lows[feasible], costs[feasible]))] if len(feasible) else np.argsort(-lows)
+        picks = list(range(len(masks))) if len(masks) <= 2 * limit else list(dict.fromkeys([0, *order[:limit - 1].tolist(), len(masks) - 1]))
+        tested = []
+        for i in picks:
+            ids = {pool[k]["id"] for k in range(len(pool)) if masks[i][k]}
+            o = odds_for(ids, fails=fails)
+            tested.append({"moves": [pool[k]["id"] for k in range(len(pool)) if masks[i][k]], "cost": int(costs[i]), "lowest": money(lows[i]),
+                           "reaches_safety": bool(lows[i] >= safety), "p_safe": o["p_safe"], "p_short": o["p_short"], "_odds": o})
+        good = [t for t in tested if t["reaches_safety"]] or tested
+        best = max(t["p_safe"] for t in good)
+        close = [t for t in good if t["p_safe"] >= TARGET_ODDS] if best >= TARGET_ODDS else [t for t in good if t["p_safe"] >= best - ODDS_TOLERANCE]
+        if any(t["reaches_safety"] for t in tested):
+            pick = min(close, key=lambda t: (t["cost"], -t["p_safe"], -t["lowest"]))
+        else:  # nothing gets there: take the most protection available
+            pick = max(close, key=lambda t: (t["lowest"], -t["cost"]))
+        return tested, pick, int(len(masks))
+
+    def backup_for(pick: dict, fails: frozenset = frozenset()) -> dict:
+        need = max(2 * BACKUP_STEP, float(np.ceil(max(safety - pick["_odds"]["bad_case_lowest"], 0) / BACKUP_STEP) * BACKUP_STEP))
         b = {"id": "borrow:standby", "kind": "borrow", "party": "Bank", "amount": money(need), "items": [], "backup": True,
              "interest_if_used": money(need * BACKUP_RATE * s.backup_days / 365),
              "title": f"Keep a {fmt_inr(need)} overdraft ready as a backup",
@@ -258,8 +276,31 @@ def plan(ledger, balances, obligations, as_of, safety: float | None = None, appr
         b["_delta"] = delta(apply([b], obligations, as_of, s)[0], as_of, H)
         b["new_lowest"] = money(float((B + b["_delta"]).min()))
         b["impact"] = money(b["new_lowest"] - base["lowest_balance"])
-        b["odds_with_plan"] = odds_for({*chosen["moves"], b["id"]}, extra_moves=[b])["p_safe"]
-        moves.append(b)
+        b["odds_with_plan"] = odds_for({*pick["moves"], b["id"]}, extra_moves=[b], fails=fails)["p_safe"]
+        return b
+
+    tested, chosen, n_combos = search(pool)
+    suggested = [*chosen["moves"], *[m["id"] for m in moves if m["kind"] == "reserve"]]
+    # The financing agent: if even the best plan leaves real risk, size a standby overdraft from the bad futures (1 in 10),
+    # so the owner can arrange it now rather than in a hurry. It is a backup, never part of the suggested plan.
+    if chosen["p_safe"] < TARGET_ODDS:
+        moves.append(backup_for(chosen))
+
+    # Plan B: for every move in the plan that depends on someone else (a customer paying, a supplier agreeing), what to do
+    # if it hasn't worked by its checkpoint — the best plan without it, plus a backup if that still leaves real risk.
+    plan_b = []
+    by_id = {m["id"]: m for m in moves}
+    for mid in (chosen["moves"] if contingencies else []):
+        m = by_id[mid]
+        if m["kind"] not in CHECKPOINT_DAYS:
+            continue
+        fails = frozenset({m["party"]}) if m["kind"] == "collect" else frozenset()
+        rest = [x for x in pool if x["id"] != mid and not (m["kind"] == "collect" and x["kind"] == "discount" and x["party"] == m["party"])]
+        _, alt, _ = search(rest, fails, limit=4)
+        bk = backup_for(alt, fails) if alt["p_safe"] < TARGET_ODDS else None
+        plan_b.append({"if_fails": mid, "checkpoint": str((ts(as_of) + pd.Timedelta(days=CHECKPOINT_DAYS[m["kind"]])).date()),
+                       "then": alt["moves"], "lowest": alt["lowest"], "p_safe": alt["p_safe"], "reaches_safety": alt["reaches_safety"],
+                       "backup": {"amount": bk["amount"], "p_safe": bk["odds_with_plan"], "interest_if_used": bk["interest_if_used"]} if bk else None})
     for m in moves:
         m["agent"] = AGENT[m["kind"]]
         m["suggested"] = m["id"] in suggested
@@ -267,6 +308,7 @@ def plan(ledger, balances, obligations, as_of, safety: float | None = None, appr
         m["effort"] = effort(m)
     moves.sort(key=lambda m: (m.get("backup", False), not m["suggested"], m["kind"] == "reserve", -m["impact"]))
     base_odds = next(t["_odds"] for t in tested if not t["moves"])
+    learned = {k: round(v, 3) for k, v in model.reminder_p.items()}
 
     def scenario(ids) -> dict:
         chosen = [m for m in moves if m["id"] in ids]
@@ -300,7 +342,9 @@ def plan(ledger, balances, obligations, as_of, safety: float | None = None, appr
         "plan_basis": "approved" if approved else "suggested",
         "odds": {"baseline": _odds(base_odds), "suggested": _odds(chosen["_odds"]), "approved": _odds(mine_odds) if approved else None,
                  "target": TARGET_ODDS, "assumptions": risk.assumptions(model)},
-        "search": {"moves_considered": len(pool), "combinations": int(len(masks)), "stress_tested": len(tested), "sims_each": risk.N_SIMS,
+        "plan_b": plan_b,
+        "learned": learned,
+        "search": {"moves_considered": len(pool), "combinations": n_combos, "stress_tested": len(tested), "sims_each": risk.N_SIMS,
                    "plans": [{k: v for k, v in t.items() if k != "_odds"} for t in sorted(tested, key=lambda t: (-t["p_safe"], t["cost"]))]},
         "audit": audit,
         "causes": [{"date": c["date"], "label": c["label"], "amount": -c["amount"], "category": c["category"]} for c in causes],
@@ -406,4 +450,27 @@ def afford(ledger, balances, obligations, as_of, amount: float, when=None, label
         "today": now["today"], "before": {**now["baseline"], "p_safe": now["odds"]["baseline"]["p_safe"]},
         "without_moves": without, "with_plan": with_plan, "earliest_safe_date_without_moves": earliest,
         "evidence": p["evidence"],
+    }
+
+
+def evaluate_flows(ledger, balances, obligations, as_of, flows: list[dict], label: str = "Idea", safety: float | None = None,
+                   approved: set[str] | frozenset = frozenset(), outcomes=None, settings: Settings | None = None) -> dict:
+    """Test an idea that isn't one of the standard moves (e.g. an AI strategist's proposal), given as dated cash flows:
+    the lowest balance and odds without and with it, on its own and alongside the planner's best plan."""
+    s = settings or Settings()
+    tagged = [{"date": ts(f["date"]), "amount": float(f["amount"]), "label": f.get("label") or label, "source": "idea", "category": "Idea"} for f in flows]
+    before = plan(ledger, balances, obligations, as_of, safety, approved, s, outcomes=outcomes, contingencies=False)
+    if before["status"] != "ok":
+        return before
+    after = plan(ledger, balances, obligations, as_of, before["safety"], approved, s, commitments=tagged, outcomes=outcomes, contingencies=False)
+    change = money(after["baseline"]["lowest"] - before["baseline"]["lowest"])
+    return {
+        "status": "ok", "label": label, "flows": [{"date": str(f["date"].date()), "amount": money(f["amount"])} for f in tagged],
+        "net_cash": money(sum(f["amount"] for f in tagged)), "safety_level": before["safety"],
+        "lowest_without": before["baseline"]["lowest"], "lowest_with": after["baseline"]["lowest"], "change_in_lowest": change,
+        "odds_without": before["odds"]["baseline"]["p_safe"], "odds_with": after["odds"]["baseline"]["p_safe"],
+        "odds_best_plan_without": before["odds"]["suggested"]["p_safe"], "odds_best_plan_with": after["odds"]["suggested"]["p_safe"],
+        "best_plan_with_it": [m["id"] for m in after["moves"] if m["suggested"] and m["kind"] != "reserve"],
+        "verdict": "helps" if change > 1 or after["odds"]["suggested"]["p_safe"] > before["odds"]["suggested"]["p_safe"] + 0.01
+                   else "hurts" if change < -1 else "no effect",
     }

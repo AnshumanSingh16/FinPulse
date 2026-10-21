@@ -8,6 +8,7 @@ import { streamAgent } from "@/components/agent";
 import { useToast } from "@/components/fx";
 import { Button, cx, Pill, Sheet } from "@/components/ui";
 import { post } from "@/lib/api";
+import { short } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 
 export const CREW: Record<string, { I: React.ElementType; grad: string }> = {
@@ -30,6 +31,7 @@ interface Row {
   text?: string;
   tone?: string;
   done: boolean;
+  ideas?: { label: string; verdict: string; change_in_lowest: number; odds_with: number; odds_without: number }[];
 }
 interface Final {
   status: string;
@@ -68,7 +70,7 @@ export function CrewSheet({ open, onClose, onApproved, canApprove }: { open: boo
       if (e.phase === "start") {
         setRows((r) => (r.some((x) => x.agent === agent) ? r : [...r, { agent, name: String(e.name), doing: String(e.doing), done: false }]));
       } else if (e.phase === "done") {
-        setRows((r) => r.map((x) => (x.agent === agent ? { ...x, text: String(e.text), tone: String(e.tone), done: true } : x)));
+        setRows((r) => r.map((x) => (x.agent === agent ? { ...x, text: String(e.text), tone: String(e.tone), done: true, ideas: (e.ideas as Row["ideas"]) ?? [] } : x)));
       }
     }, lang)
       .then((f) => {
@@ -109,7 +111,19 @@ export function CrewSheet({ open, onClose, onApproved, canApprove }: { open: boo
                     {r.tone && r.tone !== "info" && <span className={cx("mr-1 inline-block size-2 rounded-full align-middle", r.tone === "good" ? "bg-good" : r.tone === "bad" ? "bg-bad" : "bg-caution")} />}
                     {r.text}
                   </p>
-                ) : (
+                ) : null}
+                {r.done && r.ideas && r.ideas.length > 0 ? (
+                  <ul className="mt-1.5 space-y-1">
+                    {r.ideas.map((i, k) => (
+                      <li key={k} className="flex flex-wrap items-center gap-1.5 text-xs">
+                        <Pill tone={i.verdict === "helps" ? "good" : i.verdict === "hurts" ? "bad" : "neutral"}>{t("Tested")}</Pill>
+                        <span className="font-medium">{i.label}</span>
+                        <span className="text-ink-2">· {i.change_in_lowest >= 0 ? "+" : "−"}{short(Math.abs(i.change_in_lowest))} {t("on your tightest day")}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+                {!r.done && (
                   <p className="flex items-center gap-2 text-sm text-ink-2"><Loader2 className="size-4 animate-spin" /> {r.doing}</p>
                 )}
               </div>

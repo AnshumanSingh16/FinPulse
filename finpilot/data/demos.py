@@ -32,6 +32,7 @@ class Client:
     delays: list[int]
     stuck_from: tuple[int, int] | None = None  # (year, month) from which invoices go unpaid
     desc: str = "Monthly retainer"
+    start_from: tuple[int, int] | None = None  # (year, month) of the first invoice (a client won later)
     category: str = "Service Income"
 
 
@@ -69,13 +70,14 @@ AGENCY = Profile(
     business="Pixel Pundit Studio (fictional)",
     kind="services",
     city="Bengaluru",
-    opening=10_50_000,
+    opening=13_00_000,
     clients=[
         Client("Zenith Realty", 2_10_000, 30, [0, 3, 7, 12]),
         Client("Bloom Organics", 1_20_000, 30, [0, 0, 2]),
         Client("UrbanFit Gyms", 1_40_000, 30, [5, 10, 15]),
         Client("Kaveri Hospitals", 2_40_000, 30, [0, 4], stuck_from=(2026, 7)),
         Client("Nimbus EdTech", 1_70_000, 30, [0, 2, 3]),
+        Client("Orbit Fintech", 2_60_000, 30, [0, 1, 3], start_from=(2026, 6)),
     ],
     suppliers=[
         Supplier("Arjun Rao (freelance motion designer)", "Freelance animation work", "Professional Fees", (1, 2), (28_000, 55_000), 15),
@@ -99,6 +101,7 @@ AGENCY = Profile(
         (date(2026, 3, 18), "MacBook Pro x3 for designers", "Croma Business", "Equipment", "out", 6_30_000),
         (date(2026, 9, 15), "Advance tax — 2nd instalment", "Income Tax Dept", "Income Tax", "out", 1_40_000),
         (date(2025, 12, 15), "Advance tax — 3rd instalment", "Income Tax Dept", "Income Tax", "out", 1_20_000),
+        (date(2026, 8, 20), "Fit-out of the new office floor", "Interior Studio Co", "Equipment", "out", 6_90_000),
     ],
     ahead=[
         (date(2026, 10, 25), "Deposit for the new office floor", "Sunrise Properties", "Rent", 3_50_000),
@@ -192,6 +195,8 @@ def generate(profile: Profile, seed: int = 11) -> dict[str, pd.DataFrame]:
     for idx, (y, m) in enumerate(months):
         growth = 1 + 0.01 * idx
         for c in profile.clients:
+            if c.start_from is not None and (y, m) < c.start_from:
+                continue
             stuck = c.stuck_from is not None and (y, m) >= c.stuck_from
             receivable(c.name, f"{c.desc} — {date(y, m, 1):%b %Y}", c.category, c.monthly * growth, _day(y, m, 1), c.terms, rng.choice(c.delays), stuck)
         if profile.projects and rng.random() < profile.projects[0]:

@@ -31,7 +31,7 @@ from finpilot.engine import autopilot as ap
 from finpilot.engine.cash import cash_position, obligations_status
 from finpilot.engine.categorize import categorize_ledger
 
-from . import crew, dataset, i18n, khata_views, smart_views, views
+from . import crew, dataset, i18n, khata_views, monitor, smart_views, views
 
 STATIC = Path(__file__).resolve().parents[1] / "web"
 
@@ -522,11 +522,12 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
     def _plan(d: dataset.Dataset) -> tuple[dict, dict[str, str]]:
         states = books.move_states(db, d.book)
         approved = frozenset(k for k, v in states.items() if v in ("approved", "done"))
-        key = (smart_views._fingerprint(d), _safety(d), approved)
+        outcomes = books.reminder_outcomes(db, d.book)
+        key = (smart_views._fingerprint(d), _safety(d), approved, tuple(sorted(outcomes.items())))
         if key not in _AP_CACHE:
             if len(_AP_CACHE) > 16:
                 _AP_CACHE.clear()
-            p = ap.plan(d.ledger, d.balances, d.obligations, d.as_of, safety=_safety(d), approved=approved)
+            p = ap.plan(d.ledger, d.balances, d.obligations, d.as_of, safety=_safety(d), approved=approved, outcomes=outcomes)
             if p["status"] == "ok":
                 basis = ap.apply([m for m in p["moves"] if m["approved"] and m["kind"] != "reserve"], d.obligations, d.as_of, ap.Settings())[0]
                 f = forecast_for_timeline(d, p["safety"], basis, ap.at_risk(d.obligations, d.as_of)[0])
@@ -540,6 +541,7 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
         return forecast_cash_flow(d.ledger, d.balances, obl, d.as_of, ForecastOptions(horizon_days=91, include_run_rate=True, min_buffer=safety, extra_flows=extra))
 
     def _view(d: dataset.Dataset, lang: str = "en") -> dict:
+        monitor.check(db, d.book, d.obligations, d.as_of, books.move_states(db, d.book), lang, replan=lambda: _plan(d)[0])  # the agents keep watching
         p, states = _plan(d)
         if p["status"] != "ok":
             return p | {"business": d.name.replace(" (fictional)", ""), "is_demo": d.is_demo}
@@ -551,6 +553,9 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
         prev, since = books.snapshot(db, d.book, f"{smart_views._fingerprint(d)}|{_safety(d)}", crew.picture(p))
         p["changes"], p["changes_since"] = crew.changes(prev, crew.picture(p), lang), since
         p["headline"] = crew.headline(p, lang)
+        p["activity"] = books.activity(db, d.book, 25)
+        p["watching"] = [{"move_id": w["move_id"], "party": w["party"], "checkpoint": w["checkpoint"], "kind": w["kind"]} for w in books.watches(db, d.book)]
+        p["clock"] = {"date": str(d.as_of.date()), "days_moved": int((d.as_of - pd.Timestamp(dataset.DEMO_AS_OF)).days) if d.is_demo else 0}
         return p | {"business": d.name.replace(" (fictional)", ""), "is_demo": d.is_demo, "business_type": _btype(d), "default_safety": ap.default_safety(d.ledger, d.as_of) if len(d.ledger) else None}
 
     @app.get("/api/autopilot")
@@ -567,15 +572,31 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
             p = _view(d, lang)
             if p["status"] != "ok":
                 return {"status": p["status"], "message": p.get("message", "")}
-            found = crew.steps(p, lang)
+            ai_on = ai_status()["enabled"]
+            found = crew.steps(p, lang, ai=ai_on)
             for st in found:
                 on_event({"type": "agent", "phase": "start", "agent": st["agent"], "name": st["name"], "doing": st["doing"]})
                 time.sleep(0.35)  # pacing so the owner can follow each agent; the work itself is already done
                 on_event({"type": "agent", "phase": "done", **st})
             text, mode, verified, warnings = crew.brief(p, lang), "rule-based", True, []
-            if ai_status()["enabled"]:
+            ctx = ToolContext(d.ledger, d.obligations, d.balances, d.as_of, db, d.book, d.name.replace(" (fictional)", ""), lang)
+            if ai_on:
+                # The strategist (the language model) proposes ideas beyond the standard moves and must test each with test_move;
+                # its report is shown only if every figure in it matches a tool result.
+                on_event({"type": "agent", "phase": "start", "agent": "strategist", "name": crew.name("strategist", lang), "doing": crew.doing("strategist", lang)})
+                srun = orchestrator.ask(crew.STRATEGIST_QUESTION["hi" if lang == "hi" else "en"], ctx, d.name, settings(), client=client, lang=lang,
+                                        on_event=lambda e: on_event({**e, "agent": "strategist"}))
+                tested = [s_.result for s_ in srun.steps if s_.tool == "test_move" and isinstance(s_.result, dict) and s_.result.get("status") == "ok"]
+                if srun.mode == "ai" and srun.answer and srun.verified:
+                    st = {"agent": "strategist", "name": crew.name("strategist", lang), "doing": crew.doing("strategist", lang), "text": srun.answer,
+                          "tone": "good" if any(x["verdict"] == "helps" for x in tested) else "info", "ideas": tested}
+                else:
+                    st = {"agent": "strategist", "name": crew.name("strategist", lang), "doing": crew.doing("strategist", lang), "tone": "info", "ideas": [],
+                          "text": "I couldn't verify my ideas against your records this time, so I'm not showing them." if lang != "hi"
+                          else "इस बार मैं अपने उपायों को आपके रिकॉर्ड से जाँच नहीं पाया, इसलिए नहीं दिखा रहा।"}
+                found.append(st)
+                on_event({"type": "agent", "phase": "done", **st})
                 on_event({"type": "agent", "phase": "start", "agent": "cfo", "name": "FinPilot", "doing": "Writing your brief…" if lang != "hi" else "आपके लिए सार लिख रहा हूँ…"})
-                ctx = ToolContext(d.ledger, d.obligations, d.balances, d.as_of, db, d.book, d.name.replace(" (fictional)", ""), lang)
                 run = orchestrator.ask(crew.BRIEF_QUESTION["hi" if lang == "hi" else "en"], ctx, d.name, settings(), client=client, lang=lang,
                                        on_event=lambda e: on_event({**e, "agent": "cfo"}))
                 if run.mode == "ai" and run.answer and run.verified:
@@ -587,6 +608,106 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
                     "odds": p["odds"], "suggested": [m["id"] for m in p["moves"] if m["suggested"]]}
 
         return _stream(work, lang)
+
+    @app.post("/api/demo/fast-forward/stream")
+    def fast_forward(body: dict = Body(...)):
+        """Demo books only: live the next days as they could happen (engine/live.py), with the agents watching each day."""
+        from finpilot.engine import live
+
+        lang = lg()
+        d0 = ds()
+        if not d0.is_demo:
+            raise HTTPException(400, "Fast-forward only works on the demo businesses — it writes simulated days into the books.")
+        try:
+            days = int(body.get("days", 7))
+        except (TypeError, ValueError) as e:
+            raise HTTPException(400, "days must be a number") from e
+        if not 1 <= days <= 30:
+            raise HTTPException(400, "Fast-forward 1 to 30 days at a time.")
+        scenario = str(body.get("scenario", "usual"))
+        if scenario not in live.SCENARIOS:
+            raise HTTPException(400, f"scenario must be one of {', '.join(live.SCENARIOS)}")
+
+        def work(on_event) -> dict:
+            d = ds()
+            p, states = _plan(d)
+            if p.get("status") != "ok":
+                return {"status": p.get("status"), "message": p.get("message", "")}
+            dates = books.move_dates(db, d.book)
+            approved = {m["id"]: m for m in p["moves"] if states.get(m["id"]) in ("approved", "done")}
+            lp = live.Plan(safety=p["safety"], learned=p.get("learned", {}))
+            for mid, m in approved.items():
+                start = pd.Timestamp(dates.get(mid, str(d.as_of.date())))
+                if m["kind"] == "collect":
+                    lp.reminded[m["party"]] = start
+                elif m["kind"] == "pause":
+                    lp.paused[m["party"]] = start + pd.Timedelta(days=ap.Settings().pause_days)
+                elif m["kind"] == "borrow":
+                    lp.overdraft_limit = float(m["amount"])
+            try:
+                lp.overdraft_drawn = float(books.settings(db, d.book).get("overdraft_drawn") or 0)
+            except ValueError:
+                lp.overdraft_drawn = 0.0
+
+            def on_day(day, t):
+                tmp = dataset.Dataset(d.name, d.book, t.ledger, t.obligations, t.balances, day)
+                st = books.move_states(db, d.book)
+                ok = frozenset(k for k, v in st.items() if v in ("approved", "done"))
+
+                def replan():
+                    return ap.plan(tmp.ledger, tmp.balances, tmp.obligations, day, safety=_safety(d), approved=ok,
+                                   outcomes=books.reminder_outcomes(db, d.book), contingencies=False)
+
+                for a in monitor.check(db, d.book, tmp.obligations, day, st, lang, replan=replan):
+                    on_event({"type": "activity", **a})
+
+            def emit_days(log):
+                for e in log:
+                    on_event({"type": "day", **e})
+
+            seed = int(pd.Timestamp(d.as_of).strftime("%j")) + 101 * days
+            # live the days one by one so each day's events reach the screen as it is lived
+            t = d.tables()
+            cur = d.as_of
+            for k in range(days):
+                t, log = live.advance(t, cur, 1, scenario, lp, seed=seed + k, on_day=on_day)
+                cur = cur + pd.Timedelta(days=1)
+                for e in log:
+                    for it in e["items"]:
+                        if it["kind"] == "overdraft":
+                            msg = ("Drew {amt} from the standby overdraft to stay above your cushion ({u} of {lim} used)." if lang != "hi"
+                                   else "कुशन से ऊपर रहने के लिए स्टैंडबाय ओवरड्राफ़्ट से {amt} लिए ({lim} में से {u} इस्तेमाल)।")
+                            text = msg.format(amt=views.short(it["amount"]), u=views.short(it["drawn"]), lim=views.short(it["limit"]))
+                            books.log_activity(db, d.book, e["date"], "financing", "caution", text)
+                            on_event({"type": "activity", "book_date": e["date"], "agent": "financing", "tone": "caution", "text": text})
+                emit_days(log)
+                time.sleep(0.15)
+            new = dataset.Dataset(d.name, d.book, t.ledger, t.obligations, t.balances, cur)
+            dataset.save(db, new, t)
+            books.set_settings(db, d.book, {"overdraft_drawn": str(round(lp.overdraft_drawn))})
+            v = _view(dataset.current(db), lang)
+            return {"status": "ok", "date": str(cur.date()), "headline": v.get("headline"), "changes": v.get("changes", []), "odds": v.get("odds")}
+
+        return _stream(work, lang)
+
+    _TRACK: dict = {}
+
+    @app.get("/api/track-record")
+    def track_record():
+        """How the forecast and the odds would have done on this business's own past, week by week (engine/backtest.py)."""
+        from finpilot.engine import backtest
+
+        d = ds()
+        if d.is_demo:  # the demo's original history (simulated days added by fast-forward are not part of its track record)
+            key = ("demo", d.book)
+            if key not in _TRACK:
+                t = dataset._demo_tables(d.book)
+                _TRACK[key] = backtest.run(t["ledger"], t["obligations"], t["balances"])
+        else:
+            key = ("upload", smart_views._fingerprint(d))
+            if key not in _TRACK:
+                _TRACK[key] = backtest.run(d.ledger, d.obligations, d.balances)
+        return _TRACK[key] | {"business": d.name.replace(" (fictional)", ""), "is_demo": d.is_demo}
 
     @app.post("/api/autopilot/afford")
     def autopilot_afford(body: dict = Body(...)):
@@ -624,6 +745,7 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
         out: dict = {"ok": True}
         if decision == "approve":
             books.set_move_state(db, d.book, move_id, "approved")
+            monitor.watch_approved(db, d.book, d.as_of, p, m, lg())
             if m["kind"] == "collect":
                 r = khata_views.reminders(d, db, lg(), m["party"])
                 if r:
@@ -639,8 +761,11 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
                 out |= {"next": "whatsapp", "text": text, "whatsapp": khata_views.whatsapp(text, books.contacts(db, d.book).get(m["party"]))}
         elif decision == "dismiss":
             books.set_move_state(db, d.book, move_id, "dismissed")
+            monitor.unwatch(db, d.book, move_id)
         elif decision == "undo":
             books.set_move_state(db, d.book, move_id, None)
+            books.set_move_date(db, d.book, move_id, None)
+            monitor.unwatch(db, d.book, move_id)
         elif decision == "done":
             if m["kind"] == "defer":  # the supplier agreed: the bill's due date really changes in the books
                 obl = d.obligations.copy()
@@ -660,8 +785,27 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
         d = ds()
         p, states = _plan(d)
         ids = [m["id"] for m in p.get("moves", []) if m["suggested"] and states.get(m["id"]) not in ("approved", "done", "dismissed")]
-        for i in ids:
-            books.set_move_state(db, d.book, i, "approved")
+        for m in p.get("moves", []):
+            if m["id"] in ids:
+                books.set_move_state(db, d.book, m["id"], "approved")
+                monitor.watch_approved(db, d.book, d.as_of, p, m, lg())
+        return {"approved": ids}
+
+    @app.post("/api/autopilot/plan-b")
+    def switch_plan_b():
+        """The owner's OK to switch to Plan B: the planner's current best plan for today's books, plus the standby overdraft if it suggests one."""
+        d = ds()
+        p, states = _plan(d)
+        if p.get("status") != "ok":
+            raise HTTPException(400, p.get("message", "No plan yet."))
+        ids = []
+        for m in p["moves"]:
+            if (m["suggested"] or m["kind"] == "borrow") and states.get(m["id"]) not in ("approved", "done"):
+                books.set_move_state(db, d.book, m["id"], "approved")
+                monitor.watch_approved(db, d.book, d.as_of, p, m, lg())
+                ids.append(m["id"])
+        books.log_activity(db, d.book, str(d.as_of.date()), "planner", "good",
+                           "You approved Plan B." if lg() != "hi" else "आपने Plan B मंज़ूर किया।", None)
         return {"approved": ids}
 
     @app.post("/api/autopilot/safety")

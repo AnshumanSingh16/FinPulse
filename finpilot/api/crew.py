@@ -17,6 +17,8 @@ AGENTS = {
     "planner": ("Planner", "योजनाकार"),
     "financing": ("Financing agent", "फ़ाइनेंस एजेंट"),
     "auditor": ("Auditor", "ऑडिटर"),
+    "deals": ("Deals agent", "डील एजेंट"),
+    "strategist": ("Strategist (AI)", "रणनीतिकार (AI)"),
 }
 
 DOING = {
@@ -29,6 +31,8 @@ DOING = {
     "planner": ("Comparing every combination…", "हर मेल की तुलना कर रहा हूँ…"),
     "financing": ("Sizing a backup…", "बैकअप का आकार तय कर रहा हूँ…"),
     "auditor": ("Re-running the forecast to check the plan…", "योजना जाँचने के लिए अनुमान दोबारा चला रहा हूँ…"),
+    "deals": ("Looking for invoices worth paying early…", "जल्दी भुगतान लायक इनवॉइस ढूँढ रहा हूँ…"),
+    "strategist": ("Thinking beyond the usual moves…", "सामान्य कदमों से आगे सोच रहा हूँ…"),
 }
 
 
@@ -58,6 +62,8 @@ def move_title(m: dict, lang: str) -> str:
         return _l(lang, "pause {w} for 60 days", "60 दिन {w} रोकें", w=_what(m, lang))
     if k == "reserve":
         return _l(lang, "set aside {amt} for GST", "GST के लिए {amt} अलग रखें", amt=short(m["amount"]))
+    if k == "discount":
+        return _l(lang, "offer {who} {pc} off to pay {amt} early", "{who} को {amt} जल्दी देने पर {pc} छूट", who=m["party"], pc="2%", amt=short(m["invoice"]))
     if k == "borrow":
         return _l(lang, "keep a {amt} overdraft ready", "{amt} का ओवरड्राफ़्ट तैयार रखें", amt=short(m["amount"]))
     return m["title"]
@@ -86,7 +92,7 @@ def headline(p: dict, lang: str) -> str:
               "अगले 90 दिन आप अपने कुशन {s} से ऊपर रहेंगे। सबसे तंग दिन: {d}, {low}।", s=short(p["safety"]), d=day(b["lowest_date"], lang), low=short(b["lowest"]))
 
 
-def steps(p: dict, lang: str = "en") -> list[dict]:
+def steps(p: dict, lang: str = "en", ai: bool = False) -> list[dict]:
     """One finding per agent, in order. `p` is the autopilot view (moves carry their state)."""
     moves = [m for m in p["moves"] if m.get("state") != "dismissed"]
     by = lambda k: [m for m in moves if m["kind"] == k]  # noqa: E731
@@ -142,6 +148,13 @@ def steps(p: dict, lang: str = "en") -> list[dict]:
     else:
         add("tax", _l(lang, "No regular GST payment found in your records.", "आपके रिकॉर्ड में नियमित GST भुगतान नहीं मिला।"), "info")
 
+    dl = by("discount")
+    if dl:
+        parts = [_l(lang, "{who} could pay {amt} early for {c} off", "{who} {c} छूट पर {amt} जल्दी दे सकते हैं", who=m["party"], amt=short(m["invoice"]), c=short(m["cost"])) for m in dl]
+        add("deals", _join(parts, lang) + ".", "info")
+    else:
+        add("deals", _l(lang, "No invoice worth paying early before the tight days.", "तंग दिनों से पहले जल्दी भुगतान लायक कोई इनवॉइस नहीं।"), "info")
+
     sr = p["search"]
     sug = [m for m in moves if m["suggested"] and m["kind"] != "reserve"]
     os_ = o["suggested"]
@@ -155,6 +168,19 @@ def steps(p: dict, lang: str = "en") -> list[dict]:
             t += _l(lang, " Easier plans exist, but they leave you safe in only {x}.", " आसान योजनाएँ भी हैं, पर उनमें संभावना सिर्फ़ {x} है।", x=_pct(max(e["p_safe"] for e in easier)))
     else:
         t += _l(lang, "No moves needed — you're already safe in {a} of futures.", "किसी कदम की ज़रूरत नहीं — {a} भविष्यों में आप पहले से सुरक्षित हैं।", a=_pct(ob["p_safe"]))
+    for pb in p.get("plan_b", []):
+        src = next((m for m in moves if m["id"] == pb["if_fails"]), None)
+        if not src:
+            continue
+        cond = {"collect": _l(lang, "{who} hasn't paid by {d}", "{who} {d} तक भुगतान न करें", who=src["party"], d=day(pb["checkpoint"], lang)),
+                "defer": _l(lang, "{who} hasn't agreed by {d}", "{who} {d} तक न मानें", who=src["party"], d=day(pb["checkpoint"], lang)),
+                "discount": _l(lang, "{who} hasn't taken the offer by {d}", "{who} {d} तक पेशकश न मानें", who=src["party"], d=day(pb["checkpoint"], lang))}[src["kind"]]
+        then = [move_title(m, lang) for m in moves if m["id"] in pb["then"]]
+        if pb.get("backup"):
+            then.append(_l(lang, "draw on a {amt} overdraft", "{amt} का ओवरड्राफ़्ट लें", amt=short(pb["backup"]["amount"])))
+        odds = pb["backup"]["p_safe"] if pb.get("backup") else pb["p_safe"]
+        t += _l(lang, " Plan B: if {c}, {then} — odds {o}. I'll watch for it.", " Plan B: अगर {c}, तो {then} — संभावना {o}। मैं नज़र रखूँगा।",
+                c=cond, then=_join(then, lang) or _l(lang, "keep the rest of the plan", "बाकी योजना जारी रखें"), o=_pct(odds))
     add("planner", t, "good" if os_["p_safe"] >= o["target"] else "caution")
 
     bk = next((m for m in moves if m["kind"] == "borrow"), None)
@@ -173,6 +199,11 @@ def steps(p: dict, lang: str = "en") -> list[dict]:
     else:
         add("auditor", _l(lang, "The re-run gives {x}, not {y} — treat this plan with care.", "दोबारा चलाने पर {x} आया, {y} नहीं — इस योजना को सावधानी से लें।",
                           x=short(a["rerun_lowest"]), y=short(a["planned_lowest"])), "bad")
+    if not ai:
+        add("strategist", _l(lang, "Turn on AI in Settings and I'll look for ideas beyond these moves — an advance from a loyal client, selling idle "
+                                   "equipment, renegotiating rent — and test each one on your forecast before suggesting it.",
+                             "Settings में AI चालू करें — मैं इन कदमों से आगे के उपाय ढूँढूँगा (भरोसेमंद क्लाइंट से एडवांस, बेकार सामान बेचना, किराया "
+                             "दोबारा तय करना) और हर एक को आपके अनुमान पर परखकर ही सुझाऊँगा।"), "info")
     return out
 
 
@@ -195,6 +226,16 @@ def brief(p: dict, lang: str = "en") -> str:
                 amt=short(bk["amount"]), o=_pct(bk["odds_with_plan"]))
     return t.strip()
 
+
+STRATEGIST_QUESTION = {
+    "en": "[Strategist] Look beyond the standard moves (collect, move a bill, pause spending, GST reserve, overdraft). Use get_cash_autopilot, "
+          "then propose at most 2 practical, legal ideas for this business — e.g. ask a reliable client for an advance, sell idle equipment, a short "
+          "promotion, renegotiate a large payment — and TEST each one with test_move before mentioning it. Reply in at most 3 short sentences: "
+          "only tested ideas, each with its measured effect on the tightest day and the odds. If none helps, say so.",
+    "hi": "[रणनीतिकार] सामान्य कदमों (वसूली, बिल आगे बढ़ाना, खर्च रोकना, GST, ओवरड्राफ़्ट) से आगे सोचिए। get_cash_autopilot इस्तेमाल करें, फिर इस कारोबार के लिए "
+          "ज़्यादा से ज़्यादा 2 व्यावहारिक, कानूनी उपाय सुझाइए — जैसे भरोसेमंद क्लाइंट से एडवांस, बेकार सामान बेचना, छोटा ऑफ़र, बड़े भुगतान पर दोबारा बात — और "
+          "हर उपाय को बताने से पहले test_move से परखिए। ज़्यादा से ज़्यादा 3 छोटे वाक्यों में जवाब दें: सिर्फ़ परखे गए उपाय, हर एक का सबसे तंग दिन और संभावना पर असर।",
+}
 
 BRIEF_QUESTION = {
     "en": "Brief me like my finance manager, in at most 4 short sentences: will I run short of cash, what should I approve, and how much does it improve my odds? "

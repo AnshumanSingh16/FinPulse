@@ -2,7 +2,7 @@
 
 import {
   AlertTriangle, ArrowRight, Banknote, Check, CheckCheck, ChevronDown, CircleCheck, Clock, Copy, HandCoins, Landmark, MessageCircle, PauseCircle, Pencil,
-  ShieldCheck, ShoppingBag, Sparkles, TrendingDown, TrendingUp, Undo2, Wand2, X,
+  Percent, ShieldCheck, ShoppingBag, Sparkles, TrendingDown, TrendingUp, Undo2, Wand2, X,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -10,6 +10,7 @@ import { useCallback, useContext, useEffect, useState } from "react";
 import { CashChart } from "@/components/cash-chart";
 import { CrewSheet } from "@/components/crew";
 import { DataVersion } from "@/components/data-version";
+import { ActivityFeed, FastForwardCard, TrackRecordCard, WatchCard, type Activity, type PlanB, type Watch } from "@/components/live";
 import { EvidenceButton } from "@/components/evidence";
 import { CountUp, useToast } from "@/components/fx";
 import { Button, Card, cx, ErrorNote, Loading, MoneyInput, Pill, Sheet } from "@/components/ui";
@@ -39,7 +40,7 @@ interface Odds {
 }
 interface Move {
   id: string;
-  kind: "collect" | "defer" | "pause" | "reserve" | "borrow";
+  kind: "collect" | "defer" | "pause" | "reserve" | "borrow" | "discount";
   agent: string;
   party: string;
   amount: number;
@@ -54,6 +55,8 @@ interface Move {
   backup?: boolean;
   odds_with_plan?: number;
   interest_if_used?: number;
+  invoice?: number;
+  cost?: number;
   state: "open" | "approved" | "done";
 }
 interface Week {
@@ -82,6 +85,10 @@ interface Plan {
   weekly: Week[];
   changes: { tone: "good" | "bad" | "caution"; text: string }[];
   changes_since: string | null;
+  plan_b: PlanB[];
+  watching: Watch[];
+  activity: Activity[];
+  clock: { date: string; days_moved: number };
   evidence: Evidence;
 }
 
@@ -91,6 +98,7 @@ const AGENT: Record<Move["kind"], { label: string; I: React.ElementType; grad: s
   pause: { label: "Spending agent", I: PauseCircle, grad: "grad-sunset" },
   reserve: { label: "Tax agent", I: Landmark, grad: "grad-violet" },
   borrow: { label: "Financing agent", I: Banknote, grad: "grad-sunset" },
+  discount: { label: "Deals agent", I: Percent, grad: "grad-ocean" },
 };
 
 function day(iso: string | null | undefined, lang = "en") {
@@ -104,12 +112,14 @@ function moveTitle(m: Move, t: T, lang: string) {
   if (m.kind === "defer") return t("Ask {who} to move {bill} to {date}", { who: m.party, bill: m.items[0], date: day(m.to_date, lang) });
   if (m.kind === "pause") return m.party === "Owner Drawings" ? t("Pause owner drawings for 60 days") : t("Pause marketing spend for 60 days");
   if (m.kind === "borrow") return t("Keep a {amt} overdraft ready", { amt: short(m.amount) });
+  if (m.kind === "discount") return t("Offer {who} 2% off to pay {amt} by {date}", { who: m.party, amt: short(m.invoice ?? 0), date: day(m.to_date, lang) });
   return t("Set aside {amt} for GST due {date}", { amt: short(m.amount), date: day(m.due, lang) });
 }
 function moveDetail(m: Move, t: T, lang: string) {
   if (m.kind === "collect") return t("{n} invoice(s) overdue, oldest {d} days. Assumes they pay within a week of your reminder.", { n: m.items.length, d: m.days_late ?? 0 });
   if (m.kind === "defer") return t("{amt} due {from}. Assumes they agree to 3 more weeks.", { amt: inr(m.amount), from: day(m.from_date, lang) });
   if (m.kind === "pause") return t("About {amt} a month on average; pausing keeps {kept} in the bank.", { amt: short(m.monthly ?? 0), kept: short(m.amount) });
+  if (m.kind === "discount") return t("Due {date}. Costs {amt}; assumes they accept (7 in 10 do in the simulation).", { date: day(m.from_date, lang), amt: short(m.cost ?? 0) });
   if (m.kind === "borrow") return t("Only if the plan falls short. Using all of it for 90 days would cost about {amt} in interest (at about 14% a year).", { amt: short(m.interest_if_used ?? 0) });
   return t("Your typical monthly GST payment, kept aside so it isn't spent by mistake.");
 }
@@ -140,7 +150,11 @@ export default function TodayPage() {
       <WeekStrip p={p} />
       {p.changes.length > 0 && <Changes p={p} />}
       <PlanSection p={p} onChange={load} />
+      <WatchCard planB={p.plan_b ?? []} watching={p.watching ?? []} moves={p.moves} />
+      <ActivityFeed items={p.activity ?? []} onChange={load} />
+      {p.is_demo && <FastForwardCard clock={p.clock} onDone={load} />}
       <AffordCard p={p} />
+      <TrackRecordCard />
       <Details p={p} onCushion={() => setCushion(true)} />
       <AskBox />
       <CrewSheet open={crew} onClose={() => setCrew(false)} onApproved={load} canApprove={p.moves.some((m) => m.suggested && m.state === "open" && m.kind !== "reserve")} />

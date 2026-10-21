@@ -37,6 +37,8 @@ A dashboard shows a chart and leaves the thinking to the owner. In FinPilot a cr
 - **They check each other.** The auditor re-runs the forecast. When an AI writes the summary, every figure is verified against the tools' results.
 - **They act within limits.** They prepare the WhatsApp reminders, the supplier message and the letter to the bank, but the owner sends them. Nothing moves money by itself.
 - **They notice change.** When a customer pays, the picture updates: *"You no longer run out of cash."*
+- **They keep watching after you approve.** Every uncertain move has a checkpoint and a Plan B. A missed checkpoint is caught, learned from, and comes with the next step ready.
+- **They prove themselves.** The Track record replays the forecast on the business's own past and reports how often it was right, including where it is weak.
 
 The language is for owners:
 - *"safe to spend today"*

@@ -28,6 +28,11 @@ SCHEMA = [
     "CREATE TABLE IF NOT EXISTS checkups (book TEXT, lang TEXT, day TEXT, ran_at TEXT, data TEXT, PRIMARY KEY (book, lang))",
     "CREATE TABLE IF NOT EXISTS autopilot_moves (book TEXT, id TEXT, state TEXT, at TEXT, PRIMARY KEY (book, id))",
     "CREATE TABLE IF NOT EXISTS autopilot_snapshots (id INTEGER PRIMARY KEY AUTOINCREMENT, book TEXT, at TEXT, fingerprint TEXT, data TEXT)",
+    "CREATE TABLE IF NOT EXISTS watches (id INTEGER PRIMARY KEY AUTOINCREMENT, book TEXT, move_id TEXT, kind TEXT, party TEXT, items TEXT, "
+    "amount REAL, started TEXT, checkpoint TEXT, plan_b TEXT, status TEXT, resolved TEXT)",
+    "CREATE TABLE IF NOT EXISTS agent_activity (id INTEGER PRIMARY KEY AUTOINCREMENT, book TEXT, book_date TEXT, at TEXT, agent TEXT, tone TEXT, text TEXT, action TEXT)",
+    "CREATE TABLE IF NOT EXISTS reminder_outcomes (id INTEGER PRIMARY KEY AUTOINCREMENT, book TEXT, party TEXT, sent_on TEXT, result TEXT, resolved_on TEXT)",
+    "CREATE TABLE IF NOT EXISTS move_dates (book TEXT, id TEXT, book_date TEXT, PRIMARY KEY (book, id))",
     "CREATE TABLE IF NOT EXISTS chat_log (id INTEGER PRIMARY KEY AUTOINCREMENT, book TEXT, at TEXT, role TEXT, kind TEXT, data TEXT)",
 ]
 
@@ -133,7 +138,7 @@ def update_goal(db: Path, book: str, goal_id: int, add: float | None = None, del
 
 
 DEFAULT_SETTINGS = {"gst_registered": "yes", "gst_rate_sales": "5", "gst_rate_purchases": "5", "gst_filing": "monthly", "language": "en",
-                    "business_type": "", "safety": "", "crew_last_run": ""}
+                    "business_type": "", "safety": "", "crew_last_run": "", "overdraft_drawn": ""}
 
 
 def settings(db: Path, book: str) -> dict[str, str]:
@@ -175,7 +180,8 @@ def pop_entry(db: Path, book: str, entry_id: str) -> dict | None:
 def reset_book(db: Path, book: str) -> None:
     """Forget everything the owner did in a book (used for 'Reset demo')."""
     with connect(db) as con:
-        for t in ("contacts", "promises", "cat_rules", "budgets", "goals", "settings", "entry_log", "agent_actions", "memory", "checkups", "chat_log", "autopilot_moves", "autopilot_snapshots"):
+        for t in ("contacts", "promises", "cat_rules", "budgets", "goals", "settings", "entry_log", "agent_actions", "memory", "checkups", "chat_log", "autopilot_moves", "autopilot_snapshots",
+                  "watches", "agent_activity", "reminder_outcomes", "move_dates"):
             con.execute(f"DELETE FROM {t} WHERE book = ?", (book,))
 
 
@@ -308,3 +314,81 @@ def snapshot(db: Path, book: str, fingerprint: str, data: dict) -> tuple[dict | 
         else:
             prev = rows[1] if len(rows) > 1 else None
     return (json.loads(prev[2]), prev[0]) if prev else (None, None)
+
+
+# ---------------------------------------------------------------- the agents' watch list, activity log and what they learned
+
+
+def add_watch(db: Path, book: str, move: dict, started: str, checkpoint: str, plan_b: dict | None) -> None:
+    with connect(db) as con:
+        con.execute("DELETE FROM watches WHERE book = ? AND move_id = ? AND status = 'open'", (book, move["id"]))
+        con.execute("INSERT INTO watches (book, move_id, kind, party, items, amount, started, checkpoint, plan_b, status) VALUES (?,?,?,?,?,?,?,?,?, 'open')",
+                    (book, move["id"], move["kind"], move.get("party", ""), json.dumps(move.get("items", [])), float(move.get("amount", 0)), started, checkpoint,
+                     json.dumps(plan_b) if plan_b else None))
+
+
+def drop_watch(db: Path, book: str, move_id: str) -> None:
+    with connect(db) as con:
+        con.execute("DELETE FROM watches WHERE book = ? AND move_id = ? AND status = 'open'", (book, move_id))
+
+
+def watches(db: Path, book: str, status: str | None = "open") -> list[dict]:
+    with connect(db) as con:
+        q = "SELECT id, move_id, kind, party, items, amount, started, checkpoint, plan_b, status, resolved FROM watches WHERE book = ?"
+        rows = con.execute(q + (" AND status = ?" if status else "") + " ORDER BY id", (book, status) if status else (book,)).fetchall()
+    keys = ("id", "move_id", "kind", "party", "items", "amount", "started", "checkpoint", "plan_b", "status", "resolved")
+    out = []
+    for r in rows:
+        w = dict(zip(keys, r))
+        w["items"] = json.loads(w["items"] or "[]")
+        w["plan_b"] = json.loads(w["plan_b"]) if w["plan_b"] else None
+        out.append(w)
+    return out
+
+
+def close_watch(db: Path, book: str, watch_id: int, status: str, resolved: str) -> None:
+    with connect(db) as con:
+        con.execute("UPDATE watches SET status = ?, resolved = ? WHERE book = ? AND id = ?", (status, resolved, book, watch_id))
+
+
+def log_activity(db: Path, book: str, book_date: str, agent: str, tone: str, text: str, action: dict | None = None) -> None:
+    with connect(db) as con:
+        con.execute("INSERT INTO agent_activity (book, book_date, at, agent, tone, text, action) VALUES (?,?,?,?,?,?,?)",
+                    (book, book_date, store.now(), agent, tone, text, json.dumps(action) if action else None))
+
+
+def activity(db: Path, book: str, limit: int = 30) -> list[dict]:
+    with connect(db) as con:
+        rows = con.execute("SELECT id, book_date, at, agent, tone, text, action FROM agent_activity WHERE book = ? ORDER BY id DESC LIMIT ?", (book, limit)).fetchall()
+    return [{"id": r[0], "book_date": r[1], "at": r[2], "agent": r[3], "tone": r[4], "text": r[5], "action": json.loads(r[6]) if r[6] else None} for r in rows]
+
+
+def note_reminder(db: Path, book: str, party: str, sent_on: str) -> None:
+    with connect(db) as con:
+        if not con.execute("SELECT 1 FROM reminder_outcomes WHERE book = ? AND party = ? AND result IS NULL", (book, party)).fetchone():
+            con.execute("INSERT INTO reminder_outcomes (book, party, sent_on) VALUES (?,?,?)", (book, party, sent_on))
+
+
+def resolve_reminder(db: Path, book: str, party: str, result: str, on: str) -> None:
+    with connect(db) as con:
+        con.execute("UPDATE reminder_outcomes SET result = ?, resolved_on = ? WHERE book = ? AND party = ? AND result IS NULL", (result, on, book, party))
+
+
+def reminder_outcomes(db: Path, book: str) -> dict[str, tuple[int, int]]:
+    """Per customer: (reminders whose outcome is known, of which paid)."""
+    with connect(db) as con:
+        rows = con.execute("SELECT party, COUNT(*), SUM(result = 'paid') FROM reminder_outcomes WHERE book = ? AND result IS NOT NULL GROUP BY party", (book,)).fetchall()
+    return {r[0]: (int(r[1]), int(r[2] or 0)) for r in rows}
+
+
+def set_move_date(db: Path, book: str, move_id: str, book_date: str | None) -> None:
+    with connect(db) as con:
+        if book_date is None:
+            con.execute("DELETE FROM move_dates WHERE book = ? AND id = ?", (book, move_id))
+        else:
+            con.execute("INSERT OR REPLACE INTO move_dates VALUES (?, ?, ?)", (book, move_id, book_date))
+
+
+def move_dates(db: Path, book: str) -> dict[str, str]:
+    with connect(db) as con:
+        return dict(con.execute("SELECT id, book_date FROM move_dates WHERE book = ?", (book,)).fetchall())

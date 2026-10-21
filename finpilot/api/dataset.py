@@ -71,7 +71,8 @@ def load(db: Path, book: str) -> Dataset | None:
         if saved is None:
             t = _demo_tables(book)
             return Dataset(DEMOS[book]["name"], book, t["ledger"].copy(), t["obligations"].copy(), t["balances"].copy(), pd.Timestamp(DEMO_AS_OF))
-        return Dataset(saved["name"], book, saved["ledger"], saved.get("obligations"), saved.get("balances"), pd.Timestamp(DEMO_AS_OF))
+        # A demo's date only moves when the owner fast-forwards it (see engine/live.py); a reset brings it back.
+        return Dataset(saved["name"], book, saved["ledger"], saved.get("obligations"), saved.get("balances"), pd.Timestamp(saved.get("as_of") or DEMO_AS_OF))
     return load_started(db)
 
 

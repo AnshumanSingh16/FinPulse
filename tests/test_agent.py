@@ -103,7 +103,7 @@ class TestTools:
                    "draft_budget": {"category": "Rent", "monthly_limit": 50000},
                    "update_plan": {"steps": [{"title": "Check cash", "status": "doing"}]}, "remember": {"fact": "Closed on Sundays"},
                    "forget": {"id": 1}, "draft_promise": {"customer": "Metro Foods", "date": "2026-10-10"},
-                   "draft_recategorise": {"party": "Metro Foods", "category": "Sales"}, "plan_purchase": {"amount": 300000, "label": "Machine"}}
+                   "draft_recategorise": {"party": "Metro Foods", "category": "Sales"}, "plan_purchase": {"amount": 300000, "label": "Machine"}, "test_move": {"label": "Sell old printer", "flows": [{"date": "2026-10-10", "amount": 40000}]}}
         for t in TOOLS:
             ok, r = run_tool(ctx, t.name, minimal.get(t.name, {}))
             assert ok, (t.name, r)

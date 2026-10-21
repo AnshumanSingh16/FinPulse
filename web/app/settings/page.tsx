@@ -1,6 +1,6 @@
 "use client";
 
-import { Bot, Brain, Briefcase, ChevronRight, Database, FileText, Languages, MessageSquareX, Palette } from "lucide-react";
+import { Bot, Brain, Briefcase, ChevronRight, Database, FileText, Languages, MessageSquareX, Palette, Target } from "lucide-react";
 import Link from "next/link";
 import { useContext, useState } from "react";
 import { MemorySheet } from "@/components/agent";
@@ -62,6 +62,7 @@ export default function SettingsPage() {
         )}
         <Row I={Bot} title={t("FinPilot's brain")} sub={state?.ai.enabled ? t("AI on — {provider}", { provider: state.ai.provider_label }) : t("Built-in answers (offline). Add a free Gemini key to understand anything.")} onClick={() => setAi(true)} />
         <Row I={Brain} title={t("What FinPilot remembers")} sub={t("Preferences you told it, like who not to remind")} onClick={() => setMemory(true)} />
+        <Row I={Target} title={t("Track record")} sub={t("How accurate FinPilot would have been on your past weeks")} href="/proof/" />
         <Row I={FileText} title={t("Monthly report for your CA")} sub={t("Profit, costs, GST estimate — print or save as PDF")} href="/reports/" />
       </div>
 

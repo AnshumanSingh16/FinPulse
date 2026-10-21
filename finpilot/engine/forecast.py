@@ -37,6 +37,69 @@ class ForecastOptions:
     run_rate_months: int = 3
     min_buffer: float | None = None
     extra_flows: list[dict] = field(default_factory=list)  # {"date", "amount" (signed), "label"}
+    # Learned from the business's own history (used by the cash autopilot; off by default for the plain forecast):
+    customer_delays: bool = False   # expect each customer's invoice on its due date + that customer's usual delay
+    recurring: bool = False         # monthly payments to/from the same party (rent, salaries, EMIs, retainers) on their usual day
+    billing_cycles: bool = False    # typical flows in an invoiced category start one billing cycle after its last scheduled item
+
+
+def customer_delay_days(obligations: pd.DataFrame | None) -> tuple[dict[str, int], int]:
+    """Median days late per customer (3+ paid invoices), and for everyone together."""
+    if obligations is None or not len(obligations):
+        return {}, 0
+    o = obligations[(obligations["kind"] == "receivable") & (obligations["status"] == "paid")]
+    late = (pd.to_datetime(o["paid_date"]) - pd.to_datetime(o["due_date"])).dt.days.clip(lower=0).dropna()
+    if not len(late):
+        return {}, 0
+    per = {k: int(round(g.median())) for k, g in late.groupby(o.loc[late.index, "counterparty"]) if len(g) >= 3}
+    return per, int(round(late.median()))
+
+
+def recurring_payments(ledger: pd.DataFrame, as_of, months: int = 6, obligations: pd.DataFrame | None = None) -> list[dict]:
+    """Monthly payments that repeat: same party, category and direction; at least 3 of the last `months` months; amounts within
+    15% of each other; about a month apart. Series already covered by an unpaid invoice/bill for that party are left to it."""
+    a = ts(as_of)
+    df = prepare_ledger(ledger)
+    df = df[(df["date"] <= a) & (df["date"] > a - pd.DateOffset(months=months)) & ~df["cls"].isin(RUN_RATE_EXCLUDED)]
+    covered: set[tuple] = set()
+    if obligations is not None and len(obligations):
+        pend = obligations[obligations["status"] == "pending"]
+        covered = set(zip(pend["counterparty"].astype(str), pend["category"].astype(str)))
+    out = []
+    for (party, cat, direction), g in df.groupby(["counterparty", "category", "direction"]):
+        if (str(party), str(cat)) in covered or len(g) < 3 or str(party) in ("", "Day-to-day"):
+            continue
+        g = g.sort_values("date")
+        if g["date"].dt.to_period("M").nunique() < len(g) or g["date"].dt.to_period("M").nunique() < 3:
+            continue  # more than one a month, or too few months
+        amt = g["amount"].tail(3)
+        if amt.std(ddof=0) > 0.15 * amt.mean():
+            continue
+        gaps = g["date"].diff().dt.days.dropna()
+        if not (25 <= gaps.median() <= 35):
+            continue
+        if (a - g["date"].iloc[-1]).days > 40:
+            continue  # stopped
+        out.append({"counterparty": party, "category": cat, "direction": direction, "amount": money(float(amt.median())),
+                    "day": int(round(g["date"].dt.day.tail(3).median())), "last": g["date"].iloc[-1], "txn_ids": g["txn_id"].tolist()})
+    return out
+
+
+def billing_cycle_days(obligations: pd.DataFrame | None) -> dict[str, int]:
+    """Per category: the usual number of days between one invoice/bill and the next to the same party (3+ items)."""
+    if obligations is None or not len(obligations):
+        return {}
+    o = obligations.copy()
+    o["due_date"] = pd.to_datetime(o["due_date"])
+    out = {}
+    for cat, g in o.groupby("category"):
+        gaps = []
+        for _, h in g.groupby("counterparty"):
+            if len(h) >= 3:
+                gaps.extend(h["due_date"].sort_values().diff().dt.days.dropna().tolist())
+        if len(gaps) >= 2:
+            out[cat] = int(min(45, max(1, round(float(pd.Series(gaps).median())))))
+    return out
 
 
 def one_off_ids(ledger: pd.DataFrame, as_of, days: int) -> set[str]:
@@ -48,11 +111,54 @@ def one_off_ids(ledger: pd.DataFrame, as_of, days: int) -> set[str]:
     for f in unusual_transactions(ledger, as_of, lookback_days=days)["flags"]:
         if f["type"] == "possible_duplicate":
             out.update(f["txn_ids"][1:])
-        elif f["type"] == "rare_large_payment":
+        elif f["type"] == "rare_large_payment" and not _seen_before(ledger, f):
+            # A large payment in a young category is only a one-off if nothing like it was paid before
+            # (a monthly salary in the 3rd month of records is typical, not rare).
             out.update(f["txn_ids"])
         elif f["type"] == "outlier" and f["amount"] >= 2 * (f["amount"] - f["excess"]):
             out.update(f["txn_ids"])
     return out
+
+
+def _seen_before(ledger: pd.DataFrame, flag: dict, tolerance: float = 0.25) -> bool:
+    d = pd.to_datetime(ledger["date"])
+    prior = ledger[(ledger["category"] == flag["category"]) & (d < pd.Timestamp(flag["date"])) & (ledger["direction"] == "out")]["amount"]
+    return bool(((prior - flag["amount"]).abs() <= tolerance * flag["amount"]).any())
+
+
+def invoiced_txn_ids(ledger: pd.DataFrame, obligations: pd.DataFrame | None) -> set[str]:
+    """Bank lines that are the payment of a recorded invoice or bill (same party, amount and date as its payment)."""
+    if obligations is None or not len(obligations):
+        return set()
+    o = obligations[obligations["status"] == "paid"][["counterparty", "amount", "paid_date"]].copy()
+    o["key"] = o["counterparty"].astype(str) + "|" + o["amount"].round(0).astype(str) + "|" + pd.to_datetime(o["paid_date"]).dt.strftime("%Y-%m-%d")
+    led = ledger.copy()
+    led["key"] = led["counterparty"].astype(str) + "|" + led["amount"].round(0).astype(str) + "|" + pd.to_datetime(led["date"]).dt.strftime("%Y-%m-%d")
+    return set(led.loc[led["key"].isin(set(o["key"])), "txn_id"])
+
+
+def run_rate_split(ledger: pd.DataFrame, obligations: pd.DataFrame | None, as_of, months: int = 3) -> pd.DataFrame:
+    """The run rate per category, split into money that comes through invoices/bills (`billed`) and money that doesn't
+    (`unbilled`, e.g. counter sales). Invoices and bills already in the books cover the billed part for their cycle."""
+    total = run_rate(ledger, as_of, months)
+    billed_ids = invoiced_txn_ids(ledger, obligations)
+    pend_pairs: set[tuple] = set()
+    if obligations is not None and len(obligations):
+        pend = obligations[obligations["status"] == "pending"]
+        pend_pairs = set(zip(pend["category"].astype(str), pend["counterparty"].astype(str)))
+    pair = ledger["category"].astype(str) + "\x00" + ledger["counterparty"].astype(str)
+    covered_mask = ~ledger["txn_id"].isin(billed_ids) & pair.isin({f"{c}\x00{p}" for c, p in pend_pairs})
+
+    def part(mask) -> pd.Series:
+        if not mask.any():
+            return pd.Series(dtype=float)
+        return run_rate(ledger[mask], as_of, months).set_index("category")["monthly"]
+
+    total["billed"] = total["category"].map(part(ledger["txn_id"].isin(billed_ids))).fillna(0.0)
+    # paid to/by a party that already has a scheduled item in the books (e.g. payroll, rent): covered by those items
+    total["covered"] = total["category"].map(part(covered_mask)).fillna(0.0)
+    total["unbilled"] = (total["monthly"] - total["billed"] - total["covered"]).round(2)
+    return total
 
 
 def run_rate(ledger: pd.DataFrame, as_of, months: int = 3) -> pd.DataFrame:
@@ -113,6 +219,7 @@ def forecast_cash_flow(
                 o[c] = pd.to_datetime(o[c]).dt.normalize()
         pend = o[o["status"] == "pending"]
         frac = opt.receivable_collection_pct / 100
+        delays, pooled_delay = customer_delay_days(o) if opt.customer_delays else ({}, 0)
         for r in pend.itertuples():
             if r.kind == "receivable":
                 if r.due_date < start:
@@ -121,7 +228,7 @@ def forecast_cash_flow(
                         continue
                     when = start + pd.Timedelta(days=opt.overdue_receivable_days)
                 else:
-                    when = r.due_date + pd.Timedelta(days=opt.receivable_delay_days)
+                    when = r.due_date + pd.Timedelta(days=opt.receivable_delay_days + (delays.get(r.counterparty, pooled_delay) if opt.customer_delays else 0))
                 amount = r.amount * frac
                 label = f"{r.item_id} from {r.counterparty}"
             else:
@@ -132,6 +239,9 @@ def forecast_cash_flow(
                 flows.append({"date": when, "amount": money(amount), "label": label, "source": r.item_id, "category": r.category, "kind": "scheduled"})
                 record_ids.append(r.item_id)
         assumptions.append("Pending receivables are received on their due dates" + (f" + {opt.receivable_delay_days} days" if opt.receivable_delay_days else "") + (f", {opt.receivable_collection_pct:g}% collected" if frac != 1 else "") + ".")
+        if opt.customer_delays:
+            assumptions.append("Each customer's invoices are expected on the due date plus that customer's usual delay "
+                               f"(median of their past payments; {pooled_delay} days for customers with fewer than 3 past payments).")
         assumptions.append("Pending payables are paid on their due dates; overdue payables on the first day.")
         if opt.include_overdue_receivables:
             assumptions.append(f"Overdue receivables are collected {opt.overdue_receivable_days} days from today.")
@@ -140,8 +250,29 @@ def forecast_cash_flow(
     else:
         limitations.append("No invoices or bills were provided: scheduled inflows and outflows are unknown.")
 
+    rr_ledger = ledger
+    if opt.recurring and opt.include_run_rate:
+        series = recurring_payments(ledger, start, obligations=o if not o.empty else None)
+        for r in series:
+            # next occurrences on the usual day of the month, from about a month after the last one
+            month = (r["last"] + pd.Timedelta(days=20)).to_period("M")
+            while True:
+                when = month.to_timestamp() + pd.Timedelta(days=min(r["day"], month.days_in_month) - 1)
+                if when > end:
+                    break
+                if when > start:
+                    sign = 1 if r["direction"] == "in" else -1
+                    flows.append({"date": when, "amount": sign * r["amount"], "label": f"{r['counterparty']} (monthly)", "source": "recurring",
+                                  "category": r["category"], "kind": "recurring"})
+                month += 1
+        if series:
+            assumptions.append(f"{len(series)} monthly payment(s) that repeat in your bank lines are expected on their usual day: "
+                               + ", ".join(f"{r['counterparty']} {r['amount']:,.0f} around the {r['day']}" for r in series[:6]) + ".")
+            rec_ids = {i for r in series for i in r["txn_ids"]}
+            rr_ledger = ledger[~ledger["txn_id"].isin(rec_ids)]
+
     if opt.include_run_rate:
-        rr = run_rate(ledger, start, opt.run_rate_months)
+        rr = run_rate_split(rr_ledger, obligations, start, opt.run_rate_months) if opt.billing_cycles else run_rate(rr_ledger, start, opt.run_rate_months)
         win = rr.attrs.get("window")
         sched_last = (
             {}
@@ -149,15 +280,27 @@ def forecast_cash_flow(
             else o[o["status"] == "pending"].groupby("category")["due_date"].max().to_dict()
         )
         total_monthly = 0.0
+        cycles = billing_cycle_days(o) if opt.billing_cycles and not o.empty else {}
         for r in rr.itertuples():
             if abs(r.monthly) < 1:
                 continue
-            begin = max(start, sched_last.get(r.category, start))
-            day = begin + pd.Timedelta(days=1)
-            per_day = r.monthly * 12 / 365
-            while day <= end:
-                flows.append({"date": day, "amount": per_day, "label": f"Typical {r.category.lower()}", "source": "run_rate", "category": r.category, "kind": "assumed"})
-                day += pd.Timedelta(days=1)
+            if opt.billing_cycles:
+                # money that doesn't come through invoices/bills is typical from tomorrow; the invoiced part is covered by the
+                # invoices/bills already in the books until one billing cycle after the last of them
+                last = sched_last.get(r.category)
+                parts = [(r.unbilled, start), (r.covered, max(start, last) if last is not None else start)]
+                if abs(r.billed) >= 1:
+                    parts.append((r.billed, max(start, last + pd.Timedelta(days=cycles.get(r.category, 0))) if last is not None else start))
+            else:
+                parts = [(r.monthly, max(start, sched_last.get(r.category, start)))]
+            for monthly, begin in parts:
+                if abs(monthly) < 1:
+                    continue
+                day = begin + pd.Timedelta(days=1)
+                per_day = monthly * 12 / 365
+                while day <= end:
+                    flows.append({"date": day, "amount": per_day, "label": f"Typical {r.category.lower()}", "source": "run_rate", "category": r.category, "kind": "assumed"})
+                    day += pd.Timedelta(days=1)
             total_monthly += r.monthly
         assumptions.append(
             f"Typical unscheduled flows: the average of {win[0]} to {win[1]} per category, spread evenly "

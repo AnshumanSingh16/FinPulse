@@ -20,9 +20,27 @@
 | Tax | Sets the next GST payment aside. |
 | Planner | Scores **every combination** of moves exactly, stress-tests the best ones in the same futures, and picks the plan with the best odds. Among plans that are about as safe, it picks the one that asks least of you. |
 | Financing | If the plan still leaves real risk, it sizes a standby overdraft from the bad futures (1 in 10) and prepares the letter to your bank. |
+| Deals | Offers a reliable customer a small discount to pay an invoice early, but only when the tightest day falls before its due date. |
 | Auditor | Re-runs the full forecast with the chosen plan and confirms it matches the planner. |
+| Strategist (AI) | With an AI key, suggests ideas beyond these moves and **tests each one with `test_move`** before mentioning it. |
 
 Then FinPilot sums it up in plain words. With an AI key, the AI writes this summary from the tools' results, and every figure is checked; if one doesn't match, you get the built-in summary instead. You can approve the whole plan with one tap.
+
+**Plan B and autonomy over time.** Every move that depends on someone else gets a checkpoint and a Plan B, for example: *"If Kaveri hasn't paid by 10 Oct → …"*. After you approve, the agents keep watching:
+- They notice a missed checkpoint and prepare a firmer reminder.
+- They learn from how each customer responds to reminders, and the odds update.
+- They re-plan with today's books and ask you to approve Plan B.
+- If you approved a standby overdraft, they draw on it on the day cash would dip below your cushion.
+
+Everything is logged in **What your agents did**. On the demos, **Watch your agents over time** lives the next 1–4 weeks with simulated payments, so you can see all of this happen.
+
+**Track record** (`/proof/`): for every past week, FinPilot rewinds the books, forecasts 30 days exactly as it does today, and compares with what really happened. It reports:
+- error against a "balance stays flat" guess
+- real dips flagged in advance
+- the odds score (Brier)
+- how often reality fell inside the simulated range
+
+See **[PITCH.md](PITCH.md)** for the numbers.
 
 **Can I afford it?** Type an amount and pick a date. The answer is **Yes**, **Yes, if you approve the plan**, **Risky** or **Not now**, with your odds and the earliest safe day to pay without changing anything.
 
@@ -107,13 +125,13 @@ FINPILOT_PROVIDER=gemini        # optional when only one key is set
 
 ## A 3-minute tour (three demo businesses)
 
-1. Open the app. You're in **Pixel Pundit Studio**, a design agency. The top card says **"Money runs out in 32 days"**, with **₹0** safe to spend and a **2%** chance of staying safe.
-2. Tap **Fix it for me** and watch the crew work. The Risk analyst finds you run out in 81% of futures, and the Planner scores 8 combinations and picks: collect from Kaveri Hospitals, pause drawings and pause marketing. That plan still depends on Kaveri paying, so the Financing agent suggests a ₹7.5 L standby overdraft, which takes your odds to 91%. The Auditor confirms the numbers.
-3. Tap **Approve the plan**. The top card changes to *"Your plan works — if customers pay"*. Tap **Approve & copy bank letter** on the backup card.
-4. In **Can I afford it?**, try ₹2,00,000 next week. The answer is **Not now**, and it tells you why.
-5. Record a payment from Kaveri Hospitals under **People** (₹5,25,600), then come back to **Today**. **What changed** shows that they paid and that you no longer run out.
-6. Switch to **Brew & Bun Café** (tap the business name at the top). Money gets tight in 62 days, and here the Planner prefers pausing drawings and marketing (85%) over collecting (76%). Then try **Annapurna Masala Works**, which is all set. Ask it *"Can I afford a ₹12 lakh machine?"*: the answer is Risky.
-7. **Settings** (⚙): turn on AI with a free Gemini key, switch to Hindi (the agents speak Hindi too), set your business type, or use your own books.
+1. Open the app. You're in **Pixel Pundit Studio**, a design agency. The top card reads **"Money runs out in 32 days"**, with ₹0 safe to spend and a 2% chance of staying safe.
+2. Tap **Fix it for me** and watch the crew report live. The plan depends on a hospital client that is 61 days late, so the Financing agent sizes a ₹5.5 L standby overdraft, which takes the odds to 90%. The Planner's report also includes Plan B.
+3. Tap **Approve the plan**. *"Your agents are watching: Kaveri Hospitals should pay by 10 Oct."*
+4. In **Watch your agents over time**, pick *"The late customer never pays"* and tap **+2 weeks**. On 10 Oct the agents flag the missed checkpoint, learn that Kaveri is less likely to pay (60% → 48%), re-plan, and ask you to approve Plan B. Tap **Approve Plan B**, then **+1 month** to watch the overdraft drawn on salary day.
+5. Try *"The late customer pays after the reminder"* instead (after **Back to the start**). Kaveri pays on 5 Oct, and the agents learn the other way (60% → 68%).
+6. **How accurate is this?** opens the Track record. Switch to **Brew & Bun Café** for the strongest numbers: 22 of 22 real dips flagged, and an 82% smaller miss on the tightest day than guessing.
+7. **Can I afford it?** Try ₹2,00,000 next week. **Settings** (⚙) lets you switch to Hindi (the agents speak Hindi too), turn on AI so the Strategist suggests its own ideas, or use your own books.
 
 ## Your own data
 
@@ -153,7 +171,9 @@ finpilot/
   engine/                   Pure Python + pandas. ALL financial calculations live here (tested)
     summary.py  expenses.py  cash.py  forecast.py  decision.py  alerts.py
     autopilot.py            The cash autopilot: candidate moves, exhaustive plan search, financing backup, auditor, afford, weekly view
-    risk.py                 1,000 simulated futures from each customer's payment history (numpy)
+    risk.py                 1,000 simulated futures from each customer's payment history; learned reminder odds (numpy)
+    live.py                 Fast-forward for demos: lives the next days with simulated payments
+    backtest.py             Track record: rewinds the books week by week and scores forecasts and odds
   agent/                    tools.py (approved tools + validation), orchestrator.py (agent loop),
                             verify.py (independent checks), offline.py (built-in answers)
   api/
@@ -161,6 +181,7 @@ finpilot/
     views.py                Plain-language views (status, attention items, reminders…) over the engine
     dataset.py              Demo vs. your uploaded data
     crew.py                 The agent crew's findings in English/Hindi, and the "what changed" feed
+    monitor.py              Checkpoints, Plan B, learning and the agents' activity log
   web/                      The built web app (generated — do not edit)
 web/                        Next.js + Tailwind source for the web app (Cash, Timeline, Ask, People, Settings, Your data, Reports)
 tests/                      pytest: engine, loader, store, agent, API
@@ -178,8 +199,8 @@ npm run build                                       # rebuilds finpilot/web for 
 
 ### How the agent works
 
-1. **Plan and call tools.** The model gets the question, a description of the available data and the rules. Before each round it writes one short line of what it will check — shown live in Ask, with each tool step, over a server-sent-event stream (`POST /api/ask/stream`). It chooses from 30 approved tools:
-   - cash autopilot: `get_cash_autopilot` (the 90-day look-ahead, safety level, odds from 1,000 simulated futures, the planner's search, the backup and the audit) and `plan_purchase` (can I pay this on that date — verdict, odds with and without the agents' moves, earliest safe day). The agent is told to start here for anything about running short.
+1. **Plan and call tools.** The model gets the question, a description of the available data and the rules. Before each round it writes one short line of what it will check — shown live in Ask, with each tool step, over a server-sent-event stream (`POST /api/ask/stream`). It chooses from 32 approved tools:
+   - cash autopilot: `get_cash_autopilot` (the 90-day look-ahead, safety level, odds from 1,000 simulated futures, the planner's search, the backup and the audit) `plan_purchase` (can I pay this on that date: verdict, odds with and without the agents' moves, earliest safe day), `test_move` (test any idea given as dated cash flows) and `get_track_record` (how accurate the forecast and odds would have been on this business's past). The agent is told to start here for anything about running short.
    - money: `get_financial_summary`, `analyze_expense_changes`, `find_unusual_transactions`, `get_cash_position`, `forecast_cash_flow`
    - khata: `get_receivables_and_payables`, `get_upcoming_payments`, `get_customers_and_suppliers`, `get_person_details`
    - insight: `get_health_score`, `get_weekly_story`, `get_budgets_and_goals`, `get_tax_calendar_and_gst`
@@ -221,11 +242,20 @@ The rule-based mode uses the same tools, validation and verification, with a sma
 ## Tests
 
 ```bash
-pytest            # 302 tests, about a minute and a half
+pytest            # 313 tests, about two and a half minutes
 ```
 
 The tests cover:
 
+- **Plan B, autonomy and proof:**
+  - Plan B and its checkpoints
+  - fast-forward with a missed checkpoint: learning 60% → 48%, Plan B, the overdraft drawn only when needed
+  - a good-news run: learning 60% → 68%
+  - fast-forwarded books stay consistent
+  - the Deals agent helps only when the tightest day is before the due date
+  - `test_move`
+  - the AI Strategist tests ideas before suggesting them (scripted model)
+  - track record numbers, and rewinding that hides the future
 - **The agent crew and risk engine:**
   - the simulation exactly reproduces the forecast when nothing varies
   - payment dates come from each customer's own history

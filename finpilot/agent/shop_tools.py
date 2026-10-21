@@ -426,6 +426,51 @@ def t_autopilot(ctx: ToolContext, a: dict) -> dict:
     }
 
 
+def t_test_move(ctx: ToolContext, a: dict) -> dict:
+    _reject_unknown(a, {"label", "flows"})
+    from finpilot.engine import autopilot as ap
+
+    label = _str(a, "label", 80, required=True)
+    flows = a.get("flows")
+    if not isinstance(flows, list) or not 1 <= len(flows) <= 6:
+        raise ToolArgumentError("'flows' must be a list of 1 to 6 {date, amount} items (amount + for money in, − for money out).")
+    as_of = pd.Timestamp(ctx.as_of)
+    clean = []
+    for f in flows:
+        if not isinstance(f, dict):
+            raise ToolArgumentError("Each flow must be an object with 'date' and 'amount'.")
+        amt = f.get("amount")
+        if not isinstance(amt, (int, float)) or isinstance(amt, bool) or amt == 0 or abs(amt) > 1e8:
+            raise ToolArgumentError("Each 'amount' must be a non-zero number of rupees (+ in, − out).")
+        try:
+            d = pd.Timestamp(str(f.get("date")))
+        except ValueError as e:
+            raise ToolArgumentError("Each 'date' must be YYYY-MM-DD.") from e
+        if not as_of < d <= as_of + pd.Timedelta(days=90):
+            raise ToolArgumentError("Dates must be within the next 90 days.")
+        clean.append({"date": d, "amount": float(amt)})
+    st = _settings(ctx)
+    try:
+        safety = float(st.get("safety")) if st.get("safety") else None
+    except ValueError:
+        safety = None
+    states = books.move_states(ctx.db_path, _book(ctx)) if ctx.db_path else {}
+    approved = frozenset(k for k, v in states.items() if v in ("approved", "done"))
+    outcomes = books.reminder_outcomes(ctx.db_path, _book(ctx)) if ctx.db_path else None
+    r = ap.evaluate_flows(ctx.ledger, ctx.balances, ctx.obligations, ctx.as_of, clean, label, safety, approved, outcomes)
+    if r.get("status") == "ok":
+        r["note"] = "An idea tested on the forecast — whether it can really be done is up to the owner."
+    return r
+
+
+def t_track_record(ctx: ToolContext, a: dict) -> dict:
+    _reject_unknown(a, set())
+    from finpilot.engine import backtest
+
+    r = backtest.run(ctx.ledger, ctx.obligations, ctx.balances, sims=300)
+    return {k: v for k, v in r.items() if k != "points"}
+
+
 def t_plan_purchase(ctx: ToolContext, a: dict) -> dict:
     _reject_unknown(a, {"amount", "date", "label"})
     from finpilot.engine import autopilot as ap
@@ -586,6 +631,20 @@ PLAN_TOOLS: list[Tool] = [
          "moves, and the earliest date it could be paid without any moves. Prefer this over simulate_purchase for cash purchases.",
          _obj({"amount": {"type": "number", "minimum": 1}, "date": {"type": "string", "description": "YYYY-MM-DD, default tomorrow"}, "label": {"type": "string"}}, ["amount"]),
          t_plan_purchase),
+    Tool("test_move",
+         "Test a cash idea that isn't one of the standard moves (e.g. ask a loyal client for an advance, sell idle equipment, a short sale, "
+         "renegotiate a payment) by giving it as dated cash flows (+ in, − out, within 90 days). Returns the lowest balance and the odds of "
+         "staying above safety without and with it, on its own and with the planner's best plan. Always test an idea before suggesting it.",
+         _obj({"label": {"type": "string"},
+               "flows": {"type": "array", "minItems": 1, "maxItems": 6,
+                         "items": _obj({"date": {"type": "string", "description": "YYYY-MM-DD"}, "amount": {"type": "number"}}, ["date", "amount"])}},
+              ["label", "flows"]),
+         t_test_move),
+    Tool("get_track_record",
+         "How accurate FinPilot's forecasts and odds would have been on this business's own past: weekly 30-day forecasts against what "
+         "happened — error vs a flat guess (on the tightest day and over the path), how often the real outcome fell inside the simulated range, "
+         "Brier score of the odds, and how many real dips were flagged in advance.",
+         _obj({}), t_track_record),
     Tool("get_review_queue", "Bank lines that need a category (uncategorised, or incoming money only guessed as sales), grouped by party, with the current guess.",
          _obj({}), t_review_queue),
     Tool("draft_promise", "Prepare a note that a customer promised to pay (by a date, optionally an amount) for the owner to confirm. FinPilot then flags it if the date passes unpaid.",
