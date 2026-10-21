@@ -27,7 +27,7 @@ def _l(lang: str, en: str, hi: str, **kw) -> str:
 
 def watch_approved(db: Path, book: str, as_of: pd.Timestamp, plan: dict, move: dict, lang: str = "en") -> None:
     """Called when the owner approves a move: remember when it started and, for uncertain moves, set a checkpoint with Plan B."""
-    books.set_move_date(db, book, move["id"], str(as_of.date()))
+    books.set_move_date(db, book, move["id"], str(as_of.date()), {k: move.get(k) for k in ("id", "kind", "party", "amount", "monthly", "items", "due", "from_date", "to_date", "title")})
     if move["kind"] not in ap.CHECKPOINT_DAYS:
         return
     cp = as_of + pd.Timedelta(days=ap.CHECKPOINT_DAYS[move["kind"]])

@@ -145,12 +145,14 @@ P = {
     "sum.head": ("**{period}**", "**{period}**"),
     "sum.rev": ("- Sales received: {amt}", "- बिक्री से मिला: {amt}"),
     "sum.cost": ("- Running costs paid: {amt}", "- चलाने का खर्च: {amt}"),
-    "sum.profit": ("- **Profit (estimate): {amt}**{margin} — an estimate before depreciation, unpaid bills and the interest in loan EMIs.",
-                   "- **मुनाफ़ा (अनुमान): {amt}**{margin} — घिसाई, बकाया बिल और EMI के ब्याज से पहले का अनुमान।"),
-    "sum.margin": (" ({m:.1f}% of sales)", " (बिक्री का {m:.1f}%)"),
+    "sum.profit": ("- **Net operating cash difference: {amt}**{margin} — sales received minus running costs paid. This is a cash figure, not accounting profit.",
+                   "- **चलाने से बचा/घटा कैश: {amt}**{margin} — मिली बिक्री में से चुकाया खर्च। यह कैश का अंतर है, हिसाब-किताब वाला मुनाफ़ा नहीं।"),
+    "sum.notprofit": ("\n*Why it isn't profit:* money customers still owe for this period{owed}, bills received but not yet paid{bills}, costs that belong to other months and depreciation are not counted.",
+                      "\n*यह मुनाफ़ा क्यों नहीं:* इस अवधि की ग्राहकों पर बाकी रक़म{owed}, आए पर न चुकाए बिल{bills}, दूसरे महीनों के खर्च और घिसाई इसमें नहीं गिने गए।"),
+    "sum.margin": (" ({m:.1f}% of sales received)", " (मिली बिक्री का {m:.1f}%)"),
     "sum.net": ("- Net cash movement (all money in − out): {amt}", "- कुल आया − कुल गया: {amt}"),
-    "sum.outside": ("\nOutside profit: equipment bought {capex}, loans received {loan}, loan repayments {emi}, owner drawings {draw}, GST/TDS paid {tax}.",
-                    "\nमुनाफ़े से बाहर: मशीन/सामान {capex}, लोन मिला {loan}, लोन चुकाया {emi}, मालिक ने निकाला {draw}, GST/TDS भरा {tax}।"),
+    "sum.outside": ("\nNot running costs: equipment bought {capex}, loans received {loan}, loan repayments {emi}, owner drawings {draw}, GST/TDS paid {tax}.",
+                    "\nचलाने के खर्च से अलग: मशीन/सामान {capex}, लोन मिला {loan}, लोन चुकाया {emi}, मालिक ने निकाला {draw}, GST/TDS भरा {tax}।"),
     "rec.txn": ("- {id}: {date} · {what} · {party} · {cat} · {dir} {amt}", "- {id}: {date} · {what} · {party} · {cat} · {dir} {amt}"),
     "in": ("in", "आया"), "out": ("out", "गया"),
     "rec.obl": ("- {id}: {kind} · {party} · {amt} · due {date} · {status}", "- {id}: {kind} · {party} · {amt} · देय {date} · {status}"),
@@ -410,6 +412,8 @@ def _summary(q: str, call: ToolCaller, as_of: pd.Timestamp) -> str:
         tr("sum.profit", amt=_inr(s["estimated_operating_profit"]), margin=margin),
         tr("sum.net", amt=_inr(s["net_cash_movement"])),
         tr("sum.outside", capex=_inr(o["capex"]), loan=_inr(o["financing_in"]), emi=_inr(o["loan_repayments"]), draw=_inr(o["owner_drawings"]), tax=_inr(o["tax_remitted"])),
+        tr("sum.notprofit", owed=f" ({_inr(s['unpaid_invoices_in_period'])})" if s.get("unpaid_invoices_in_period") else "",
+           bills=f" ({_inr(s['pending_payables'])})" if s.get("pending_payables") else ""),
     ])
 
 
@@ -892,6 +896,111 @@ def _category(q: str, call: ToolCaller, as_of) -> str:
     return "\n".join(lines) + tr("cat.note")
 
 
+# ---------------------------------------------------------------- "why are my sales less?" — an investigation, with what it can't verify
+
+P.update({
+    "sc.head": ("**Sales received {a} to {b}: {cur}** — {chg} ({pct}) {dir} than {pa} to {pb} ({prev}).",
+                "**{a} to {b} में मिली बिक्री: {cur}** — {pa} to {pb} ({prev}) के मुक़ाबले {chg} ({pct}) {dir}।"),
+    "sc.less": ("less", "कम"), "sc.more": ("more", "ज़्यादा"),
+    "sc.same": ("**Sales received {a} to {b}: {cur}** — the same as {pa} to {pb}.", "**{a} to {b} में मिली बिक्री: {cur}** — {pa} to {pb} के बराबर।"),
+    "sc.partial": ("\n*This month isn't over, so it's compared with the same number of days last month.*", "\n*महीना अभी पूरा नहीं हुआ, इसलिए पिछले महीने के उतने ही दिनों से तुलना की है।*"),
+    "sc.where": ("\n**Where the difference comes from** (these add up to the change):", "\n**फ़र्क़ कहाँ से आया** (ये जोड़कर पूरा फ़र्क़ बनते हैं):"),
+    "sc.drv": ("- {label}: {amt}{who}", "- {label}: {amt}{who}"),
+    "sc.d.stopped": ("Customers who didn't pay this time", "जिन ग्राहकों ने इस बार कुछ नहीं दिया"),
+    "sc.d.less": ("Customers who paid less", "जिन ग्राहकों ने कम दिया"),
+    "sc.d.more": ("Customers who paid more", "जिन ग्राहकों ने ज़्यादा दिया"),
+    "sc.d.new": ("New customers", "नए ग्राहक"),
+    "sc.d.pooled": ("Counter / app takings", "काउंटर / ऐप की बिक्री"),
+    "sc.find": ("\n**What I found:**", "\n**मुझे क्या मिला:**"),
+    "sc.lateparty": ("- **{who}** paid {cur} (was {prev}) but has **{owed} in invoices due and unpaid** ({ids}). That's late money, not lost business — a reminder should bring it in.",
+                     "- **{who}** ने {cur} दिया (पहले {prev}), पर उनके **{owed} के बिल देय होकर बाकी हैं** ({ids})। यह देर से आने वाला पैसा है, खोया हुआ धंधा नहीं — याद दिलाने से आ सकता है।"),
+    "sc.gone": ("- **{who}** paid nothing this time (was {prev}) and has no invoice pending. They may have stopped buying — worth a call.",
+                "- **{who}** ने इस बार कुछ नहीं दिया (पहले {prev}) और कोई बिल बाकी नहीं है। शायद उन्होंने ख़रीदना बंद कर दिया — एक फ़ोन कर लें।"),
+    "sc.down": ("- **{who}** paid {cur} (was {prev}), with nothing overdue — they're buying less.", "- **{who}** ने {cur} दिया (पहले {prev}), कुछ बकाया नहीं — वे कम ख़रीद रहे हैं।"),
+    "sc.pool": ("- Counter / app takings: {cur} over {dc} days (was {prev} over {dp} days) — {pdc} a day vs {pdp}.",
+                "- काउंटर / ऐप की बिक्री: {dc} दिन में {cur} (पहले {dp} दिन में {prev}) — रोज़ {pdc}, पहले {pdp}।"),
+    "sc.mix": ("- Named customers: {n1} payment(s) averaging {a1} (was {n0} averaging {a0}). Fewer payments account for {ce}, smaller payments for {se}.",
+               "- नाम वाले ग्राहक: {n1} भुगतान, औसत {a1} (पहले {n0}, औसत {a0})। कम भुगतानों से {ce}, छोटे भुगतानों से {se} का फ़र्क़।"),
+    "sc.hist": ("- Compared with normal: your 6-month average is {avg}; {n} of the {m} months before this were higher.",
+                "- आम महीनों से तुलना: 6 महीने का औसत {avg}; इससे पहले के {m} में से {n} महीने इससे ज़्यादा रहे।"),
+    "sc.lowest": ("- Compared with normal: your 6-month average is {avg} — this is your **lowest month in the last {m1}**.",
+                  "- आम महीनों से तुलना: 6 महीने का औसत {avg} — यह **पिछले {m1} महीनों में सबसे कम** है।"),
+    "sc.season": ("- Same month last year: {amt} ({chg}).", "- पिछले साल इसी महीने: {amt} ({chg})।"),
+    "sc.unv": ("\n**What I couldn't verify:**", "\n**जो मैं जाँच नहीं पाया:**"),
+    "sc.ask": ("\n**To dig deeper, share:** {what}", "\n**और गहराई से देखने के लिए दें:** {what}"),
+    "sc.next": ("\n**Next step:** {what}", "\n**अगला क़दम:** {what}"),
+    "sc.next.remind": ("remind {who} — say *“remind {who}”* and I'll draft it.", "{who} को याद दिलाएँ — *“{who} को याद दिलाओ”* कहें, मैं संदेश बना दूँगा।"),
+    "sc.next.call": ("call {who} to ask whether anything changed.", "{who} को फ़ोन करके पूछें कि क्या कुछ बदला है।"),
+})
+
+_SC_UNV_HI = {
+    "products": "कौन-से सामान/सेवाएँ कम बिकीं — बैंक रिकॉर्ड में भुगतान होते हैं, सामान नहीं। जाँचने के लिए अपने बिलिंग ऐप से सामान-वार बिक्री (Excel/CSV) अपलोड करें।",
+    "pooled": "काउंटर/ऐप की बिक्री में कितने ऑर्डर थे — वह एक साथ एक भुगतान में आती है, इसलिए कम ऑर्डर और छोटे ऑर्डर अलग नहीं दिखते।",
+    "season": "क्या यह मौसमी है — पिछले साल के इसी महीने का रिकॉर्ड नहीं है।",
+    "prices": "आपके दाम, छूट, ग्राहकों की आवाजाही और वापसी — ये बैंक स्टेटमेंट में नहीं होते।",
+}
+
+
+def _sales_why(q: str, call: ToolCaller, as_of) -> str:
+    ok, r = call("investigate_sales_change", {})
+    if not ok or r.get("status") != "ok":
+        return r.get("message", "")
+    hi = _LANG["v"] == "hi"
+    pc, pp, sl = r["period"]["current"], r["period"]["previous"], r["sales"]
+    if abs(sl["change"]) < 1:
+        lines = [tr("sc.same", a=pc[0], b=pc[1], cur=_inr(sl["current"]), pa=pp[0], pb=pp[1])]
+    else:
+        pct = f"{abs(sl['change_pct']):.0f}%" if sl["change_pct"] is not None else "—"
+        lines = [tr("sc.head", a=pc[0], b=pc[1], cur=_inr(sl["current"]), chg=_inr(abs(sl["change"])), pct=pct,
+                    dir=tr("sc.less" if sl["change"] < 0 else "sc.more"), pa=pp[0], pb=pp[1], prev=_inr(sl["previous"]))]
+    if r["period"]["partial_month"]:
+        lines.append(tr("sc.partial"))
+    groups = [d for d in r["drivers"] if not d.get("overlay")]
+    if groups:
+        lines.append(tr("sc.where"))
+        for d in groups:
+            who = f" ({', '.join(d['parties'][:3])}{'…' if len(d['parties']) > 3 else ''})" if d["parties"] else ""
+            amt = ("+" if d["amount"] > 0 else "") + _inr(d["amount"])
+            lines.append(tr("sc.drv", label=tr(f"sc.d.{d['key']}"), amt=amt, who=who))
+    found, remind, call_ = [], [], []
+    for c in [c for c in r["customers"] if c["change"] < 0][:4]:
+        if c["unpaid_due"]:
+            found.append(tr("sc.lateparty", who=c["party"], cur=_inr(c["cur"]), prev=_inr(c["prev"]), owed=_inr(c["unpaid_due"]), ids=", ".join(c["unpaid_items"][:4])))
+            remind.append(c["party"])
+        elif c["kind"] == "stopped":
+            found.append(tr("sc.gone", who=c["party"], prev=_inr(c["prev"])))
+            call_.append(c["party"])
+        else:
+            found.append(tr("sc.down", who=c["party"], cur=_inr(c["cur"]), prev=_inr(c["prev"])))
+    pl = r["pooled"]
+    if pl and abs(pl["change"]) >= 1:
+        found.append(tr("sc.pool", cur=_inr(pl["cur"]), dc=pl["days_cur"], prev=_inr(pl["prev"]), dp=pl["days_prev"], pdc=_inr(pl["per_day_cur"]), pdp=_inr(pl["per_day_prev"])))
+    mx = r["mix"]
+    if mx and (mx["count_effect"] or mx["size_effect"]):
+        sign = lambda v: ("+" if v > 0 else "") + _inr(v)  # noqa: E731
+        found.append(tr("sc.mix", n1=mx["payments_cur"], a1=_inr(mx["avg_cur"]), n0=mx["payments_prev"], a0=_inr(mx["avg_prev"]), ce=sign(mx["count_effect"]), se=sign(mx["size_effect"])))
+    h = r["history"]
+    if h["average_6m"] is not None and h["months"]:
+        if h["months_higher"] == h["months_compared"] and h["months_compared"] >= 3:
+            found.append(tr("sc.lowest", avg=_inr(h["average_6m"]), m1=h["months_compared"] + 1))
+        else:
+            found.append(tr("sc.hist", avg=_inr(h["average_6m"]), n=h["months_higher"], m=h["months_compared"]))
+    if r["seasonal"]["available"]:
+        found.append(tr("sc.season", amt=_inr(r["seasonal"]["total"]), chg=("+" if r["seasonal"]["change"] > 0 else "") + _inr(r["seasonal"]["change"])))
+    if found:
+        lines.append(tr("sc.find"))
+        lines += found
+    lines.append(tr("sc.unv"))
+    for u in r["unverified"]:
+        if hi:
+            k = "products" if u.startswith("Which products") else "pooled" if u.startswith("How many orders") else "season" if u.startswith("Whether this") else "prices"
+            u = _SC_UNV_HI[k]
+        lines.append(f"- {u}")
+    if remind or call_:
+        lines.append(tr("sc.next", what=tr("sc.next.remind", who=remind[0]) if remind else tr("sc.next.call", who=call_[0])))
+    return "\n".join(lines)
+
+
 # ---------------------------------------------------------------- missions: multi-step goals with a visible plan (check-up, collect, cut costs), memory, promises
 
 P.update({
@@ -1197,6 +1306,7 @@ BASE_INTENTS: list[tuple[str, re.Pattern, Callable | None]] = [
     ("expenses", re.compile(r"\b(expense|expenses|cost|costs|spend|spending|spent|kharcha|kharch|kharche)\b|खर्च", re.I), _expenses),
     ("owed", re.compile(r"\b(overdue|owe|owes|owed|receivable|payable|collect|pending|due|bills|upcoming|udhaar|udhar|baki|baaki)\b|उधार|बाकी|बकाया|देना|लेना", re.I), _owed),
     ("cash", re.compile(r"\b(cash|balance|bank|paisa|paise)\b|कैश|बैलेंस|पैसा|पैसे|बैंक", re.I), _cash),
+    ("sales_why", re.compile(r"\b(why|kyu|kyun|kyon|reason|wajah)\b.{0,40}\b(sales?|revenue|income|bikri|kamai|dhanda|dhandha|business)\b|\b(sales?|revenue|income|bikri)\b.{0,20}\b(down|drop\w*|fall\w*|fell|less|lower|low|declin\w*|kam|ghat\w*)\b|बिक्री.{0,20}(कम|घट)|क्यों.{0,30}बिक्री|बिक्री.{0,30}क्यों", re.I), _sales_why),
     ("summary", re.compile(r"\b(profit\w*|revenue|sales|summary|margin|income|making money|earn\w*|kamai|kama|how (?:is|are|was) (?:the |my )?(?:business|shop|dukaan)|performance|munafa|munafe|bikri|dhanda|dhandha)\b|मुनाफ़ा|मुनाफा|बिक्री|कारोबार|धंधा|कमाई", re.I), _summary),
 ]
 INTENTS = [(p, h) for _, p, h in BASE_INTENTS if h is not None]  # kept for older callers
@@ -1246,6 +1356,8 @@ def plan(question: str, parties: list[str] | None = None) -> list[tuple[str, Cal
         if k == "owed" and "person" in seen:  # "how much does Metro owe" is about that person
             continue
         if k == "expenses" and "category" in seen:
+            continue
+        if k == "summary" and "sales_why" in seen:  # the investigation already covers the totals
             continue
         seen.add(k)
         out.append((k, h))

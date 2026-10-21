@@ -11,7 +11,7 @@ import { AgentAnswer, LiveCard, applyEvent, emptyLive, streamAgent, type AgentRe
 import { CashChart } from "@/components/cash-chart";
 import { CREW } from "@/components/crew";
 import { DataVersion } from "@/components/data-version";
-import { EvidenceButton } from "@/components/evidence";
+import { EvidenceButton, ProveButton } from "@/components/evidence";
 import { useToast } from "@/components/fx";
 import { ReminderSheet } from "@/components/reminder";
 import { BrandMark } from "@/components/shell";
@@ -20,9 +20,10 @@ import { get, post } from "@/lib/api";
 import { inr, short } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 import { Cockpit } from "./cockpit";
+import { OutlookCard } from "./outlook";
 import { currentOdds, day, moveDetail, moveShort, moveTitle, pct, standing, type Activity, type Move, type Plan, type T } from "./model";
 
-type Kind = "brief" | "user" | "cfo" | "crew" | "plan" | "why" | "afford" | "proof" | "sim" | "answer" | "event";
+type Kind = "brief" | "alerts" | "user" | "cfo" | "crew" | "plan" | "why" | "afford" | "proof" | "sim" | "outlook" | "answer" | "event";
 interface Msg {
   id: number;
   k: Kind;
@@ -70,14 +71,19 @@ export function CfoDesk() {
     load().then((x) => {
       if (x && briefed.current !== version) {
         briefed.current = version;
-        setMsgs([{ id: nextId.current++, k: "brief" }]);
+        setMsgs(x.status === "ok" && x.alerts?.length ? [{ id: nextId.current++, k: "brief" }, { id: nextId.current++, k: "alerts" }] : [{ id: nextId.current++, k: "brief" }]);
       }
     });
   }, [load, version]);
 
   useEffect(() => {
-    end.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [msgs.length]);
+    // bring the newest message to the top of the view (not the bottom), so a long answer is read from its start;
+    // the opening briefing and alerts stay where they are
+    if (msgs.length <= 2) return;
+    const el = document.querySelector<HTMLElement>(`[data-msg="${msgs[msgs.length - 1].id}"]`);
+    const prev = document.querySelector<HTMLElement>(`[data-msg="${msgs[msgs.length - 2].id}"]`);
+    (msgs[msgs.length - 2].k === "user" ? prev : el)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [msgs]);
 
   const params = useSearchParams();
   const asked = useRef(false);
@@ -88,7 +94,7 @@ export function CfoDesk() {
       asked.current = true;
       if (q) ask(q);
       const labels: Record<string, string> = { fix: t("Show me the fix"), why: t("Why?"), afford: t("Can I afford something?"), proof: t("How sure are you?"),
-        sim: t("Fast-forward 2 weeks"), event: t("Tell me what's coming") };
+        sim: t("Fast-forward 2 weeks"), event: t("Tell me what's coming"), outlook: t("Cash in 2 weeks") };
       if (d && labels[d]) act(d, labels[d]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -114,6 +120,7 @@ export function CfoDesk() {
     else if (key === "afford") add({ k: "afford" });
     else if (key === "proof") add({ k: "proof" });
     else if (key === "sim") add({ k: "sim" });
+    else if (key === "outlook") add({ k: "outlook" });
     else if (key === "event") add({ k: "event" });
     else if (key === "planb") {
       setBusy(true);
@@ -156,8 +163,10 @@ export function CfoDesk() {
         <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto" role="log" aria-live="polite">
           <div className="mx-auto w-full max-w-2xl space-y-6 px-4 py-6 sm:px-6 lg:py-10">
             {msgs.map((m) => (
-              <div key={m.id} className="rise">
+              <div key={m.id} data-msg={m.id} className="rise scroll-mt-4">
                 {m.k === "brief" && <Briefing p={p} onAct={act} />}
+                {m.k === "alerts" && <Alerts p={p} onAsk={ask} onAct={act} />}
+                {m.k === "outlook" && <Cfo><OutlookCard /></Cfo>}
                 {m.k === "user" && <Owner text={m.text ?? ""} />}
                 {m.k === "cfo" && (
                   <Cfo>
@@ -252,6 +261,7 @@ function followUps(p: Plan | null, t: T): Act[] {
   const out: Act[] = [];
   const collect = p.moves.find((m) => m.kind === "collect" && m.state === "approved");
   if (collect) out.push({ key: `remind:${collect.party}`, label: t("Send the reminder to {who}", { who: collect.party }), primary: true });
+  out.push({ key: "outlook", label: t("Cash in 2 weeks") });
   if (p.is_demo) out.push({ key: "sim", label: t("Fast-forward 2 weeks") });
   out.push({ key: "afford", label: t("Can I afford something?") });
   return out;
@@ -263,6 +273,7 @@ function suggestions(p: Plan, t: T): Act[] {
   if (fixAvailable(p)) out.push({ key: "fix", label: t("Show me the fix") });
   out.push({ key: "why", label: t("Why?") });
   out.push({ key: "afford", label: t("Can I afford something?") });
+  out.push({ key: "outlook", label: t("Cash in 2 weeks") });
   out.push({ key: "event", label: t("Tell me what's coming") });
   if (p.is_demo) out.push({ key: "sim", label: t("Fast-forward 2 weeks") });
   out.push({ key: "proof", label: t("How sure are you?") });
@@ -309,6 +320,35 @@ function Briefing({ p, onAct }: { p: Plan; onAct: (k: string, l: string) => void
       {lines.map((l, i) => <p key={i} className="mt-3 text-[1.05rem] leading-relaxed text-ink-2">{l}</p>)}
       <Listen text={[`${hello}, ${p.business}.`, headlineFor(p, t, lang), ...lines].join(" ")} />
       <Actions acts={[primary, ...secondary]} onAct={onAct} />
+    </Cfo>
+  );
+}
+
+// ---------------------------------------------------------------- what I noticed before you asked
+
+function Alerts({ p, onAsk, onAct }: { p: Plan; onAsk: (q: string) => void; onAct: (k: string, l: string) => void }) {
+  const { t } = useT();
+  return (
+    <Cfo>
+      <p className="serif text-xl font-semibold">{t("{n} thing(s) I noticed before you asked", { n: p.alerts.length })}</p>
+      <ul className="mt-3 space-y-3">
+        {p.alerts.map((a) => (
+          <li key={a.id} className={cx("rounded-2xl border bg-surface p-4", a.tone === "bad" ? "border-bad/40" : a.tone === "caution" ? "border-caution/40" : "border-line")}>
+            <p className="flex items-start gap-2 font-semibold">
+              <span className={cx("mt-1.5 size-2.5 shrink-0 rounded-full", a.tone === "bad" ? "bg-bad" : a.tone === "caution" ? "bg-caution" : "bg-brand")} />
+              {a.title}
+            </p>
+            <p className="mt-1 pl-4.5 text-sm text-ink-2">{a.detail}</p>
+            <div className="mt-2 flex flex-wrap items-center gap-2 pl-4.5">
+              {a.actions.map((x) => (
+                <button key={x.label} onClick={() => (x.q ? onAsk(x.q) : x.do && onAct(x.do, x.label))}
+                  className="rounded-full bg-ink px-3.5 py-1.5 text-xs font-semibold text-canvas transition hover:bg-brand">{x.label}</button>
+              ))}
+              <EvidenceButton evidence={a.evidence} label={t("Show me why")} className="text-xs" />
+            </div>
+          </li>
+        ))}
+      </ul>
     </Cfo>
   );
 }
@@ -481,13 +521,16 @@ function PlanCard({ p, onApproved }: { p: Plan; onApproved: (msg: string) => voi
           const I = AGENT_ICON[m.kind];
           return (
             <li key={m.id} className="px-5 py-3">
-              <button onClick={() => setOpen(open === m.id ? null : m.id)} className="flex w-full items-center gap-3 text-left">
-                <span className="serif w-5 shrink-0 text-lg text-muted">{i + 1}</span>
-                <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand"><I className="size-4" /></span>
-                <span className="min-w-0 flex-1 font-medium">{moveTitle(m, t, lang)}</span>
-                <span className="shrink-0 text-sm font-semibold text-good">{m.impact > 0 ? `+${short(m.impact)}` : m.kind === "reserve" ? "" : ""}</span>
-                {(done || m.state !== "open") && <Check className="size-4 shrink-0 text-good" />}
-              </button>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setOpen(open === m.id ? null : m.id)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+                  <span className="serif w-5 shrink-0 text-lg text-muted">{i + 1}</span>
+                  <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand"><I className="size-4" /></span>
+                  <span className="min-w-0 flex-1 font-medium">{moveTitle(m, t, lang)}</span>
+                  <span className="shrink-0 text-sm font-semibold text-good">{m.impact > 0 ? `+${short(m.impact)}` : ""}</span>
+                  {(done || m.state !== "open") && <Check className="size-4 shrink-0 text-good" />}
+                </button>
+                <ProveButton moveId={m.id} className="shrink-0" />
+              </div>
               {open === m.id && <p className="mt-1.5 pl-16 text-sm text-ink-2">{moveDetail(m, t, lang)}</p>}
             </li>
           );
@@ -500,6 +543,7 @@ function PlanCard({ p, onApproved }: { p: Plan; onApproved: (msg: string) => voi
                 <span className="font-semibold">{t("Add a safety net: keep a {amt} overdraft ready", { amt: short(backup.amount) })}</span>
                 <span className="block text-ink-2">{t("Costs nothing unless used — about {amt} if you use all of it for 90 days. I'll draft the letter to your bank.", { amt: short(backup.interest_if_used ?? 0) })}</span>
               </span>
+              <ProveButton moveId={backup.id} className="ml-auto shrink-0" />
             </label>
           </li>
         )}
@@ -546,7 +590,7 @@ function Why({ p }: { p: Plan }) {
       <div className="mt-4 rounded-2xl border border-line bg-surface p-4">
         <CashChart baseline={p.series.baseline} plan={p.series.plan} safety={p.safety} planLabel={p.plan_basis === "approved" ? "With your approved moves" : "With the agents' plan"} />
       </div>
-      <div className="mt-3"><EvidenceButton evidence={p.evidence} label={t("How is this worked out?")} /></div>
+      <div className="mt-3"><EvidenceButton evidence={p.evidence} label={t("Prove it: how is this worked out?")} /></div>
     </Cfo>
   );
 }

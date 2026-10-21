@@ -84,8 +84,9 @@ def financial_summary(
 
     limitations = [
         "Cash basis: revenue is money received from sales in the period; unpaid invoices are not included.",
-        "Estimated operating profit excludes depreciation, unpaid bills (accruals), GST input-credit "
-        "adjustments and the interest inside loan EMIs. It is not an audited profit figure.",
+        "Revenue − operating expenses is a net operating CASH difference, not accounting profit: it leaves out "
+        "unpaid invoices, unpaid bills (accruals), costs that belong to other periods, depreciation, GST input-credit "
+        "adjustments and the interest inside loan EMIs.",
         "This is not a cash balance: cash also depends on the opening balance, loans, asset purchases, "
         "taxes and owner drawings.",
     ]
@@ -102,12 +103,20 @@ def financial_summary(
             f"Asset purchases of {other['capex']:,.0f} are excluded from operating expenses (no depreciation applied)."
         )
     pending_payables = None
+    unpaid_invoices = None
     if obligations is not None and as_of is not None and len(obligations):
         o = obligations
         pend = o[(o["kind"] == "payable") & (o["status"] == "pending")]
         if "issue_date" in pend:
             pend = pend[pd.to_datetime(pend["issue_date"]) <= pd.Timestamp(as_of)]
         pending_payables = money(pend["amount"].sum())
+        rec = o[(o["kind"] == "receivable") & (o["status"] == "pending")]
+        if "issue_date" in rec and len(df):
+            iss = pd.to_datetime(rec["issue_date"])
+            rec = rec[(iss >= df["date"].min()) & (iss <= df["date"].max())]
+            unpaid_invoices = money(rec["amount"].sum())
+            if unpaid_invoices:
+                limitations.append(f"Invoices raised in this period but not yet paid ({unpaid_invoices:,.0f}) are not counted as revenue.")
         if pending_payables:
             limitations.append(
                 f"Bills already received but unpaid ({pending_payables:,.0f}) are not deducted."
@@ -121,7 +130,9 @@ def financial_summary(
         "revenue": money(revenue),
         "operating_expenses": money(opex),
         "estimated_operating_profit": money(revenue - opex),
-        "profit_label": "Estimated operating profit (cash basis, before depreciation and accruals)",
+        "profit_label": "Net operating cash difference (sales received − running costs paid; estimated, not accounting profit)",
+        "pending_payables": pending_payables,
+        "unpaid_invoices_in_period": unpaid_invoices,
         "estimated_margin_pct": money(100 * (revenue - opex) / revenue) if revenue else None,
         "total_inflows": money(total_in),
         "total_outflows": money(total_out),

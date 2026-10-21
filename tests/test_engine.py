@@ -16,7 +16,7 @@ class TestSummary:
         # Operating: rent 40k + raw materials 75k + unknown 5k. Laptop (capex), drawings, GST excluded.
         assert s["operating_expenses"] == 120_000
         assert s["estimated_operating_profit"] == 100_000
-        assert "Estimated" in s["profit_label"]
+        assert "not accounting profit" in s["profit_label"]
         assert s["other_flows"]["capex"] == 40_000
         assert s["other_flows"]["financing_in"] == 50_000
         assert s["other_flows"]["owner_drawings"] == 10_000

@@ -56,6 +56,23 @@ export interface PlanB {
   p_safe: number;
   backup: { amount: number; p_safe: number; interest_if_used: number } | null;
 }
+export interface Alert {
+  id: string;
+  tone: "bad" | "caution" | "info";
+  title: string;
+  detail: string;
+  evidence: Evidence;
+  actions: { label: string; q?: string; do?: string }[];
+}
+export interface FollowThrough {
+  move_id: string;
+  kind: string;
+  party: string;
+  approved_on: string;
+  status: "waiting" | "done" | "missed" | "partial" | "slipped";
+  result: string;
+  record_ids: string[];
+}
 export interface Plan {
   status: string;
   message?: string;
@@ -83,6 +100,8 @@ export interface Plan {
   search: { combinations: number; stress_tested: number; sims_each: number;
             plans: { moves: string[]; cost: number; lowest: number; reaches_safety: boolean; p_safe: number }[] };
   events: { id: number; date: string; amount: number; label: string }[];
+  alerts: Alert[];
+  follow_through: FollowThrough[];
   evidence: Evidence;
 }
 

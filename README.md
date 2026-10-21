@@ -44,6 +44,14 @@ See **[PITCH.md](PITCH.md)** for the numbers.
 
 **Can I afford it?** Type an amount and pick a date. The answer is **Yes**, **Yes, if you approve the plan**, **Risky** or **Not now**, with your odds and the earliest safe day to pay without changing anything.
 
+**Ask → investigate → show the evidence → simulate → recommend → track.** The signature loop:
+- **Proactive alerts.** Before you ask, the desk lists what it noticed — bills next week that may exceed the cash you'll have, overdue money, sales down, a cost that jumped — each with its evidence and a next step.
+- **"Why are my sales less this month?"** is investigated, not just totalled. The change is split by customer (stopped, paid less, paid more, new) and counter/app takings — the parts add up exactly — plus fewer payments vs smaller payments. Invoices that are due but unpaid are flagged as *late money, not lost business*. It says what it can't tell (which products, prices, seasonality without last year's data) and what to upload to check.
+- **Show me why** sits beside every recommendation, alert and answer. It opens the proof in four parts: 1 the records used, 2 the calculation line by line, 3 what was assumed, 4 what couldn't be verified.
+- **Cash in 2 weeks** is a scenario you can change: untick a collection you doubt, tick an overdue customer you trust, hold a bill, set sales to 80%, add a purchase. The breakdown always adds up to the end balance.
+- **What you approved — and what happened**: each approved move shows whether it was done and what followed — paid, part-paid, missed the checkpoint, or spend that slipped after a pause. On the agency demo, after approving and fast-forwarding two weeks: *"Kaveri Hospitals paid ₹5,25,600 on 5 Oct — 5 days after you approved."*
+- **Cash is not profit.** Sales received minus running costs paid is labelled *net operating cash difference*, with what it leaves out (unpaid invoices, unpaid bills, other months' costs, depreciation).
+
 **What changed:** when a customer pays or the books change, the agents compare against the last picture: *"Kaveri Hospitals paid ₹5.26 L"*, *"You no longer run out of cash"*.
 
 Also:
@@ -203,9 +211,9 @@ npm run build                                       # rebuilds finpilot/web for 
 
 ### How the agent works
 
-1. **Plan and call tools.** The model gets the question, a description of the available data and the rules. Before each round it writes one short line of what it will check — shown live in Ask, with each tool step, over a server-sent-event stream (`POST /api/ask/stream`). It chooses from 32 approved tools:
+1. **Plan and call tools.** The model gets the question, a description of the available data and the rules. Before each round it writes one short line of what it will check — shown live in Ask, with each tool step, over a server-sent-event stream (`POST /api/ask/stream`). It chooses from 33 approved tools:
    - cash autopilot: `get_cash_autopilot` (the 90-day look-ahead, safety level, odds from 1,000 simulated futures, the planner's search, the backup and the audit) `plan_purchase` (can I pay this on that date: verdict, odds with and without the agents' moves, earliest safe day), `test_move` (test any idea given as dated cash flows) and `get_track_record` (how accurate the forecast and odds would have been on this business's past). The agent is told to start here for anything about running short.
-   - money: `get_financial_summary`, `analyze_expense_changes`, `find_unusual_transactions`, `get_cash_position`, `forecast_cash_flow`
+   - money: `get_financial_summary`, `investigate_sales_change` (why sales went up or down, customer by customer, with late money told apart from lost business), `analyze_expense_changes`, `find_unusual_transactions`, `get_cash_position`, `forecast_cash_flow`
    - khata: `get_receivables_and_payables`, `get_upcoming_payments`, `get_customers_and_suppliers`, `get_person_details`
    - insight: `get_health_score`, `get_weekly_story`, `get_budgets_and_goals`, `get_tax_calendar_and_gst`
    - decisions: `simulate_purchase`, `run_what_if` (price, discount, hire, loan)
@@ -246,7 +254,7 @@ The rule-based mode uses the same tools, validation and verification, with a sma
 ## Tests
 
 ```bash
-pytest            # 313 tests, about two and a half minutes
+pytest            # 337 tests, about three minutes
 ```
 
 The tests cover:

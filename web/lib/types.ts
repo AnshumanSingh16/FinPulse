@@ -7,6 +7,15 @@ export interface Evidence {
   limitations: string[];
   record_ids: string[];
   record_count: number;
+  /** what the records can't confirm */
+  unverified?: string[];
+  period?: [string, string] | string[] | null;
+  /** the arithmetic, line by line (or one line) */
+  formula?: string[] | string | null;
+  /** the statement being proved, e.g. a recommendation's title */
+  claim?: string;
+  /** records already loaded by the server */
+  records?: Rec[];
 }
 
 export interface BusinessType {

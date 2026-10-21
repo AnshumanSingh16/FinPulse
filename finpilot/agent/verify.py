@@ -147,6 +147,22 @@ def check_tool_result(name: str, args: dict, result: dict, ledger: pd.DataFrame,
                 g = result[k]
                 out.append(Check(f"{k}: payable = output − input credit", close(max(g["output_gst"] - g["input_credit"], 0), g["estimated_payable"]), "arithmetic"))
 
+    elif name == "investigate_sales_change":
+        # re-derived from raw rows: sales in each span by plain sums; the causes must add up to the change
+        lg = ledger.copy()
+        lg["date"] = pd.to_datetime(lg["date"]).dt.normalize()
+        is_rev = pd.Series([classify(c, d) == "revenue" for c, d in zip(lg["category"], lg["direction"])], index=lg.index)
+        sales = lg[(lg["direction"] == "in") & is_rev]
+        for key in ("current", "previous"):
+            a_, b_ = (pd.Timestamp(x) for x in result["period"][key])
+            got = sales[(sales["date"] >= a_) & (sales["date"] <= b_)]["amount"].sum()
+            out.append(Check(f"sales {key} period = sum of sales rows", close(got, result["sales"][key]), f"{got:.2f}"))
+        parts = sum(d["amount"] for d in result["drivers"] if not d.get("overlay"))
+        out.append(Check("causes add up to the change", close(parts, result["sales"]["change"]), f"{parts:.2f}"))
+        mx = result.get("mix")
+        if mx:
+            named = sum(c["change"] for c in result["customers"])
+            out.append(Check("count effect + size effect = named customers' change", close(mx["count_effect"] + mx["size_effect"], named), f"{named:.2f}"))
     elif name == "get_supporting_records":
         ids = set(args.get("record_ids", []))
         got = {r.get("txn_id") for r in result["transactions"]} | {r.get("item_id") for r in result["invoices_and_bills"]}

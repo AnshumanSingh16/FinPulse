@@ -19,7 +19,7 @@ from pathlib import Path
 import pandas as pd
 from fastapi import Body, FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from finpilot.agent import orchestrator
@@ -46,7 +46,8 @@ KINDS = {"bank": "ledger", "invoices": "obligations", "balances": "balances"}
 REQUIRED = {"ledger": [("date",), ("amount", "debit", "credit")], "obligations": [("amount",), ("due_date",)], "balances": [("as_of",), ("balance",)]}
 
 STEP_LABEL = {
-    "get_financial_summary": "Worked out sales, costs and profit",
+    "get_financial_summary": "Worked out sales and costs (cash basis)",
+    "investigate_sales_change": "Investigated why sales changed",
     "analyze_expense_changes": "Compared your costs month to month",
     "find_unusual_transactions": "Looked for unusual or double payments",
     "get_cash_position": "Checked your bank balance",
@@ -76,7 +77,8 @@ STEP_LABEL = {
     "draft_recategorise": "Prepared a category fix",
 }
 STEP_LABEL_HI = {
-    "get_financial_summary": "बिक्री, खर्च और मुनाफ़ा निकाला",
+    "get_financial_summary": "बिक्री और खर्च निकाला (कैश के हिसाब से)",
+    "investigate_sales_change": "बिक्री बदलने की वजह की जाँच की",
     "analyze_expense_changes": "महीने-दर-महीने खर्च की तुलना की",
     "find_unusual_transactions": "असामान्य या दोहरे भुगतान खोजे",
     "get_cash_position": "बैंक बैलेंस जाँचा",
@@ -114,7 +116,7 @@ FOLLOWUPS = {
     "get_person_details": [("Who else owes me money?", "और किस पर उधारी बाकी है?")],
     "get_cash_position": [("When could I run short of cash?", "कैश कब कम पड़ सकता है?"), ("Who owes me money?", "किस पर उधारी बाकी है?")],
     "forecast_cash_flow": [("What if customers pay 30 days late?", "अगर ग्राहक 30 दिन देर से चुकाएँ तो?"), ("Which bills are coming up?", "कौन से बिल आने वाले हैं?")],
-    "get_financial_summary": [("Why did costs go up last month?", "पिछले महीने खर्च क्यों बढ़ा?"), ("Can I raise prices by 5%?", "दाम 5% बढ़ाऊँ तो?")],
+    "get_financial_summary": [("Why are my sales less this month?", "इस महीने बिक्री कम क्यों है?"), ("Why did costs go up last month?", "पिछले महीने खर्च क्यों बढ़ा?"), ("Can I raise prices by 5%?", "दाम 5% बढ़ाऊँ तो?")],
     "analyze_expense_changes": [("Any double or unusual payments?", "कोई दोहरा या अजीब भुगतान?"), ("Set budgets from my averages", "मेरे औसत से बजट बताओ")],
     "find_unusual_transactions": [("Show me the biggest costs", "सबसे बड़े खर्च दिखाओ")],
     "get_health_score": [("How can I improve my score?", "स्कोर कैसे सुधारूँ?"), ("How did this week go?", "इस हफ़्ते कैसा रहा?")],
@@ -629,8 +631,71 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
         p["activity"] = books.activity(db, d.book, 25)
         p["watching"] = [{"move_id": w["move_id"], "party": w["party"], "checkpoint": w["checkpoint"], "kind": w["kind"]} for w in books.watches(db, d.book)]
         p["events"] = _coming(d)
+        # the watchtower: what the owner should know before they ask, each with its proof and next steps
+        from finpilot.engine import followthrough, investigate, watchtower
+
+        o7 = _outlook(d, 7)
+        sc = investigate.sales_change(d.ledger, d.obligations, d.as_of) if len(d.ledger) else None
+        p["alerts"] = watchtower.cfo_alerts(p, d.ledger, d.obligations, d.as_of, o7, sc, lang)
+        for a_ in p["alerts"]:
+            a_["evidence"] = views.evidence(a_["evidence"], a_["title"]) | {"formula": a_["evidence"].get("formula")}
+        # approved moves that have left the plan (e.g. the customer paid) are still reported, from their snapshot at approval
+        all_states = books.move_states(db, d.book)
+        gone = [m | {"state": all_states[i]} for i, m in books.approved_moves(db, d.book).items()
+                if all_states.get(i) in ("approved", "done") and i not in {x["id"] for x in p["moves"]}]
+        p["follow_through"] = followthrough.follow_through(p["moves"] + gone, books.move_dates(db, d.book), books.watches(db, d.book, None),
+                                                           d.ledger, d.obligations, d.as_of, lang)
         p["clock"] = {"date": str(d.as_of.date()), "days_moved": int((d.as_of - pd.Timestamp(dataset.DEMO_AS_OF)).days) if d.is_demo else 0}
         return p | {"business": d.name.replace(" (fictional)", ""), "is_demo": d.is_demo, "business_type": _btype(d), "default_safety": ap.default_safety(d.ledger, d.as_of) if len(d.ledger) else None}
+
+    def _outlook(d: dataset.Dataset, days: int = 14, **kw) -> dict:
+        from finpilot.engine import outlook
+
+        states = books.move_states(db, d.book)
+        p, _ = _plan(d)
+        moves = [m for m in p.get("moves", []) if states.get(m["id"]) in ("approved", "done") and m["kind"] not in ("reserve", "borrow")]
+        extra = ap.apply(moves, d.obligations, d.as_of, ap.Settings())[0]
+        extra += [{"date": pd.Timestamp(c["date"]), "amount": c["amount"], "label": c["label"], "source": f"event:{c['id']}", "category": "Known event"} for c in _coming(d)]
+        covered = frozenset(i for m in moves if m["kind"] == "collect" for i in m["items"])
+        r = outlook.outlook(d.ledger, d.balances, ap.at_risk(d.obligations, d.as_of)[0], d.as_of, p.get("safety") or 0.0, days, commitments=extra, covered=covered, **kw)
+        if r.get("status") == "ok":
+            r["evidence"] = views.evidence(r["evidence"], "How cash in two weeks is worked out")
+        return r
+
+    @app.post("/api/outlook")
+    def outlook_api(body: dict = Body(default={})):
+        """Cash in two weeks under the owner's own assumptions (which collections arrive, bills held, sales level, a planned purchase)."""
+        try:
+            days = int(body.get("days") or 14)
+            sales = float(body.get("sales_pct", 100))
+            pur = body.get("purchase") or None
+            if pur:
+                pur = {"amount": float(pur.get("amount") or 0), "date": str(pur.get("date") or "") or None, "label": str(pur.get("label") or "")}
+                if pur["amount"] < 0 or pur["amount"] > 1e10:
+                    raise ValueError("amount")
+                if pur["date"]:
+                    pd.Timestamp(pur["date"])
+            skip = tuple(str(x) for x in (body.get("skip") or [])[:200])
+            od = tuple(str(x) for x in (body.get("overdue_pay") or [])[:200])
+        except (TypeError, ValueError):
+            return JSONResponse({"status": "invalid", "message": "Check the amounts and dates."}, status_code=400)
+        return _outlook(ds(), days, skip=skip, overdue_pay=od, sales_pct=sales, purchase=pur)
+
+    @app.get("/api/prove")
+    def prove(move: str = Query(..., max_length=200)):
+        """'Show me why' for one recommendation: its records, the arithmetic, the assumptions and what can't be verified."""
+        from finpilot.engine import proof
+
+        d = ds()
+        p, _ = _plan(d)
+        m = next((x for x in p.get("moves", []) if x["id"] == move), None) if p.get("status") == "ok" else None
+        if m is None:
+            return JSONResponse({"status": "missing", "message": "That recommendation isn't in the current plan."}, status_code=404)
+        r = proof.prove_move(m, p, d.ledger, d.obligations, d.as_of)
+        order = {i: k for k, i in enumerate(r["record_ids"])}
+        r["records"] = sorted(views.records(d, r["record_ids"][:60]), key=lambda x: order.get(x["id"], 1e9))
+        r["record_count"] = len(r["record_ids"])
+        return r
 
     @app.get("/api/autopilot")
     def autopilot():

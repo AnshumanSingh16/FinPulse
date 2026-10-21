@@ -50,6 +50,8 @@ function CashLine({ p, height = 150 }: { p: Plan; height?: number }) {
   );
 }
 
+const STATUS: Record<string, string> = { done: "Done", waiting: "Waiting", missed: "Missed", partial: "Part paid", slipped: "Slipped" };
+
 export function Cockpit({ p, onCushion, compact }: { p: Plan; onCushion: () => void; compact?: boolean }) {
   const { t, lang } = useT();
   const s = standing(p);
@@ -146,6 +148,26 @@ export function Cockpit({ p, onCushion, compact }: { p: Plan; onCushion: () => v
               <li key={e.id} className="flex items-center justify-between gap-2">
                 <span className="truncate">{e.label}</span>
                 <span className={cx("shrink-0 text-xs", e.amount > 0 ? "text-glow" : "text-ember")}>{e.amount > 0 ? "+" : "−"}{short(Math.abs(e.amount))} · {day(e.date, lang)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {p.follow_through?.length > 0 && (
+        <div className="pit-card p-4">
+          <p className="text-xs tracking-[0.14em] text-pit-muted uppercase">{t("What you approved — and what happened")}</p>
+          <ul className="mt-2 space-y-2.5 text-sm">
+            {p.follow_through.map((f) => (
+              <li key={f.move_id}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="truncate font-medium">{f.kind === "pause" ? (f.party === "Owner Drawings" ? t("Pause owner drawings") : t("Pause marketing")) : f.kind === "reserve" ? t("GST set aside") : f.kind === "borrow" ? t("Standby overdraft") : f.party}</span>
+                  <span className={cx("shrink-0 rounded-full px-2 py-0.5 text-[0.65rem] font-semibold tracking-wide uppercase",
+                    f.status === "done" ? "bg-glow/15 text-glow" : f.status === "missed" || f.status === "slipped" ? "bg-ember/15 text-ember" : "bg-pit-line text-pit-muted")}>
+                    {t(STATUS[f.status])}
+                  </span>
+                </div>
+                <p className="text-xs text-pit-muted">{f.result}</p>
               </li>
             ))}
           </ul>

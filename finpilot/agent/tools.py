@@ -138,6 +138,18 @@ def t_summary(ctx: ToolContext, a: dict) -> dict:
     return r
 
 
+def t_sales_change(ctx: ToolContext, a: dict) -> dict:
+    from finpilot.engine.investigate import sales_change
+
+    _reject_unknown(a, {"start_date", "end_date"})
+    start, end = _date(a, "start_date"), _date(a, "end_date")
+    if bool(start) != bool(end):
+        raise ToolArgumentError("Give both start_date and end_date, or neither to look at this month so far.")
+    if start and start > end:
+        raise ToolArgumentError("start_date must be on or before end_date.")
+    return sales_change(ctx.ledger, ctx.obligations, ctx.as_of, start, end)
+
+
 def t_expense_changes(ctx: ToolContext, a: dict) -> dict:
     _reject_unknown(a, {"period_a_start", "period_a_end", "period_b_start", "period_b_end", "months"})
     dates = [_date(a, k) for k in ("period_a_start", "period_a_end", "period_b_start", "period_b_end")]
@@ -299,9 +311,18 @@ D = {"type": "string", "description": "YYYY-MM-DD"}
 TOOLS: list[Tool] = [
     Tool(
         "get_financial_summary",
-        "Revenue (cash basis), recorded operating expenses, ESTIMATED operating profit and net cash movement for a period, with monthly figures, expenses by category, and flows outside operating profit (asset purchases, loans, drawings, taxes). Defaults to all data up to the as-of date.",
+        "Revenue (cash basis), recorded operating expenses, their difference (estimated_operating_profit — present it as the NET OPERATING CASH DIFFERENCE, not profit) and net cash movement for a period, with monthly figures, expenses by category, and flows outside operating profit (asset purchases, loans, drawings, taxes). Defaults to all data up to the as-of date.",
         _obj({"start_date": D, "end_date": D}),
         t_summary,
+    ),
+    Tool(
+        "investigate_sales_change",
+        "WHY sales went up or down: this month so far vs the same span of last month (or a given period vs the one before). "
+        "Splits the change by customer (stopped / paid less / paid more / new) and pooled counter/app takings — these add up exactly to the change — "
+        "plus number of payments × average payment, invoices due that haven't arrived (late money, not lost business), recent months and seasonality when the books allow. "
+        "Also lists what the records can't verify (products, prices, footfall) and what data to ask for. Use it for any 'why are sales less/down/low' question.",
+        _obj({"start_date": D, "end_date": D}),
+        t_sales_change,
     ),
     Tool(
         "analyze_expense_changes",

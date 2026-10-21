@@ -24,6 +24,11 @@ It works for any business type: a shop, a factory, an agency, a café.
 | **Creativity, verified** | With AI on, the Strategist (an LLM) suggests ideas outside the standard list. It must test each one with `test_move` against the real forecast before mentioning it. | `test_move` tool |
 | **Self-checking** | The Auditor re-runs the forecast on the chosen plan. Every figure the LLM writes must match a tool result, or the answer is not shown. | `agent/verify.py` |
 | **Human in the loop** | Agents draft the WhatsApp reminders, supplier messages and bank letter. The owner approves. Nothing pays, sends or files by itself. | — |
+| **Investigation, not totals** | *"Why are my sales less?"* splits the change by customer and counter takings (the parts add up exactly), tells late money from lost business, and lists what it can't verify | `engine/investigate.py` |
+| **Show me why** | Beside every recommendation, alert and answer: the records used, the calculation, the assumptions, what couldn't be verified | `engine/proof.py`, `/api/prove` |
+| **Proactive alerts** | Bills next week vs cash, overdue money, sales down, a jump in a cost — before the owner asks, each with evidence and a next step | `engine/watchtower.py` |
+| **Scenario: cash in 2 weeks** | The owner changes the assumptions (which payments arrive, a bill held, sales level, a purchase); the breakdown adds up to the end balance | `engine/outlook.py` |
+| **Follow-through** | Every approved move reports what actually happened: paid, partly paid, missed, or spend that slipped | `engine/followthrough.py` |
 | **Proof** | A **Track record**: every past week, the books are rewound and forecast, and the forecast is compared with what really happened | `engine/backtest.py`, `/proof/` |
 
 ## Track record (on the demo businesses' own past; 30-day forecasts, weekly)
@@ -61,8 +66,8 @@ The home screen is a **CFO desk**. On the left is one conversation with your CFO
 
 ## How it's built
 
-- Python and FastAPI do every calculation, deterministically and under test (313 tests).
-- An LLM (Claude or Gemini, optional) plans, calls 32 approved tools, and writes in plain words. A verifier checks every number it writes.
+- Python and FastAPI do every calculation, deterministically and under test (337 tests).
+- An LLM (Claude or Gemini, optional) plans, calls 33 approved tools, and writes in plain words. A verifier checks every number it writes.
 - Next.js front end, works on phones, English and Hindi.
 - Runs offline: with no AI key, the crew, planner, monitor and track record all still work.
 
@@ -75,6 +80,9 @@ The home screen is a **CFO desk**. On the left is one conversation with your CFO
 | What about things the data can't know (Diwali, a big order, a purchase)? | **Tell me what's coming** adds the event to every forecast, plan and affordability check. It is shown in the cockpit and logged. |
 | What if the customer still doesn't pay? | Checkpoints and Plan B. Use *Fast-forward 2 weeks → "never pays"* to see it. |
 | How do we know it's accurate? | **Track record**: weekly backtests on the business's own past, with weaknesses shown. |
+| Why are my sales down? | Investigated customer by customer; late money is told apart from lost business; products, prices and seasonality are listed as not verifiable from a bank statement. *Desk → "Why are my sales less?"* |
+| Is "sales minus costs" your profit? | No — it's labelled *net operating cash difference*, with what it leaves out (unpaid invoices and bills, other months' costs, depreciation). |
+| Can I check a recommendation myself? | **Show me why** beside each one: the records, the arithmetic, the assumptions, and what couldn't be verified. |
 | Can the AI invent numbers? | Every figure in an AI answer must match a tool result, or the answer is corrected or flagged. The Strategist's ideas must pass `test_move` before they're mentioned. |
 | Will it move money or message customers by itself? | Never. It drafts and you send. Every agent action and owner decision is in the **audit log** (Settings → Download, CSV). |
 | Does it actually get money in faster? | Reminders include the business's **UPI pay link** (`upi://pay…`), so the customer can pay with one tap. |

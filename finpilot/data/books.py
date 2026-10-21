@@ -33,6 +33,7 @@ SCHEMA = [
     "CREATE TABLE IF NOT EXISTS agent_activity (id INTEGER PRIMARY KEY AUTOINCREMENT, book TEXT, book_date TEXT, at TEXT, agent TEXT, tone TEXT, text TEXT, action TEXT)",
     "CREATE TABLE IF NOT EXISTS reminder_outcomes (id INTEGER PRIMARY KEY AUTOINCREMENT, book TEXT, party TEXT, sent_on TEXT, result TEXT, resolved_on TEXT)",
     "CREATE TABLE IF NOT EXISTS move_dates (book TEXT, id TEXT, book_date TEXT, PRIMARY KEY (book, id))",
+    "CREATE TABLE IF NOT EXISTS approved_moves (book TEXT, id TEXT, data TEXT, PRIMARY KEY (book, id))",
     "CREATE TABLE IF NOT EXISTS known_events (id INTEGER PRIMARY KEY AUTOINCREMENT, book TEXT, date TEXT, amount REAL, label TEXT, created_at TEXT)",
     "CREATE TABLE IF NOT EXISTS chat_log (id INTEGER PRIMARY KEY AUTOINCREMENT, book TEXT, at TEXT, role TEXT, kind TEXT, data TEXT)",
 ]
@@ -182,7 +183,7 @@ def reset_book(db: Path, book: str) -> None:
     """Forget everything the owner did in a book (used for 'Reset demo')."""
     with connect(db) as con:
         for t in ("contacts", "promises", "cat_rules", "budgets", "goals", "settings", "entry_log", "agent_actions", "memory", "checkups", "chat_log", "autopilot_moves", "autopilot_snapshots",
-                  "watches", "agent_activity", "reminder_outcomes", "move_dates", "known_events"):
+                  "watches", "agent_activity", "reminder_outcomes", "move_dates", "approved_moves", "known_events"):
             con.execute(f"DELETE FROM {t} WHERE book = ?", (book,))
 
 
@@ -382,12 +383,21 @@ def reminder_outcomes(db: Path, book: str) -> dict[str, tuple[int, int]]:
     return {r[0]: (int(r[1]), int(r[2] or 0)) for r in rows}
 
 
-def set_move_date(db: Path, book: str, move_id: str, book_date: str | None) -> None:
+def set_move_date(db: Path, book: str, move_id: str, book_date: str | None, move: dict | None = None) -> None:
+    """When a move was approved — and what it was then, so its outcome can be reported after it leaves the plan."""
     with connect(db) as con:
         if book_date is None:
             con.execute("DELETE FROM move_dates WHERE book = ? AND id = ?", (book, move_id))
+            con.execute("DELETE FROM approved_moves WHERE book = ? AND id = ?", (book, move_id))
         else:
             con.execute("INSERT OR REPLACE INTO move_dates VALUES (?, ?, ?)", (book, move_id, book_date))
+            if move is not None:
+                con.execute("INSERT OR REPLACE INTO approved_moves VALUES (?, ?, ?)", (book, move_id, json.dumps(move, default=str)))
+
+
+def approved_moves(db: Path, book: str) -> dict[str, dict]:
+    with connect(db) as con:
+        return {i: json.loads(d) for i, d in con.execute("SELECT id, data FROM approved_moves WHERE book = ?", (book,)).fetchall()}
 
 
 def move_dates(db: Path, book: str) -> dict[str, str]:

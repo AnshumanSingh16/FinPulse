@@ -503,16 +503,17 @@ export function AgentAnswer({ a, conversation, hidePlan }: { a: AgentResult; con
                 </li>
               ))}
             </ol>
-            {a.evidence.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {a.evidence.map((e) => (
-                  <button key={e.title} onClick={() => setEv(e)} className="rounded-full border border-line px-3 py-1.5 text-xs font-medium text-ink-2 hover:border-brand hover:text-brand">
-                    <ShieldCheck className="mr-1 inline size-3.5" />
-                    {e.title}
-                  </button>
-                ))}
-              </div>
-            )}
+          </div>
+        )}
+        {a.evidence.length > 0 && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold tracking-wide text-muted uppercase">{t("Show me why")}:</span>
+            {a.evidence.map((e) => (
+              <button key={e.title} onClick={() => setEv(e)} className="rounded-full border border-brand/40 bg-brand-50 px-3 py-1.5 text-xs font-semibold text-brand hover:border-brand">
+                <ShieldCheck className="mr-1 inline size-3.5" />
+                {e.title}
+              </button>
+            ))}
           </div>
         )}
       </div>

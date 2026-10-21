@@ -123,7 +123,7 @@ function MonthlyReport({ month }: { month: string }) {
           <Row label="Sales received" value={inr(s.revenue)} />
           <Row label="Running costs paid" value={inr(s.operating_expenses)} />
           <div className="my-1 h-px bg-line" />
-          <Row label="Estimated operating profit" value={inr(s.estimated_operating_profit)} strong tone={s.estimated_operating_profit < 0 ? "bad" : "good"} />
+          <Row label="Net operating cash difference (not accounting profit)" value={inr(s.estimated_operating_profit)} strong tone={s.estimated_operating_profit < 0 ? "bad" : "good"} />
           {s.estimated_margin_pct != null && <Row label="Margin" value={`${s.estimated_margin_pct.toFixed(1)}%`} />}
         </Card>
         <Card className="print-page">
@@ -134,7 +134,7 @@ function MonthlyReport({ month }: { month: string }) {
           <div className="my-1 h-px bg-line" />
           <Row label="Closing balance" value={data.closing_balance != null ? inr(data.closing_balance) : "—"} strong />
           <p className="mt-1 text-xs text-muted">
-            Outside profit: assets {inr(data.other_flows.capex)}, loan EMIs {inr(data.other_flows.loan_repayments)}, drawings {inr(data.other_flows.owner_drawings)}, GST/TDS {inr(data.other_flows.tax_remitted)}
+            Not running costs: assets {inr(data.other_flows.capex)}, loan EMIs {inr(data.other_flows.loan_repayments)}, drawings {inr(data.other_flows.owner_drawings)}, GST/TDS {inr(data.other_flows.tax_remitted)}
           </p>
         </Card>
         <Card className="print-page">

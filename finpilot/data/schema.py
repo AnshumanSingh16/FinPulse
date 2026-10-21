@@ -127,6 +127,7 @@ class Evidence:
     limitations: tuple[str, ...] = ()
     record_ids: tuple[str, ...] = ()
     period: tuple[str, str] | None = None
+    unverified: tuple[str, ...] = ()  # what the records can't confirm (shown as "What I couldn't verify")
 
     def to_dict(self) -> dict:
         return {
@@ -135,4 +136,5 @@ class Evidence:
             "limitations": list(self.limitations),
             "record_ids": list(self.record_ids),
             "period": list(self.period) if self.period else None,
+            "unverified": list(self.unverified),
         }

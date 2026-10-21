@@ -61,6 +61,9 @@ def evidence(ev: dict, title: str, max_ids: int = 200) -> dict:
         "method": ev.get("method", ""),
         "assumptions": list(ev.get("assumptions") or []),
         "limitations": list(ev.get("limitations") or []),
+        "unverified": list(ev.get("unverified") or []),
+        "period": ev.get("period"),
+        "formula": ev.get("formula"),
         "record_ids": ids[:max_ids],
         "record_count": len(ids),
     }
