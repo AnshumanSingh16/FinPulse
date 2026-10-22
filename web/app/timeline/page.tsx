@@ -2,6 +2,7 @@
 
 import { AlertTriangle, ArrowDownLeft, ArrowUpRight, ChevronDown } from "lucide-react";
 import { useContext, useEffect, useState } from "react";
+import { PeriodView } from "@/components/periods";
 import { DataVersion } from "@/components/data-version";
 import { Card, cx, Loading } from "@/components/ui";
 import { get } from "@/lib/api";
@@ -43,7 +44,7 @@ function plain(it: Week["items"][number], t: (k: string, v?: Record<string, stri
   return it.label.replace(/^(INV|BILL|SCH)-[\w-]+ (from|to) /, "");
 }
 
-export default function TimelinePage() {
+function WeeklyView() {
   const { t, lang } = useT();
   const { version } = useContext(DataVersion);
   const [data, setData] = useState<Data | null>(null);
@@ -58,12 +59,9 @@ export default function TimelinePage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl">{t("Cash timeline")}</h1>
-        <p className="text-sm text-ink-2">
-          {t("Money in and out, week by week, for the next 13 weeks.")} {approved ? t("Includes the moves you approved.") : t("If nothing changes — approve moves on the Today tab to see their effect.")}
-        </p>
-      </div>
+      <p className="text-sm text-ink-2">
+        {t("Money in and out, week by week, for the next 13 weeks.")} {approved ? t("Includes the moves you approved.") : t("If nothing changes — approve the fix on the Desk to see its effect.")}
+      </p>
       <ol className="space-y-2.5">
         {data.weekly.map((w, i) => {
           const low = w.closing < data.safety;
@@ -121,6 +119,33 @@ export default function TimelinePage() {
           );
         })}
       </ol>
+    </div>
+  );
+}
+
+type View = "month" | "quarter" | "week";
+
+export default function TimelinePage() {
+  const { t } = useT();
+  const [view, setView] = useState<View>("month");
+  const tabs: { k: View; label: string }[] = [{ k: "month", label: t("Monthly") }, { k: "quarter", label: t("Quarterly") }, { k: "week", label: t("Weekly") }];
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl">{t("Cash timeline")}</h1>
+          <p className="text-sm text-ink-2">{view === "week" ? t("The next 13 weeks, item by item.") : t("What happened, then what's coming — on one line.")}</p>
+        </div>
+        <div className="inline-flex rounded-full border border-line bg-surface p-1" role="tablist">
+          {tabs.map((x) => (
+            <button key={x.k} role="tab" aria-selected={view === x.k} onClick={() => setView(x.k)}
+              className={cx("rounded-full px-4 py-1.5 text-sm font-semibold transition", view === x.k ? "bg-ink text-canvas" : "text-ink-2 hover:text-ink")}>
+              {x.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {view === "week" ? <WeeklyView /> : <PeriodView by={view} />}
       <p className="text-center text-xs text-muted">{t("Arithmetic on your records and stated assumptions — not a prediction.")}</p>
     </div>
   );

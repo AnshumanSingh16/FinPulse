@@ -55,7 +55,7 @@ See **[PITCH.md](PITCH.md)** for the numbers.
 **What changed:** when a customer pays or the books change, the agents compare against the last picture: *"Kaveri Hospitals paid ₹5.26 L"*, *"You no longer run out of cash"*.
 
 Also:
-- **Timeline:** week by week, every bill and invoice.
+- **Timeline:** charts of your bank balance and money in and out — **monthly** or **quarterly**, the last 12 months from your records joined to the forecast at today — plus a **weekly** view with every bill and invoice.
 - **Ask:** chat in English, Hindi or Hinglish.
 - **People:** who owes you, with WhatsApp reminders.
 

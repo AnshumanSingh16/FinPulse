@@ -172,3 +172,25 @@ def test_follow_through_reports_what_happened(app):
     k = ft["collect:Kaveri Hospitals"]
     assert k["status"] == "done" and "paid" in k["result"]
     assert ft["pause:Marketing"]["status"] in ("done", "slipped")
+
+
+# ---------------------------------------------------------------- the timeline by month and quarter
+
+
+@pytest.mark.parametrize("by", ["month", "quarter"])
+def test_timeline_periods_add_up_and_join_the_forecast_at_today(app, by):
+    app.post("/api/source", json={"source": "demo_agency"})
+    p = app.get("/api/autopilot").json()
+    r = app.get("/api/timeline", params={"by": by}).json()
+    assert r["status"] == "ok" and r["by"] == by
+    per = r["periods"]
+    assert len(per) == (15 if by == "month" else 5)
+    for x in per:
+        assert x["opening"] + x["money_in"] - x["money_out"] == pytest.approx(x["closing"], abs=1), x["label"]
+    for a, b in zip(per, per[1:]):
+        assert a["closing"] == pytest.approx(b["opening"], abs=1)
+    sep = next(x for x in per if x["kind"] == "actual" and x["end"] >= "2026-09-30") if by == "month" else next(x for x in per if x["label"] == "Q3 2026")
+    assert sep["closing"] == pytest.approx(p["today"], abs=1), "the past ends at today's cash"
+    assert min(x["lowest"] for x in per if x["kind"] != "actual") == pytest.approx(p["baseline"]["lowest"], abs=1), "the forecast is the plan's own"
+    assert [x["kind"] for x in per].count("actual") == (12 if by == "month" else 4)
+    assert app.get("/api/timeline", params={"by": "year"}).status_code == 422

@@ -543,16 +543,28 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
             p = ap.plan(d.ledger, d.balances, d.obligations, d.as_of, safety=_safety(d), approved=approved, outcomes=outcomes,
                         commitments=[{"date": pd.Timestamp(c["date"]), "amount": c["amount"], "label": c["label"], "source": f"event:{c['id']}", "category": "Known event"} for c in coming])
             if p["status"] == "ok":
-                basis = ap.apply([m for m in p["moves"] if m["approved"] and m["kind"] != "reserve"], d.obligations, d.as_of, ap.Settings())[0]
-                f = forecast_for_timeline(d, p["safety"], basis, ap.at_risk(d.obligations, d.as_of)[0])
-                p["weekly"] = ap.weekly(f)
+                p["weekly"] = ap.weekly(timeline_forecast(d, p))
             _AP_CACHE[key] = p
         return copy.deepcopy(_AP_CACHE[key]), states
 
-    def forecast_for_timeline(d: dataset.Dataset, safety: float, extra: list[dict], obl) -> dict:
-        from finpilot.engine.forecast import ForecastOptions, forecast_cash_flow
+    def timeline_forecast(d: dataset.Dataset, p: dict) -> dict:
+        """The daily forecast behind the timeline: the plan's own forecast (same options, the events the owner told us about)
+        with the moves already approved."""
+        extra = ap.apply([m for m in p["moves"] if m["approved"] and m["kind"] != "reserve"], d.obligations, d.as_of, ap.Settings())[0]
+        extra += [{"date": pd.Timestamp(c["date"]), "amount": c["amount"], "label": c["label"], "source": f"event:{c['id']}", "category": "Known event"} for c in _coming(d)]
+        return ap._forecast(d.ledger, d.balances, d.obligations, d.as_of, 91, p["safety"], extra=extra, obl=ap.at_risk(d.obligations, d.as_of)[0])
 
-        return forecast_cash_flow(d.ledger, d.balances, obl, d.as_of, ForecastOptions(horizon_days=91, include_run_rate=True, min_buffer=safety, extra_flows=extra))
+    @app.get("/api/timeline")
+    def timeline(by: str = Query("month", pattern="^(month|quarter)$")):
+        """Cash by month or quarter: the past from the ledger, then the forecast (with approved moves)."""
+        from finpilot.engine import periods
+
+        d = ds()
+        p, _ = _plan(d)
+        if p.get("status") != "ok":
+            return {"status": p.get("status"), "message": p.get("message", "")}
+        r = periods.periods(timeline_forecast(d, p), d.ledger, d.as_of, by)
+        return r | {"safety": p["safety"], "plan_basis": p["plan_basis"], "approved": any(m["approved"] for m in p["moves"])}
 
     def _coming(d: dataset.Dataset) -> list[dict]:
         """Events the owner told FinPilot about that are still ahead (within the 90 days)."""
