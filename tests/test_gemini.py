@@ -106,11 +106,27 @@ class TestLoop:
 
 
 class TestKeyAndModels:
-    def test_pick_model_prefers_default_then_newest_flash(self):
+    def test_pick_model_prefers_saved_then_newest_flash(self):
         ms = lambda *n: [{"name": f"models/{x}", "supportedGenerationMethods": ["generateContent"]} for x in n]  # noqa: E731
-        assert gemini.pick_model(ms("gemini-2.5-flash", "gemini-3-flash")) == "gemini-2.5-flash"
+        assert gemini.pick_model(ms("gemini-2.5-flash", "gemini-3-flash"), "gemini-2.5-flash") == "gemini-2.5-flash"
+        assert gemini.pick_model(ms("gemini-2.5-flash", "gemini-3-flash")) == "gemini-3-flash"
         assert gemini.pick_model(ms("gemini-2.0-flash", "gemini-3.1-flash", "gemini-3-pro")) == "gemini-3.1-flash"
         assert gemini.pick_model([{"name": "models/embedding-001", "supportedGenerationMethods": ["embedContent"]}]) is None
+
+    def test_key_check_skips_models_google_has_retired(self):
+        # gemini-3.8-flash is listed but answers 404 for new keys (as gemini-2.5-flash does today); the next one is used
+        ms = {"models": [{"name": f"models/{x}", "supportedGenerationMethods": ["generateContent"]} for x in ("gemini-2.5-flash", "gemini-3.8-flash", "gemini-3.7-flash")]}
+        tried = []
+
+        def post(path, body, key):
+            tried.append(path)
+            if "3.8" in path or "2.5" in path:
+                raise gemini.NotFoundError("no longer available to new users")
+            assert body == gemini.PROBE  # nothing about the business
+            return {}
+
+        assert gemini.check_key("k", "gemini-2.5-flash", get=lambda p, k: ms, post=post) == "gemini-3.7-flash"
+        assert tried == ["models/gemini-2.5-flash:generateContent", "models/gemini-3.8-flash:generateContent", "models/gemini-3.7-flash:generateContent"]
 
     def test_errors_map_to_plain_reasons(self, ctx):
         bad = {"error": {"message": "API key not valid.", "details": [{"reason": "API_KEY_INVALID"}]}}

@@ -119,7 +119,7 @@ FINPILOT_PROVIDER=gemini        # optional when only one key is set
 | Variable | Default | Purpose |
 |---|---|---|
 | `GEMINI_API_KEY` | (unset) | Turns on the AI agent with Google Gemini (`GOOGLE_API_KEY` also works). |
-| `FINPILOT_GEMINI_MODEL` | `gemini-2.5-flash` | Gemini model (set automatically to one your key can use). |
+| `FINPILOT_GEMINI_MODEL` | picked by the key check | Gemini model (set automatically to one your key can use). |
 | `ANTHROPIC_API_KEY` | (unset) | Turns on the AI agent with Anthropic Claude. |
 | `FINPILOT_MODEL` | `claude-opus-5-5` | Claude model used by the agent. |
 | `FINPILOT_PROVIDER` | (auto) | `gemini` or `anthropic` when both keys are set. |

@@ -67,7 +67,7 @@ class Settings:
     db_path: Path
     ai_disabled: bool
     gemini_api_key: str | None = None
-    gemini_model: str = "gemini-2.5-flash"
+    gemini_model: str = "gemini-flash-latest"
     provider_choice: str = ""
 
     @property
@@ -98,6 +98,6 @@ def settings() -> Settings:
         db_path=Path(os.environ.get("FINPILOT_DB", ROOT / "finpilot.db")),
         ai_disabled=os.environ.get("FINPILOT_AI", "").lower() == "off",
         gemini_api_key=os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY") or None,
-        gemini_model=os.environ.get("FINPILOT_GEMINI_MODEL", "gemini-2.5-flash"),
+        gemini_model=os.environ.get("FINPILOT_GEMINI_MODEL", "gemini-flash-latest"),
         provider_choice=os.environ.get("FINPILOT_PROVIDER", "").lower(),
     )

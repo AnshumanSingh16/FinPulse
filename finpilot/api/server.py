@@ -8,6 +8,7 @@ from __future__ import annotations
 import copy
 import json
 import mimetypes
+import os
 import queue
 import re
 import threading
@@ -48,6 +49,10 @@ REQUIRED = {"ledger": [("date",), ("amount", "debit", "credit")], "obligations":
 STEP_LABEL = {
     "get_financial_summary": "Worked out sales and costs (cash basis)",
     "investigate_sales_change": "Investigated why sales changed",
+    "get_cash_autopilot": "Looked 90 days ahead and checked the plan",
+    "plan_purchase": "Tested the payment against your cash",
+    "test_move": "Tested an idea on your forecast",
+    "get_track_record": "Checked how accurate past forecasts were",
     "analyze_expense_changes": "Compared your costs month to month",
     "find_unusual_transactions": "Looked for unusual or double payments",
     "get_cash_position": "Checked your bank balance",
@@ -79,6 +84,10 @@ STEP_LABEL = {
 STEP_LABEL_HI = {
     "get_financial_summary": "बिक्री और खर्च निकाला (कैश के हिसाब से)",
     "investigate_sales_change": "बिक्री बदलने की वजह की जाँच की",
+    "get_cash_autopilot": "90 दिन आगे देखा और योजना जाँची",
+    "plan_purchase": "भुगतान को आपके कैश पर परखा",
+    "test_move": "एक उपाय को अनुमान पर परखा",
+    "get_track_record": "पिछले अनुमान कितने सही रहे, देखा",
     "analyze_expense_changes": "महीने-दर-महीने खर्च की तुलना की",
     "find_unusual_transactions": "असामान्य या दोहरे भुगतान खोजे",
     "get_cash_position": "बैंक बैलेंस जाँचा",
@@ -1019,7 +1028,7 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
         if provider == "gemini":
             if key.startswith("sk-ant-"):
                 raise HTTPException(400, "That's an Anthropic key — choose Anthropic Claude instead. Gemini keys start with AIza or AQ.")
-            ok, why, model = orchestrator.check_gemini_key(key, lg(), settings().gemini_model)
+            ok, why, model = orchestrator.check_gemini_key(key, lg(), os.environ.get("FINPILOT_GEMINI_MODEL"))
             if not ok:
                 raise HTTPException(400, f"The key didn't work: {why}.")
             config.save_local("GEMINI_API_KEY", key)

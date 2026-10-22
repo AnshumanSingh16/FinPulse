@@ -340,10 +340,19 @@ def ask(
         return run_offline(question, ctx, lang=lang, on_event=on_event)
     try:
         if getattr(settings, "provider", "anthropic") == "gemini" and not hasattr(client, "beta"):
-            from finpilot.agent.gemini import run_gemini
+            from finpilot.agent import gemini
 
-            return run_gemini(question, ctx, settings.api_key, settings.active_model, business, history, prior_results, settings.max_agent_steps,
-                              lang=lang, on_event=on_event, preface=preface, post=client)
+            try:
+                return gemini.run_gemini(question, ctx, settings.api_key, settings.active_model, business, history, prior_results, settings.max_agent_steps,
+                                         lang=lang, on_event=on_event, preface=preface, post=client)
+            except gemini.NotFoundError:
+                # Google retired the saved model for this key: pick one that answers, remember it, and try once more
+                model = gemini.check_key(settings.api_key, None, post=client)
+                from finpilot import config
+
+                config.save_local("FINPILOT_GEMINI_MODEL", model)
+                return gemini.run_gemini(question, ctx, settings.api_key, model, business, history, prior_results, settings.max_agent_steps,
+                                         lang=lang, on_event=on_event, preface=preface, post=client)
         client = client or make_client(settings.anthropic_api_key)
         return run_ai(question, ctx, client, settings.model, business, history, prior_results, settings.max_agent_steps, lang=lang, on_event=on_event, preface=preface)
     except Exception as e:  # API/network errors: fall back, and say so
@@ -382,11 +391,12 @@ def check_key(api_key: str, lang: str = "en", client=None) -> tuple[bool, str]:
 
 
 def check_gemini_key(api_key: str, lang: str = "en", preferred: str | None = None) -> tuple[bool, str, str | None]:
-    """Check a Gemini key by listing models (nothing about the business is sent). Returns (ok, reason, model to use)."""
+    """Check a Gemini key: list its models and find one that answers a one-line test (nothing about the business is sent).
+    Returns (ok, reason, model to use)."""
     from finpilot.agent import gemini
 
     try:
-        return True, "", gemini.check_key(api_key, preferred or gemini.DEFAULT_MODEL)
+        return True, "", gemini.check_key(api_key, preferred)
     except Exception as e:
         return False, _why(e, lang), None
 

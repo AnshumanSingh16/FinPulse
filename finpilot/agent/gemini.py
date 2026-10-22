@@ -16,7 +16,7 @@ from typing import Any, Callable
 from finpilot.agent.tools import ToolContext, anthropic_tool_specs
 
 BASE = "https://generativelanguage.googleapis.com/v1beta"
-DEFAULT_MODEL = "gemini-2.5-flash"
+DEFAULT_MODEL = "gemini-flash-latest"  # only a fallback name; the key check picks a model this key can really use
 _ALLOWED = {"type", "description", "enum", "items", "properties", "required", "minimum", "maximum", "minItems", "maxItems", "format", "nullable"}
 
 
@@ -140,23 +140,36 @@ def function_declarations() -> list[dict]:
 # ---------------------------------------------------------------- key check and model choice
 
 
-def pick_model(models: list[dict], preferred: str = DEFAULT_MODEL) -> str | None:
-    """The preferred model if this key can use it, else the newest stable 'flash' model (free tier friendly)."""
+def candidates(models: list[dict], preferred: str | None = None) -> list[str]:
+    """Models to try, best first: the one already chosen (if this key lists it), then stable 'flash' models newest first,
+    then Google's 'gemini-flash-latest' alias. Listing a model doesn't mean it answers: Google retires models for new
+    keys while still listing them, so check_key tries each one."""
     names = [m["name"].split("/", 1)[-1] for m in models if "generateContent" in m.get("supportedGenerationMethods", [])]
-    if preferred in names:
-        return preferred
 
     def ver(n: str) -> tuple:
         m = re.match(r"gemini-(\d+)(?:\.(\d+))?-flash$", n)
         return (int(m.group(1)), int(m.group(2) or 0)) if m else (-1, -1)
 
-    flash = sorted((n for n in names if ver(n)[0] >= 0), key=ver, reverse=True)
-    return flash[0] if flash else None
+    out = [preferred] if preferred and preferred in names else []
+    out += [n for n in sorted((n for n in names if ver(n)[0] >= 0), key=ver, reverse=True) if n not in out]
+    if "gemini-flash-latest" in names and "gemini-flash-latest" not in out:
+        out.append("gemini-flash-latest")
+    return out
 
 
-def check_key(api_key: str, preferred: str = DEFAULT_MODEL, get: Callable | None = None) -> str:
-    """Raises a GeminiError if the key doesn't work; returns the model to use. Lists models only — nothing about the business is sent."""
-    get = get or http_get
+def pick_model(models: list[dict], preferred: str | None = None) -> str | None:
+    """The first candidate (no network call)."""
+    c = candidates(models, preferred)
+    return c[0] if c else None
+
+
+PROBE = {"contents": [{"role": "user", "parts": [{"text": "Reply with OK."}]}], "generationConfig": {"maxOutputTokens": 8}}
+
+
+def check_key(api_key: str, preferred: str | None = None, get: Callable | None = None, post: Callable | None = None) -> str:
+    """Raises a GeminiError if the key doesn't work; returns a model that really answers. Lists the models, then sends a
+    one-line 'Reply with OK.' to each candidate until one answers — nothing about the business is sent."""
+    get, post = get or http_get, post or http_post
     models, token = [], None
     for _ in range(5):
         data = get("models?pageSize=200" + (f"&pageToken={token}" if token else ""), api_key)
@@ -164,10 +177,18 @@ def check_key(api_key: str, preferred: str = DEFAULT_MODEL, get: Callable | None
         token = data.get("nextPageToken")
         if not token:
             break
-    model = pick_model(models, preferred)
-    if not model:
-        raise NotFoundError("No Gemini text model is available for this key.")
-    return model
+    busy = None
+    for name in candidates(models, preferred)[:6]:
+        try:
+            post(f"models/{name}:generateContent", PROBE, api_key)
+            return name
+        except NotFoundError:  # listed but retired for this key
+            continue
+        except (OverloadedError, RateLimitError):  # it exists; it's just busy right now
+            busy = busy or name
+    if busy:
+        return busy
+    raise NotFoundError("No Gemini text model is available for this key.")
 
 
 # ---------------------------------------------------------------- the agent loop
