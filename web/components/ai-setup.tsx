@@ -117,7 +117,7 @@ export function AiSetupSheet({ open, onClose }: { open: boolean; onClose: () => 
                     spellCheck={false}
                     value={key}
                     onChange={(e) => setKey(e.target.value)}
-                    placeholder={provider === "gemini" ? "AIza…" : "sk-ant-…"}
+                    placeholder={provider === "gemini" ? "AIza… or AQ.…" : "sk-ant-…"}
                     className="w-full bg-transparent font-mono text-sm outline-none placeholder:text-muted"
                     aria-label={t("API key")}
                   />

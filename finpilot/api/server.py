@@ -1009,7 +1009,7 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
     @app.post("/api/ai/key")
     def set_ai_key(body: dict = Body(...)):
         key = str(body.get("key") or "").strip()
-        provider = str(body.get("provider") or ("gemini" if key.startswith("AIza") else "anthropic"))
+        provider = str(body.get("provider") or ("anthropic" if key.startswith("sk-ant-") else "gemini"))
         if provider not in ("gemini", "anthropic"):
             raise HTTPException(400, "Choose Google Gemini or Anthropic Claude.")
         if not body.get("consent"):
@@ -1017,8 +1017,8 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
         if any(c.isspace() for c in key) or len(key) < 20:
             raise HTTPException(400, "That doesn't look like an API key. Copy the whole key and try again.")
         if provider == "gemini":
-            if not key.startswith("AIza"):
-                raise HTTPException(400, "That doesn't look like a Gemini API key (it starts with AIza). Get one free at aistudio.google.com/apikey.")
+            if key.startswith("sk-ant-"):
+                raise HTTPException(400, "That's an Anthropic key — choose Anthropic Claude instead. Gemini keys start with AIza or AQ.")
             ok, why, model = orchestrator.check_gemini_key(key, lg(), settings().gemini_model)
             if not ok:
                 raise HTTPException(400, f"The key didn't work: {why}.")

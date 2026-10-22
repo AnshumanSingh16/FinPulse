@@ -174,3 +174,14 @@ class TestSetup:
         monkeypatch.setattr(orchestrator, "check_gemini_key", lambda k, lang="en", preferred=None: (False, "the API key was not accepted", None))
         r = app_client.post("/api/ai/key", json={"key": "AIzaSyTestTestTestTestTestTestTestTest1234", "consent": True})
         assert r.status_code == 400 and "not accepted" in r.json()["detail"]
+
+    def test_newer_aq_gemini_keys_are_accepted(self, app_client, monkeypatch):
+        # Google AI Studio now also issues keys starting with "AQ."; the live check decides, not the prefix
+        checked = []
+        monkeypatch.setattr(orchestrator, "check_gemini_key", lambda k, lang="en", preferred=None: (checked.append(k) or True, "", "gemini-2.5-flash"))
+        key = "AQ.TestTestTestTestTestTestTestTestTest"
+        try:
+            s = app_client.post("/api/ai/key", json={"key": key, "consent": True}).json()
+            assert checked == [key] and s["enabled"] and s["provider"] == "gemini"
+        finally:
+            app_client.delete("/api/ai/key")
