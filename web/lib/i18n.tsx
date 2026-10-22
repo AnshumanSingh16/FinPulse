@@ -605,6 +605,7 @@ const HI: Record<string, string> = {
   "Part paid": "कुछ मिला",
   "Slipped": "फिसला",
   "Day-to-day sales ({p}% of usual)": "रोज़ की बिक्री (आम का {p}%)",
+  "Checking the key… this can take up to a minute": "key जाँच रहा हूँ… इसमें एक मिनट तक लग सकता है",
 };
 
 interface LangCtx {

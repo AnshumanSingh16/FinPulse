@@ -47,6 +47,10 @@ class APIConnectionError(GeminiError):
     pass
 
 
+class APITimeoutError(APIConnectionError):
+    """Google was reached but took too long to answer."""
+
+
 class OverloadedError(GeminiError):
     pass
 
@@ -76,6 +80,8 @@ def http_post(path: str, body: dict, api_key: str, timeout: float = 120) -> dict
     for attempt in range(2):
         try:
             r = httpx.post(f"{BASE}/{path}", json=body, headers={"x-goog-api-key": api_key}, timeout=timeout)
+        except httpx.TimeoutException as e:
+            raise APITimeoutError(type(e).__name__) from e
         except httpx.HTTPError as e:
             raise APIConnectionError(type(e).__name__) from e
         if r.status_code in (500, 502, 503, 504) and attempt == 0:  # Gemini is sometimes briefly overloaded: one retry
@@ -169,7 +175,8 @@ PROBE = {"contents": [{"role": "user", "parts": [{"text": "Reply with OK."}]}], 
 def check_key(api_key: str, preferred: str | None = None, get: Callable | None = None, post: Callable | None = None) -> str:
     """Raises a GeminiError if the key doesn't work; returns a model that really answers. Lists the models, then sends a
     one-line 'Reply with OK.' to each candidate until one answers — nothing about the business is sent."""
-    get, post = get or http_get, post or http_post
+    get = get or http_get
+    post = post or (lambda path, body, key: http_post(path, body, key, timeout=25))  # a short wait per model while checking
     models, token = [], None
     for _ in range(5):
         data = get("models?pageSize=200" + (f"&pageToken={token}" if token else ""), api_key)
@@ -184,7 +191,9 @@ def check_key(api_key: str, preferred: str | None = None, get: Callable | None =
             return name
         except NotFoundError:  # listed but retired for this key
             continue
-        except (OverloadedError, RateLimitError):  # it exists; it's just busy right now
+        except (OverloadedError, RateLimitError, APIConnectionError):
+            # it exists but is busy or slow right now (the model list above already proved Google is reachable): try the next,
+            # and if none answers, use the first that only failed for being busy
             busy = busy or name
     if busy:
         return busy

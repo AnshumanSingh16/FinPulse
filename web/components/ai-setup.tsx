@@ -137,7 +137,7 @@ export function AiSetupSheet({ open, onClose }: { open: boolean; onClose: () => 
           </ol>
           {err && <p className="rounded-2xl bg-bad-50 p-3 text-sm text-bad">{err}</p>}
           <Button size="lg" className="w-full" disabled={!key.trim() || !agree || busy} onClick={save}>
-            <ShieldCheck className="size-5" /> {busy ? t("Checking the key…") : t("Check key and turn on AI")}
+            <ShieldCheck className="size-5" /> {busy ? t("Checking the key… this can take up to a minute") : t("Check key and turn on AI")}
           </Button>
           <p className="flex items-center justify-center gap-1.5 text-xs text-muted">
             <Lock className="size-3.5" /> {t("The key is checked with a free call and saved in the .env file on this computer — never in the app's code.")}

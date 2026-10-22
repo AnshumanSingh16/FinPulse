@@ -374,8 +374,11 @@ def _why(e: Exception, lang: str = "en") -> str:
         return "मुफ़्त सीमा पूरी, एक मिनट बाद पूछें" if hi else "the free/rate limit was reached — try again in a minute"
     if name == "OverloadedError":
         return "AI अभी व्यस्त है" if hi else "the AI service is busy right now"
-    if name in ("APIConnectionError", "APITimeoutError", "ConnectError"):
-        return "इंटरनेट से कनेक्ट नहीं हो सका" if hi else "couldn't reach the internet"
+    if name == "APITimeoutError":
+        return "Google ने जवाब देने में बहुत देर की, फिर कोशिश करें" if hi else "Google took too long to answer — try again in a minute"
+    if name in ("APIConnectionError", "ConnectError"):
+        return ("Google तक नहीं पहुँच सका — इंटरनेट, VPN या फ़ायरवॉल जाँचें" if hi
+                else "couldn't reach Google — check the internet connection, or a VPN/firewall blocking generativelanguage.googleapis.com")
     if name == "NotFoundError":
         return "मॉडल नहीं मिला" if hi else "the model name wasn't found"
     return name

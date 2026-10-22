@@ -128,6 +128,21 @@ class TestKeyAndModels:
         assert gemini.check_key("k", "gemini-2.5-flash", get=lambda p, k: ms, post=post) == "gemini-3.7-flash"
         assert tried == ["models/gemini-2.5-flash:generateContent", "models/gemini-3.8-flash:generateContent", "models/gemini-3.7-flash:generateContent"]
 
+    def test_key_check_survives_a_slow_model(self):
+        ms = {"models": [{"name": f"models/{x}", "supportedGenerationMethods": ["generateContent"]} for x in ("gemini-3.8-flash", "gemini-3.7-flash")]}
+
+        def slow_then_ok(path, body, key):
+            if "3.8" in path:
+                raise gemini.APITimeoutError("ReadTimeout")
+            return {}
+
+        assert gemini.check_key("k", get=lambda p, k: ms, post=slow_then_ok) == "gemini-3.7-flash"
+
+        def all_slow(path, body, key):
+            raise gemini.APITimeoutError("ReadTimeout")
+
+        assert gemini.check_key("k", get=lambda p, k: ms, post=all_slow) == "gemini-3.8-flash"  # Google is reachable; the model is just slow
+
     def test_errors_map_to_plain_reasons(self, ctx):
         bad = {"error": {"message": "API key not valid.", "details": [{"reason": "API_KEY_INVALID"}]}}
         with pytest.raises(gemini.AuthenticationError):
