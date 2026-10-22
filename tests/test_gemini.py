@@ -143,6 +143,22 @@ class TestKeyAndModels:
 
         assert gemini.check_key("k", get=lambda p, k: ms, post=all_slow) == "gemini-3.8-flash"  # Google is reachable; the model is just slow
 
+    def test_rate_limited_model_hands_over_to_the_lite_model(self, ctx):
+        used = []
+
+        def post(path, body, key):
+            used.append(path.split(":")[0])
+            if "lite" not in path:
+                raise gemini.RateLimitError("quota")
+            return reply({"text": "**Hello.**"})
+
+        s = NS(ai_enabled=True, provider="gemini", api_key="k", active_model="gemini-3.6-flash", anthropic_api_key=None, model="c", max_agent_steps=4)
+        events = []
+        run = orchestrator.ask("hi", ctx, "Demo", s, client=post, on_event=events.append)
+        assert run.mode == "ai" and "Hello" in run.answer
+        assert used[0] == "models/gemini-3.6-flash" and used[-1] == f"models/{gemini.LITE_MODEL}"
+        assert any(e.get("type") == "note" and "lighter model" in e["text"] for e in events)
+
     def test_errors_map_to_plain_reasons(self, ctx):
         bad = {"error": {"message": "API key not valid.", "details": [{"reason": "API_KEY_INVALID"}]}}
         with pytest.raises(gemini.AuthenticationError):

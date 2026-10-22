@@ -345,6 +345,15 @@ def ask(
             try:
                 return gemini.run_gemini(question, ctx, settings.api_key, settings.active_model, business, history, prior_results, settings.max_agent_steps,
                                          lang=lang, on_event=on_event, preface=preface, post=client)
+            except gemini.RateLimitError:
+                # free-tier limits are counted per model: answer with the lighter model, which has its own allowance
+                if settings.active_model == gemini.LITE_MODEL:
+                    raise
+                if on_event:
+                    on_event({"type": "note", "text": "The main AI model is at its free limit — using the lighter model for this answer."
+                              if lang != "hi" else "मुख्य AI मॉडल की मुफ़्त सीमा पूरी — इस जवाब के लिए हल्का मॉडल।"})
+                return gemini.run_gemini(question, ctx, settings.api_key, gemini.LITE_MODEL, business, history, prior_results, settings.max_agent_steps,
+                                         lang=lang, on_event=on_event, preface=preface, post=client)
             except gemini.NotFoundError:
                 # Google retired the saved model for this key: pick one that answers, remember it, and try once more
                 model = gemini.check_key(settings.api_key, None, post=client)

@@ -16,6 +16,7 @@ from typing import Any, Callable
 from finpilot.agent.tools import ToolContext, anthropic_tool_specs
 
 BASE = "https://generativelanguage.googleapis.com/v1beta"
+LITE_MODEL = "gemini-flash-lite-latest"  # used when the main model hits its free-tier limit (separate allowance)
 DEFAULT_MODEL = "gemini-flash-latest"  # only a fallback name; the key check picks a model this key can really use
 _ALLOWED = {"type", "description", "enum", "items", "properties", "required", "minimum", "maximum", "minItems", "maxItems", "format", "nullable"}
 
