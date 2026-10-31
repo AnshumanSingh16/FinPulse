@@ -49,7 +49,6 @@ export default function IntelligencePage() {
   const isInventoryScenario = scenarioKind.startsWith("inventory_") || isRestock;
   return <div className="intelligence-page space-y-6 pb-12">
     <header className="flex items-start gap-3"><span className="grid size-12 place-items-center rounded-2xl bg-brand-50 text-brand"><Lightbulb className="size-6" /></span><div><h1 className="text-3xl">{t("Business Opportunity Intelligence")}</h1><p className="mt-1 max-w-2xl text-sm text-ink-2">{t("One view of the business, backed by your financial books and the operational records you enter here. Scenarios show their assumptions.")}</p></div></header>
-    {state?.is_demo && <div className="flex items-start gap-3 rounded-2xl border border-info/20 bg-info-50 p-4 text-sm"><CircleCheck className="mt-0.5 size-5 shrink-0 text-info" /><p><b>{t("Demo walkthrough data")}</b><br />{t("This business is preloaded with fictional product, service and customer feedback records so you can explore its tailored analysis. Demo figures and comments are illustrative.")}</p></div>}
     {error && <div className="rounded-xl bg-bad-50 p-3 text-sm text-bad">{error}</div>}
 
     <section className="card space-y-4"><div><h2 className="text-lg font-semibold">{t("Business profile")}</h2><p className="text-sm text-ink-2">{t("Choose which intelligence applies to this business.")}</p></div><div className="grid gap-3 sm:grid-cols-2">
