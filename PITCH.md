@@ -29,26 +29,6 @@ It works for any business type: a shop, a factory, an agency, a café.
 | **Proactive alerts** | Bills next week vs cash, overdue money, sales down, a jump in a cost — before the owner asks, each with evidence and a next step | `engine/watchtower.py` |
 | **Scenario: cash in 2 weeks** | The owner changes the assumptions (which payments arrive, a bill held, sales level, a purchase); the breakdown adds up to the end balance | `engine/outlook.py` |
 | **Follow-through** | Every approved move reports what actually happened: paid, partly paid, missed, or spend that slipped | `engine/followthrough.py` |
-| **Proof** | A **Track record**: every past week, the books are rewound and forecast, and the forecast is compared with what really happened | `engine/backtest.py`, `/proof/` |
-
-## Track record (on the demo businesses' own past; 30-day forecasts, weekly)
-
-| | Café | Agency | Manufacturer |
-|---|---|---|---|
-| Tightest-day error vs "balance stays flat" | **82% smaller** | 36% smaller | 50% smaller |
-| Whole-month error vs flat | **76% smaller** | 17% smaller | 25% smaller |
-| Real dips flagged in advance | **22 of 22** | 1 of 4 (the misses were ≤ ₹32k below the cushion) | no dips |
-| Odds score (Brier; 0 perfect, 0.25 coin flip) | **0.06** | 0.14 | 0.00 |
-| Real outcome inside the 10–90% range (aim 80%) | 94% | 38% | 35% |
-
-Building the backtest **found four bugs in our own forecast**, now fixed:
-1. Regular salaries were treated as one-off payments in young books.
-2. Invoiced income was counted twice.
-3. Customers' habitual lateness was ignored.
-4. Monthly rent and salaries were smeared evenly across the month.
-
-Each fix is tested. The demo histories are simulated, so the page says so. It also says plainly where the simulated range is too narrow.
-
 ## The 3-minute demo (laptop)
 
 The home screen is a **CFO desk**. On the left is one conversation with your CFO. On the right is a dark **cockpit** with the live numbers: safe to spend today, days of runway, the 90-day cash line, the chance you stay safe, and what the agents are watching.
@@ -58,9 +38,8 @@ The home screen is a **CFO desk**. On the left is one conversation with your CFO
 3. Click **Approve the fix**. The cockpit flips to *"Watching: Kaveri by 10 Oct"*. The bank letter is copied, and the WhatsApp reminder is ready for you to send.
 4. Click **Fast-forward 2 weeks**, then *"Kaveri Hospitals never pays"*. Days roll by. On 10 Oct the Collections agent flags the missed checkpoint, the Risk analyst learns (60% → 48%), and the Planner re-plans with today's books.
 5. Click **Approve Plan B**. The odds go back to 90%.
-6. Ask **How sure are you?** The CFO shows its track record on the business's own past weeks.
-7. Type any question, for example *"Who pays me late?"*. The tool-using agent answers, with every figure checked.
-8. Bonus:
+6. Type any question, for example *"Who pays me late?"*. The tool-using agent answers, with every figure checked.
+7. Bonus:
    - Switch to हिं: the whole desk speaks Hindi.
    - Add a free Gemini key: the AI Strategist proposes and tests its own ideas.
 
@@ -69,7 +48,7 @@ The home screen is a **CFO desk**. On the left is one conversation with your CFO
 - Python and FastAPI do every calculation, deterministically and under test (337 tests).
 - An LLM (Claude or Gemini, optional) plans, calls 33 approved tools, and writes in plain words. A verifier checks every number it writes.
 - Next.js front end, works on phones, English and Hindi.
-- Runs offline: with no AI key, the crew, planner, monitor and track record all still work.
+- Runs offline: with no AI key, the crew, planner and monitor still work.
 
 ## Questions judges ask (also in the app: **Q&A** in the header)
 
@@ -79,7 +58,6 @@ The home screen is a **CFO desk**. On the left is one conversation with your CFO
 | Why did it pick this plan? | **Why this plan?** on the fix lists every alternative the planner compared: moves, effort, tightest day and odds, with the chosen one highlighted. |
 | What about things the data can't know (Diwali, a big order, a purchase)? | **Tell me what's coming** adds the event to every forecast, plan and affordability check. It is shown in the cockpit and logged. |
 | What if the customer still doesn't pay? | Checkpoints and Plan B. Use *Fast-forward 2 weeks → "never pays"* to see it. |
-| How do we know it's accurate? | **Track record**: weekly backtests on the business's own past, with weaknesses shown. |
 | Why are my sales down? | Investigated customer by customer; late money is told apart from lost business; products, prices and seasonality are listed as not verifiable from a bank statement. *Desk → "Why are my sales less?"* |
 | Is "sales minus costs" your profit? | No — it's labelled *net operating cash difference*, with what it leaves out (unpaid invoices and bills, other months' costs, depreciation). |
 | Can I check a recommendation myself? | **Show me why** beside each one: the records, the arithmetic, the assumptions, and what couldn't be verified. |

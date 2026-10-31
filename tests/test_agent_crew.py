@@ -386,27 +386,3 @@ def test_fast_forward_only_on_demos(app):
     app.post("/api/source", json={"source": "demo"})
     assert app.post("/api/demo/fast-forward/stream", json={"days": 99}).status_code == 400
     assert app.post("/api/demo/fast-forward/stream", json={"days": 3, "scenario": "nope"}).status_code == 400
-
-
-# ---------------------------------------------------------------- track record
-
-
-def test_track_record_on_the_cafe(app):
-    app.post("/api/source", json={"source": "demo_cafe"})
-    r = app.get("/api/track-record").json()
-    assert r["status"] == "ok" and r["weeks"] >= 30 and r["horizon_days"] == 30
-    assert r["low_better_than_flat_pct"] > 0.5 and r["path_better_than_flat_pct"] > 0.5
-    assert r["dips_flagged"] == r["dips"] > 0
-    assert r["brier"] < 0.15
-    assert sum(b["weeks"] for b in r["calibration"]) == r["weeks"]
-
-
-def test_rewind_hides_the_future(tables):
-    from finpilot.engine import backtest
-
-    t = tables["demo_agency"]
-    when = pd.Timestamp("2026-04-06")
-    led, obl, bal = backtest.rewind(t["ledger"], t["obligations"], t["balances"], when)
-    assert pd.to_datetime(led["date"]).max() <= when and pd.to_datetime(bal["as_of"]).max() <= when
-    assert (pd.to_datetime(obl["issue_date"].fillna(obl["due_date"])) <= when + pd.Timedelta(days=30)).all()
-    assert obl.loc[obl["paid_date"].notna(), "paid_date"].max() <= when

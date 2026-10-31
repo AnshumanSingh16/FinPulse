@@ -193,7 +193,6 @@ export function Cockpit({ p, onCushion, compact }: { p: Plan; onCushion: () => v
       <div className="mt-auto flex flex-wrap gap-x-4 gap-y-1 text-xs text-pit-muted">
         <Link href="/timeline/" className="hover:text-pit-ink">{t("Week by week")} →</Link>
         <Link href="/khata/" className="hover:text-pit-ink">{t("Who owes you")} →</Link>
-        <Link href="/proof/" className="hover:text-pit-ink">{t("Track record")} →</Link>
       </div>
     </aside>
   );

@@ -1,7 +1,6 @@
 "use client";
 
-import { ArrowRight, Bot, CalendarClock, Eye, FastForward, GitBranch, Loader2, MessageCircle, RotateCcw, Target } from "lucide-react";
-import Link from "next/link";
+import { ArrowRight, Bot, CalendarClock, Eye, FastForward, GitBranch, Loader2, MessageCircle, RotateCcw } from "lucide-react";
 import { useContext, useEffect, useRef, useState } from "react";
 import { streamAgent } from "@/components/agent";
 import { CREW } from "@/components/crew";
@@ -9,7 +8,7 @@ import { DataVersion } from "@/components/data-version";
 import { useToast } from "@/components/fx";
 import { ReminderSheet } from "@/components/reminder";
 import { Button, cx, Sheet } from "@/components/ui";
-import { get, post } from "@/lib/api";
+import { post } from "@/lib/api";
 import { short } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 
@@ -262,53 +261,5 @@ export function FastForwardCard({ clock, onDone }: { clock: { date: string; days
         <div ref={end} />
       </Sheet>
     </section>
-  );
-}
-
-interface Track {
-  status: string;
-  message?: string;
-  weeks: number;
-  low_better_than_flat_pct: number | null;
-  path_better_than_flat_pct: number | null;
-  dips: number;
-  dips_flagged: number;
-  brier: number;
-  false_alarms: number;
-}
-
-/** A small "how accurate is this?" card that links to the full track record. */
-export function TrackRecordCard() {
-  const { t } = useT();
-  const { version } = useContext(DataVersion);
-  const [r, setR] = useState<Track | null>(null);
-  useEffect(() => {
-    get<Track>("/api/track-record").then(setR).catch(() => setR(null));
-  }, [version]);
-  return (
-    <Link href="/proof/" className="card block p-4 transition hover:shadow-md">
-      <p className="flex items-center gap-2 font-semibold"><Target className="size-5 text-brand" /> {t("How accurate is this?")}</p>
-      {!r ? (
-        <p className="mt-1 flex items-center gap-2 text-sm text-ink-2"><Loader2 className="size-4 animate-spin" /> {t("Testing the forecast on your past weeks…")}</p>
-      ) : r.status !== "ok" ? (
-        <p className="mt-1 text-sm text-ink-2">{r.message}</p>
-      ) : (
-        <div className="mt-2 grid grid-cols-3 gap-2 text-center">
-          <div className="rounded-2xl bg-surface-2 p-2">
-            <p className="num text-xl font-bold text-good">{r.low_better_than_flat_pct != null ? pct(r.low_better_than_flat_pct) : "—"}</p>
-            <p className="text-xs text-ink-2">{t("closer on the tightest day than guessing")}</p>
-          </div>
-          <div className="rounded-2xl bg-surface-2 p-2">
-            <p className="num text-xl font-bold">{r.dips ? `${r.dips_flagged}/${r.dips}` : "—"}</p>
-            <p className="text-xs text-ink-2">{t("real dips flagged in advance")}</p>
-          </div>
-          <div className="rounded-2xl bg-surface-2 p-2">
-            <p className="num text-xl font-bold">{r.weeks}</p>
-            <p className="text-xs text-ink-2">{t("past weeks tested")}</p>
-          </div>
-        </div>
-      )}
-      <p className="mt-2 flex items-center gap-1 text-sm font-semibold text-brand">{t("See the track record")} <ArrowRight className="size-4" /></p>
-    </Link>
   );
 }
