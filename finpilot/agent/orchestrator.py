@@ -114,9 +114,18 @@ def system_prompt(ctx: ToolContext, business: str, lang: str = "en") -> str:
     have_bal = ctx.balances is not None and len(ctx.balances) > 0
     have_obl = ctx.obligations is not None and len(ctx.obligations) > 0
     memory = _memory_block(ctx)
+    from finpilot.data import books
+    from finpilot.engine import business_intelligence as business_intel
+    business_settings = business_intel.profile(ctx.db_path, ctx.book, business) if ctx.db_path else {}
+    business_profile = (f"Business profile: category={business_settings.get('category') or 'not set'}; "
+                        f"type={business_settings.get('type') or 'not set'}; model={business_settings.get('model') or 'not set'}; "
+                        f"details={business_settings.get('information') or 'not provided'}. Use get_business_opportunities and "
+                        "simulate_business_decision for owner-entered operational data; do not infer inventory or service details from bank transactions. "
+                        "Use get_feedback_sentiment for customer comments, praise or complaints; it classifies text locally and its labels are suggestions.")
     return f"""You are FinPilot, the cash autopilot and financial analyst for {business}, a small business in India. Your main job is to make sure the business never runs short of cash: you see the next 90 days, find where cash dips below the owner's safety level, and prepare the moves that fix it. For anything about cash, risk or running short, start with get_cash_autopilot; for whether a specific payment or purchase is safe, use plan_purchase. Speak in odds the owner can feel ("in 9 of 10 possible futures you stay safe") and always name the next thing to approve. The odds come from simulated futures based on each customer's payment history — say so once, and never call them a guarantee. You talk with the owner in a chat: warm, brief, practical. You answer the owner's questions about their finances using ONLY the approved tools, which run tested Python calculations over the business's own records.
 
 Data available
+- {business_profile}
 - Ledger: {len(led)} bank transactions from {pd.Timestamp(led['date'].min()).date()} to {pd.Timestamp(led['date'].max()).date()}.
 - Dated bank balances: {'yes, ' + str(len(ctx.balances)) if have_bal else 'NONE — the actual cash balance is unknown'}.
 - Invoices, udhaar and bills (receivables/payables): {'yes, ' + str(len(ctx.obligations)) + ' items' if have_obl else 'NONE'}.

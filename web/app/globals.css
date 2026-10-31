@@ -135,6 +135,32 @@ h1, .display {
   box-shadow: var(--shadow-card);
 }
 
+/* Clearer text and control boundaries on the data-heavy Intelligence page. */
+.intelligence-page .card {
+  border-color: #d0d5d2;
+}
+.intelligence-page > .card {
+  padding: 1.25rem;
+}
+.intelligence-page :is(input:not([type="file"]), textarea, select) {
+  border-color: #aeb8b3;
+}
+.intelligence-page :is(input:not([type="file"]), textarea, select):focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+.intelligence-page :is(.text-muted, .text-\[0\.68rem\]) {
+  color: #58635e;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .intelligence-page .card { border-color: #46515a; }
+  :root:not([data-theme="light"]) .intelligence-page :is(input:not([type="file"]), textarea, select) { border-color: #56616a; }
+  :root:not([data-theme="light"]) .intelligence-page :is(.text-muted, .text-\[0\.68rem\]) { color: #aab2b8; }
+}
+:root[data-theme="dark"] .intelligence-page .card { border-color: #46515a; }
+:root[data-theme="dark"] .intelligence-page :is(input:not([type="file"]), textarea, select) { border-color: #56616a; }
+:root[data-theme="dark"] .intelligence-page :is(.text-muted, .text-\[0\.68rem\]) { color: #aab2b8; }
+
 /* kept as a no-op so older markup still renders: buttons are plain and rounded now */
 .neo { }
 

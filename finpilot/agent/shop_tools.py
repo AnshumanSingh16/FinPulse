@@ -54,6 +54,34 @@ def _ledger(ctx: ToolContext) -> pd.DataFrame:
     return led
 
 
+def t_business_opportunities(ctx: ToolContext, a: dict) -> dict:
+    _reject_unknown(a, set())
+    from finpilot.engine import business_intelligence as bi
+    return {"profile": bi.profile(ctx.db_path, _book(ctx), ctx.business), "opportunities": bi.opportunities(ctx.db_path, _book(ctx)),
+            "inventory_records": len(bi.inventory(ctx.db_path, _book(ctx))), "service_records": len(bi.services(ctx.db_path, _book(ctx))),
+            "note": "Operational records are owner-entered. An empty list means the relevant data has not been entered; it is not evidence that no opportunities exist."}
+
+
+def t_feedback_sentiment(ctx: ToolContext, a: dict) -> dict:
+    _reject_unknown(a, set())
+    from finpilot.engine import sentiment
+    result = sentiment.analysis(ctx.db_path, _book(ctx))
+    return {"model": result["model"], "training": result["training"], "limitation": result["limitation"],
+            "counts": result["counts"], "total": result["total"],
+            "feedback": [{"customer": x["customer"], "text": x["text"][:240], "sentiment": x["sentiment"], "score": x["score"], "matched_features": x["matched_features"]} for x in result["records"][:30]]}
+
+
+def t_business_simulate(ctx: ToolContext, a: dict) -> dict:
+    _reject_unknown(a, {"kind", "name", "change_pct", "volume_uplift_pct", "quantity", "price", "cost_per_booking", "monthly_bookings", "expected_bookings", "monthly_fixed_cost"})
+    if not a.get("kind"):
+        return {"status": "missing_inputs", "message": "Ask which product or service decision the owner wants to simulate, and request the relevant price, quantity, or booking assumptions."}
+    from finpilot.engine import business_intelligence as bi
+    try:
+        return bi.simulate(ctx.db_path, _book(ctx), a)
+    except ValueError as e:
+        return {"status": "missing_inputs", "message": str(e)}
+
+
 def _match_name(ctx: ToolContext, name: str) -> tuple[str | None, list[str]]:
     """Exact (case-insensitive) match, else a unique partial match. Returns (name, candidates)."""
     names = set(ctx.ledger["counterparty"].dropna().astype(str))
@@ -658,6 +686,9 @@ PLAN_TOOLS: list[Tool] = [
 
 S = {"type": "string"}
 SHOP_TOOLS: list[Tool] = [
+    Tool("get_feedback_sentiment", "Analyse saved customer comments with FinPilot's local Naive Bayes text model. Use for customer sentiment, praise, complaints or recurring feedback themes. Returns sample counts, labels, model scores and matched text features. Feedback is fictional on demos; results are suggestions, not verified customer intent.", _obj({}), t_feedback_sentiment),
+    Tool("get_business_opportunities", "Read the saved business profile and deterministic opportunities based on entered inventory and/or service records. Use this when asked how to improve the business. Missing operational records are explicitly reported.", _obj({}), t_business_opportunities),
+    Tool("simulate_business_decision", "Deterministically calculate a business scenario from saved product/service values and user-stated assumptions. Supported kinds: inventory_discount, inventory_price, restock, service_price, service_launch, service_hire. Set name for an existing product/service. inventory price and service_price use change_pct (negative means discount). Use volume_uplift_pct only when the owner explicitly supplies a hypothetical uplift. New service/hire scenarios require expected_bookings, price, and costs.", _obj({"kind": {"type": "string", "enum": ["inventory_discount", "inventory_price", "restock", "service_price", "service_launch", "service_hire"]}, "name": S, "change_pct": {"type": "number"}, "volume_uplift_pct": {"type": "number"}, "quantity": {"type": "number"}, "price": {"type": "number"}, "cost_per_booking": {"type": "number"}, "monthly_bookings": {"type": "number"}, "expected_bookings": {"type": "number"}, "monthly_fixed_cost": {"type": "number"}}, ["kind"]), t_business_simulate),
     Tool("get_customers_and_suppliers",
          "The khata: customers (or suppliers) with how much they paid in the period, what they still owe (outstanding/overdue with days late), "
          "how reliably they pay, last payment, saved phone and any payment promise. Sort by overdue, outstanding, paid (best customers) or late (slowest payers).",

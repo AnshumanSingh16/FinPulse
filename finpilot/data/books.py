@@ -36,6 +36,10 @@ SCHEMA = [
     "CREATE TABLE IF NOT EXISTS approved_moves (book TEXT, id TEXT, data TEXT, PRIMARY KEY (book, id))",
     "CREATE TABLE IF NOT EXISTS known_events (id INTEGER PRIMARY KEY AUTOINCREMENT, book TEXT, date TEXT, amount REAL, label TEXT, created_at TEXT)",
     "CREATE TABLE IF NOT EXISTS chat_log (id INTEGER PRIMARY KEY AUTOINCREMENT, book TEXT, at TEXT, role TEXT, kind TEXT, data TEXT)",
+    "CREATE TABLE IF NOT EXISTS inventory_items (id INTEGER PRIMARY KEY AUTOINCREMENT, book TEXT NOT NULL, name TEXT NOT NULL, sku TEXT DEFAULT '', stock_qty REAL NOT NULL, unit_cost REAL NOT NULL, selling_price REAL NOT NULL, monthly_units_sold REAL DEFAULT 0, lead_time_days INTEGER DEFAULT 0, updated_at TEXT, UNIQUE(book, name))",
+    "CREATE TABLE IF NOT EXISTS service_offerings (id INTEGER PRIMARY KEY AUTOINCREMENT, book TEXT NOT NULL, name TEXT NOT NULL, price REAL NOT NULL, delivery_cost REAL NOT NULL, monthly_capacity REAL DEFAULT 0, monthly_bookings REAL DEFAULT 0, updated_at TEXT, UNIQUE(book, name))",
+    "CREATE TABLE IF NOT EXISTS opportunity_outcomes (id INTEGER PRIMARY KEY AUTOINCREMENT, book TEXT NOT NULL, key TEXT NOT NULL, status TEXT NOT NULL, note TEXT DEFAULT '', updated_at TEXT, UNIQUE(book, key))",
+    "CREATE TABLE IF NOT EXISTS customer_feedback (id INTEGER PRIMARY KEY AUTOINCREMENT, book TEXT NOT NULL, customer TEXT DEFAULT '', text TEXT NOT NULL, created_at TEXT NOT NULL, source TEXT NOT NULL DEFAULT 'owner entry')",
 ]
 
 
@@ -140,7 +144,7 @@ def update_goal(db: Path, book: str, goal_id: int, add: float | None = None, del
 
 
 DEFAULT_SETTINGS = {"gst_registered": "yes", "gst_rate_sales": "5", "gst_rate_purchases": "5", "gst_filing": "monthly", "language": "en",
-                    "business_type": "", "safety": "", "crew_last_run": "", "overdraft_drawn": "", "upi_id": ""}
+                    "business_type": "", "business_category": "", "business_model": "", "business_info": "", "business_name": "", "safety": "", "crew_last_run": "", "overdraft_drawn": "", "upi_id": ""}
 
 
 def settings(db: Path, book: str) -> dict[str, str]:
@@ -183,7 +187,7 @@ def reset_book(db: Path, book: str) -> None:
     """Forget everything the owner did in a book (used for 'Reset demo')."""
     with connect(db) as con:
         for t in ("contacts", "promises", "cat_rules", "budgets", "goals", "settings", "entry_log", "agent_actions", "memory", "checkups", "chat_log", "autopilot_moves", "autopilot_snapshots",
-                  "watches", "agent_activity", "reminder_outcomes", "move_dates", "approved_moves", "known_events"):
+                  "watches", "agent_activity", "reminder_outcomes", "move_dates", "approved_moves", "known_events", "inventory_items", "service_offerings", "opportunity_outcomes", "customer_feedback"):
             con.execute(f"DELETE FROM {t} WHERE book = ?", (book,))
 
 

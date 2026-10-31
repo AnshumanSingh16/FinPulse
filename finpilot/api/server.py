@@ -32,6 +32,8 @@ from finpilot.data.parse_entry import parse as parse_entry
 from finpilot.engine import autopilot as ap
 from finpilot.engine.cash import cash_position, obligations_status
 from finpilot.engine.categorize import categorize_ledger
+from finpilot.engine import business_intelligence as bi
+from finpilot.engine import sentiment
 
 from . import crew, dataset, i18n, khata_views, monitor, smart_views, views
 
@@ -48,6 +50,9 @@ REQUIRED = {"ledger": [("date",), ("amount", "debit", "credit")], "obligations":
 
 STEP_LABEL = {
     "get_financial_summary": "Worked out sales and costs (cash basis)",
+    "get_business_opportunities": "Checked business opportunities against entered records",
+    "simulate_business_decision": "Calculated a business decision scenario",
+    "get_feedback_sentiment": "Analysed customer feedback sentiment locally",
     "investigate_sales_change": "Investigated why sales changed",
     "get_cash_autopilot": "Looked 90 days ahead and checked the plan",
     "plan_purchase": "Tested the payment against your cash",
@@ -83,6 +88,9 @@ STEP_LABEL = {
 }
 STEP_LABEL_HI = {
     "get_financial_summary": "बिक्री और खर्च निकाला (कैश के हिसाब से)",
+    "get_business_opportunities": "दर्ज रिकॉर्ड से कारोबारी मौके देखे",
+    "simulate_business_decision": "कारोबारी फैसले का हिसाब लगाया",
+    "get_feedback_sentiment": "ग्राहकों की प्रतिक्रिया का भाव देखा",
     "investigate_sales_change": "बिक्री बदलने की वजह की जाँच की",
     "get_cash_autopilot": "90 दिन आगे देखा और योजना जाँची",
     "plan_purchase": "भुगतान को आपके कैश पर परखा",
@@ -216,6 +224,7 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
             "ai": ai_status(),
             "business_type": _btype(d),
             "type_info": BUSINESS_TYPES.get(_btype(d)),
+            "business_profile": _business_profile(d),
             "types": [{"key": k, **v} for k, v in BUSINESS_TYPES.items()],
             "demos": [{"key": k, **v, "name": v["name"].replace(" (fictional)", "")} for k, v in dataset.DEMOS.items()],
         }
@@ -224,6 +233,134 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
         if d.book in dataset.DEMOS:
             return dataset.DEMOS[d.book]["type"]
         return books.settings(db, d.book).get("business_type") or ""
+
+    def _business_profile(d: dataset.Dataset) -> dict:
+        return bi.profile(db, d.book, d.name.replace(" (fictional)", ""))
+
+    @app.get("/api/intelligence")
+    def business_intelligence():
+        d = ds()
+        return {"profile": _business_profile(d), "inventory": bi.inventory(db, d.book), "services": bi.services(db, d.book), "opportunities": bi.opportunities(db, d.book), "feedback": sentiment.analysis(db, d.book)}
+
+    @app.post("/api/intelligence/feedback")
+    def add_business_feedback(body: dict = Body(...)):
+        try:
+            sentiment.add_feedback(db, ds().book, str(body.get("text", "")), str(body.get("customer") or ""))
+        except ValueError as e:
+            raise HTTPException(400, str(e)) from e
+        return {"feedback": sentiment.analysis(db, ds().book)}
+
+    @app.post("/api/business-profile")
+    def save_business_profile(body: dict = Body(...)):
+        d = ds()
+        category = str(body.get("category", "hybrid"))
+        if category not in ("inventory", "service", "hybrid"):
+            raise HTTPException(400, "Category must be inventory, service, or hybrid.")
+        clean = {"business_category": category}
+        for key, target, limit in (("name", "business_name", 80), ("type", "business_type", 80), ("model", "business_model", 120), ("information", "business_info", 1000)):
+            value = str(body.get(key, "")).strip()
+            if len(value) > limit:
+                raise HTTPException(400, f"{key} must be at most {limit} characters.")
+            clean[target] = value
+        if not clean["business_name"]:
+            clean["business_name"] = d.name.replace(" (fictional)", "")
+        books.set_settings(db, d.book, clean)
+        if clean["business_name"] != d.name:
+            store.save_dataset(db, clean["business_name"], {"ledger": d.ledger, "obligations": d.obligations, "balances": d.balances}, str(d.as_of.date()), book=d.book)
+        return {"profile": _business_profile(ds())}
+
+    @app.post("/api/intelligence/inventory")
+    def save_inventory(body: dict = Body(...)):
+        d = ds()
+        try:
+            name = str(body.get("name", "")).strip()
+            qty, cost, price = (float(body.get(k)) for k in ("stock_qty", "unit_cost", "selling_price"))
+            sold = float(body.get("monthly_units_sold", 0) or 0)
+            lead = int(body.get("lead_time_days", 0) or 0)
+            if not name or len(name) > 120 or min(qty, cost, price, sold, lead) < 0 or price <= 0:
+                raise ValueError
+        except (TypeError, ValueError):
+            raise HTTPException(400, "Enter a product name, non-negative quantities and cost, and a selling price above zero.")
+        with books.connect(db) as con:
+            con.execute("INSERT INTO inventory_items(book,name,sku,stock_qty,unit_cost,selling_price,monthly_units_sold,lead_time_days,updated_at) VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(book,name) DO UPDATE SET sku=excluded.sku,stock_qty=excluded.stock_qty,unit_cost=excluded.unit_cost,selling_price=excluded.selling_price,monthly_units_sold=excluded.monthly_units_sold,lead_time_days=excluded.lead_time_days,updated_at=excluded.updated_at", (d.book,name,str(body.get("sku", ""))[:80],qty,cost,price,sold,lead,store.now()))
+        return business_intelligence()
+
+    @app.post("/api/intelligence/services")
+    def save_service(body: dict = Body(...)):
+        d = ds()
+        try:
+            name = str(body.get("name", "")).strip()
+            price, cost = float(body.get("price")), float(body.get("delivery_cost", 0))
+            capacity, bookings = float(body.get("monthly_capacity", 0) or 0), float(body.get("monthly_bookings", 0) or 0)
+            if not name or len(name) > 120 or min(price, cost, capacity, bookings) < 0 or price <= 0:
+                raise ValueError
+        except (TypeError, ValueError):
+            raise HTTPException(400, "Enter a service name, non-negative amounts and counts, and a price above zero.")
+        with books.connect(db) as con:
+            con.execute("INSERT INTO service_offerings(book,name,price,delivery_cost,monthly_capacity,monthly_bookings,updated_at) VALUES(?,?,?,?,?,?,?) ON CONFLICT(book,name) DO UPDATE SET price=excluded.price,delivery_cost=excluded.delivery_cost,monthly_capacity=excluded.monthly_capacity,monthly_bookings=excluded.monthly_bookings,updated_at=excluded.updated_at", (d.book,name,price,cost,capacity,bookings,store.now()))
+        return business_intelligence()
+
+    @app.post("/api/intelligence/import")
+    async def import_business_records(file: UploadFile = File(...), kind: str = Form(...)):
+        d = ds()
+        if kind not in ("inventory", "services", "feedback"):
+            raise HTTPException(400, "Choose inventory, services or feedback.")
+        raw = await file.read(MAX_UPLOAD + 1)
+        if len(raw) > MAX_UPLOAD:
+            raise HTTPException(413, "File is larger than 25 MB.")
+        try:
+            import io
+            frame = pd.read_excel(io.BytesIO(raw)) if file.filename and file.filename.lower().endswith((".xlsx", ".xls")) else pd.read_csv(io.BytesIO(raw))
+            frame.columns = [str(c).strip().lower().replace(" ", "_") for c in frame.columns]
+            if kind == "feedback":
+                text_col = next((c for c in ("text", "feedback", "comment", "review") if c in frame.columns), None)
+                if not text_col:
+                    raise ValueError("Feedback file needs a text, feedback, comment or review column.")
+                customer_col = next((c for c in ("customer", "customer_name", "name") if c in frame.columns), None)
+                date_col = next((c for c in ("date", "created_at") if c in frame.columns), None)
+                imported = 0
+                for row in frame.to_dict(orient="records"):
+                    text = row.get(text_col)
+                    if pd.isna(text) or not str(text).strip():
+                        continue
+                    date_value = row.get(date_col) if date_col else None
+                    date_value = str(pd.Timestamp(date_value).date()) if date_value is not None and not pd.isna(date_value) else None
+                    customer_value = row.get(customer_col) if customer_col else ""
+                    customer_value = "" if customer_value is None or pd.isna(customer_value) else str(customer_value)
+                    sentiment.add_feedback(db, d.book, str(text), customer_value, date_value, "feedback upload")
+                    imported += 1
+                return {"imported": imported, **business_intelligence()}
+            required = {"inventory": {"name", "stock_qty", "unit_cost", "selling_price"}, "services": {"name", "price"}}[kind]
+            if not required.issubset(frame.columns):
+                raise ValueError("Missing columns: " + ", ".join(sorted(required - set(frame.columns))))
+            for row in frame.fillna(0).to_dict(orient="records"):
+                if kind == "inventory":
+                    save_inventory(row)
+                else:
+                    save_service(row)
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(400, f"Could not import file: {e}") from e
+        return {"imported": int(len(frame)), **business_intelligence()}
+
+    @app.post("/api/intelligence/simulate")
+    def simulate_business_decision(body: dict = Body(...)):
+        try:
+            return bi.simulate(db, ds().book, body)
+        except ValueError as e:
+            raise HTTPException(400, str(e)) from e
+
+    @app.post("/api/intelligence/opportunity")
+    def update_opportunity(body: dict = Body(...)):
+        d = ds()
+        key, status = str(body.get("key", ""))[:160], str(body.get("status", ""))
+        valid = {x["key"] for x in bi.opportunities(db, d.book)}
+        if key not in valid or status not in ("open", "implemented", "dismissed"):
+            raise HTTPException(400, "Choose an active opportunity and a valid status.")
+        with books.connect(db) as con:
+            con.execute("INSERT INTO opportunity_outcomes(book,key,status,note,updated_at) VALUES(?,?,?,?,?) ON CONFLICT(book,key) DO UPDATE SET status=excluded.status,note=excluded.note,updated_at=excluded.updated_at", (d.book,key,status,str(body.get("note", ""))[:500],store.now()))
+        return business_intelligence()
 
     @app.post("/api/source")
     def set_source(body: dict = Body(...)):
@@ -1447,8 +1584,10 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
                 clean[k] = v
             elif k == "language" and v in i18n.LANGS:
                 clean[k] = v
-            elif k == "business_type" and (v in BUSINESS_TYPES or v == ""):
-                clean[k] = v
+            elif k == "business_type":
+                v = str(v).strip()
+                if len(v) <= 80:
+                    clean[k] = v
             elif k == "upi_id":
                 v = str(v).strip()
                 if v and not re.fullmatch(r"[\w.\-]{2,64}@[A-Za-z][\w]{1,32}", v):
