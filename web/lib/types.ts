@@ -45,7 +45,10 @@ export interface AppState {
   type_info: BusinessType | null;
   types: BusinessType[];
   demos: DemoBusiness[];
+  business_profile?: BusinessProfile;
 }
+
+export interface BusinessProfile { name: string; category: "inventory" | "service" | "hybrid"; type: string; model: string; information: string }
 
 export interface Action {
   type: "remind" | "review" | "todo" | "add_balance" | "open";

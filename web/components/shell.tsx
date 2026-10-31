@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarRange, ChevronDown, HelpCircle, Languages, Menu, MessageCircle, Monitor, Moon, Navigation2, Settings, Sun, Target, Users, X } from "lucide-react";
+import { CalendarRange, ChevronDown, Languages, Menu, MessageCircle, Monitor, Moon, Navigation2, Settings, Sun, Target, Users, X, Lightbulb } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useContext, useEffect, useState } from "react";
@@ -72,7 +72,7 @@ const LINKS = [
   { href: "/timeline/", label: "Timeline", I: CalendarRange },
   { href: "/khata/", label: "People", I: Users },
   { href: "/proof/", label: "Track record", I: Target },
-  { href: "/about/", label: "Q&A", I: HelpCircle },
+  { href: "/intelligence/", label: "Intelligence", I: Lightbulb },
 ];
 
 function isOn(path: string, href: string) {
@@ -87,6 +87,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const [menu, setMenu] = useState(false);
   const desk = path === "/";
   const isChat = path.startsWith("/ask");
+  const isIntelligence = path.startsWith("/intelligence");
   useEffect(() => {
     setMenu(false);
   }, [path]);
@@ -129,7 +130,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </div>
         )}
       </header>
-      <main className={cx("flex w-full flex-1 flex-col", desk ? "min-h-0" : isChat ? "mx-auto min-h-0 max-w-3xl" : "mx-auto max-w-4xl px-4 pt-5 pb-16 sm:px-5")}>{children}</main>
+      <main className={cx("flex w-full flex-1 flex-col", desk ? "min-h-0" : isChat ? "mx-auto min-h-0 max-w-3xl" : cx("mx-auto px-4 pt-5 pb-16 sm:px-5", isIntelligence ? "max-w-6xl" : "max-w-4xl"))}>{children}</main>
       <BusinessSheet open={pick} onClose={() => setPick(false)} />
     </div>
   );

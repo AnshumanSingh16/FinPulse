@@ -1,6 +1,6 @@
 "use client";
 
-import { Bot, Brain, Briefcase, ChevronRight, Database, Download, FileText, HelpCircle, IndianRupee, Languages, MessageSquareX, Palette, Target } from "lucide-react";
+import { Bot, Brain, Briefcase, ChevronRight, Database, Download, FileText, IndianRupee, Languages, MessageSquareX, Palette, Target } from "lucide-react";
 import Link from "next/link";
 import { useContext, useEffect, useState } from "react";
 import { MemorySheet } from "@/components/agent";
@@ -65,7 +65,6 @@ export default function SettingsPage() {
         <UpiRow />
         <Row I={Download} title={t("Download the audit log")} sub={t("Every agent action and every decision you made, as a spreadsheet for your accountant")}
           onClick={() => { window.location.href = `${API}/api/audit.csv`; }} />
-        <Row I={HelpCircle} title={t("Questions judges ask")} sub={t("What FinPilot is, how it decides, and what it won't do")} href="/about/" />
         <Row I={Target} title={t("Track record")} sub={t("How accurate FinPilot would have been on your past weeks")} href="/proof/" />
         <Row I={FileText} title={t("Monthly report for your CA")} sub={t("Profit, costs, GST estimate — print or save as PDF")} href="/reports/" />
       </div>
