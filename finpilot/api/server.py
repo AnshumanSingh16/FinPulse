@@ -57,7 +57,6 @@ STEP_LABEL = {
     "get_cash_autopilot": "Looked 90 days ahead and checked the plan",
     "plan_purchase": "Tested the payment against your cash",
     "test_move": "Tested an idea on your forecast",
-    "get_track_record": "Checked how accurate past forecasts were",
     "analyze_expense_changes": "Compared your costs month to month",
     "find_unusual_transactions": "Looked for unusual or double payments",
     "get_cash_position": "Checked your bank balance",
@@ -95,7 +94,6 @@ STEP_LABEL_HI = {
     "get_cash_autopilot": "90 दिन आगे देखा और योजना जाँची",
     "plan_purchase": "भुगतान को आपके कैश पर परखा",
     "test_move": "एक उपाय को अनुमान पर परखा",
-    "get_track_record": "पिछले अनुमान कितने सही रहे, देखा",
     "analyze_expense_changes": "महीने-दर-महीने खर्च की तुलना की",
     "find_unusual_transactions": "असामान्य या दोहरे भुगतान खोजे",
     "get_cash_position": "बैंक बैलेंस जाँचा",
@@ -986,25 +984,6 @@ def create_app(db: Path | None = None, client=None, static_dir: Path | None = ST
             return {"status": "ok", "date": str(cur.date()), "headline": v.get("headline"), "changes": v.get("changes", []), "odds": v.get("odds")}
 
         return _stream(work, lang)
-
-    _TRACK: dict = {}
-
-    @app.get("/api/track-record")
-    def track_record():
-        """How the forecast and the odds would have done on this business's own past, week by week (engine/backtest.py)."""
-        from finpilot.engine import backtest
-
-        d = ds()
-        if d.is_demo:  # the demo's original history (simulated days added by fast-forward are not part of its track record)
-            key = ("demo", d.book)
-            if key not in _TRACK:
-                t = dataset._demo_tables(d.book)
-                _TRACK[key] = backtest.run(t["ledger"], t["obligations"], t["balances"])
-        else:
-            key = ("upload", smart_views._fingerprint(d))
-            if key not in _TRACK:
-                _TRACK[key] = backtest.run(d.ledger, d.obligations, d.balances)
-        return _TRACK[key] | {"business": d.name.replace(" (fictional)", ""), "is_demo": d.is_demo}
 
     @app.post("/api/autopilot/afford")
     def autopilot_afford(body: dict = Body(...)):

@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarRange, ChevronDown, Languages, Menu, MessageCircle, Monitor, Moon, Navigation2, Settings, Sun, Target, Users, X, Lightbulb } from "lucide-react";
+import { CalendarRange, ChevronDown, Languages, Menu, MessageCircle, Monitor, Moon, Navigation2, Settings, Sun, Users, X, Lightbulb } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useContext, useEffect, useState } from "react";
@@ -71,7 +71,6 @@ const LINKS = [
   { href: "/", label: "Desk", I: MessageCircle },
   { href: "/timeline/", label: "Timeline", I: CalendarRange },
   { href: "/khata/", label: "People", I: Users },
-  { href: "/proof/", label: "Track record", I: Target },
   { href: "/intelligence/", label: "Intelligence", I: Lightbulb },
 ];
 

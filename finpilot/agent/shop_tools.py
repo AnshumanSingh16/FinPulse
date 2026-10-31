@@ -491,14 +491,6 @@ def t_test_move(ctx: ToolContext, a: dict) -> dict:
     return r
 
 
-def t_track_record(ctx: ToolContext, a: dict) -> dict:
-    _reject_unknown(a, set())
-    from finpilot.engine import backtest
-
-    r = backtest.run(ctx.ledger, ctx.obligations, ctx.balances, sims=300)
-    return {k: v for k, v in r.items() if k != "points"}
-
-
 def t_plan_purchase(ctx: ToolContext, a: dict) -> dict:
     _reject_unknown(a, {"amount", "date", "label"})
     from finpilot.engine import autopilot as ap
@@ -668,11 +660,6 @@ PLAN_TOOLS: list[Tool] = [
                          "items": _obj({"date": {"type": "string", "description": "YYYY-MM-DD"}, "amount": {"type": "number"}}, ["date", "amount"])}},
               ["label", "flows"]),
          t_test_move),
-    Tool("get_track_record",
-         "How accurate FinPilot's forecasts and odds would have been on this business's own past: weekly 30-day forecasts against what "
-         "happened — error vs a flat guess (on the tightest day and over the path), how often the real outcome fell inside the simulated range, "
-         "Brier score of the odds, and how many real dips were flagged in advance.",
-         _obj({}), t_track_record),
     Tool("get_review_queue", "Bank lines that need a category (uncategorised, or incoming money only guessed as sales), grouped by party, with the current guess.",
          _obj({}), t_review_queue),
     Tool("draft_promise", "Prepare a note that a customer promised to pay (by a date, optionally an amount) for the owner to confirm. FinPilot then flags it if the date passes unpaid.",

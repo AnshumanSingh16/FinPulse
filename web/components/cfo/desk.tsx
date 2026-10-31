@@ -23,7 +23,7 @@ import { Cockpit } from "./cockpit";
 import { OutlookCard } from "./outlook";
 import { currentOdds, day, moveDetail, moveShort, moveTitle, pct, standing, type Activity, type Move, type Plan, type T } from "./model";
 
-type Kind = "brief" | "alerts" | "user" | "cfo" | "crew" | "plan" | "why" | "afford" | "proof" | "sim" | "outlook" | "answer" | "event";
+type Kind = "brief" | "alerts" | "user" | "cfo" | "crew" | "plan" | "why" | "afford" | "sim" | "outlook" | "answer" | "event";
 interface Msg {
   id: number;
   k: Kind;
@@ -93,7 +93,7 @@ export function CfoDesk() {
     if ((q || d) && p && p.status === "ok" && !asked.current) {
       asked.current = true;
       if (q) ask(q);
-      const labels: Record<string, string> = { fix: t("Show me the fix"), why: t("Why?"), afford: t("Can I afford something?"), proof: t("How sure are you?"),
+      const labels: Record<string, string> = { fix: t("Show me the fix"), why: t("Why?"), afford: t("Can I afford something?"),
         sim: t("Fast-forward 2 weeks"), event: t("Tell me what's coming"), outlook: t("Cash in 2 weeks") };
       if (d && labels[d]) act(d, labels[d]);
     }
@@ -118,7 +118,6 @@ export function CfoDesk() {
     if (key === "fix") add({ k: "crew" });
     else if (key === "why") add({ k: "why" });
     else if (key === "afford") add({ k: "afford" });
-    else if (key === "proof") add({ k: "proof" });
     else if (key === "sim") add({ k: "sim" });
     else if (key === "outlook") add({ k: "outlook" });
     else if (key === "event") add({ k: "event" });
@@ -187,7 +186,6 @@ export function CfoDesk() {
                 }} />}
                 {m.k === "why" && <Why p={p} />}
                 {m.k === "afford" && <Afford p={p} />}
-                {m.k === "proof" && <Proof />}
                 {m.k === "sim" && <Sim p={p} onDone={async (planB) => {
                   const x = await load();
                   add({ k: "cfo", strong: planB ? t("A checkpoint was missed — Plan B is ready.") : t("That's where things stand now."),
@@ -276,7 +274,6 @@ function suggestions(p: Plan, t: T): Act[] {
   out.push({ key: "outlook", label: t("Cash in 2 weeks") });
   out.push({ key: "event", label: t("Tell me what's coming") });
   if (p.is_demo) out.push({ key: "sim", label: t("Fast-forward 2 weeks") });
-  out.push({ key: "proof", label: t("How sure are you?") });
   return out;
 }
 
@@ -307,7 +304,7 @@ function Briefing({ p, onAct }: { p: Plan; onAct: (k: string, l: string) => void
     : fixAvailable(p) ? { key: "fix", label: t("Show me the fix"), primary: true }
       : anyApproved && p.is_demo ? { key: "sim", label: t("Fast-forward 2 weeks"), primary: true }
         : { key: "afford", label: t("Can I afford something?"), primary: true };
-  const secondary: Act[] = [{ key: "why", label: t("Why?") }, { key: "afford", label: t("Can I afford something?") }, { key: "proof", label: t("How sure are you?") }]
+  const secondary: Act[] = [{ key: "why", label: t("Why?") }, { key: "afford", label: t("Can I afford something?") }]
     .filter((a) => a.key !== primary.key);
   const tone = s === "out" ? "text-bad" : s === "tight" || s === "unsure" ? "text-caution" : "text-good";
   return (
@@ -659,45 +656,6 @@ function Afford({ p }: { p: Plan }) {
             {r.verdict !== "yes" && r.earliest_safe_date_without_moves && t("Without changing anything, the earliest safe day to pay is {date}.", { date: day(r.earliest_safe_date_without_moves, lang) })}
           </p>
         </div>
-      )}
-    </Cfo>
-  );
-}
-
-// ---------------------------------------------------------------- how sure are you?
-
-interface Track { status: string; message?: string; weeks: number; low_better_than_flat_pct: number | null; dips: number; dips_flagged: number; brier: number }
-
-function Proof() {
-  const { t } = useT();
-  const [r, setR] = useState<Track | null>(null);
-  useEffect(() => {
-    get<Track>("/api/track-record").then(setR).catch(() => setR(null));
-  }, []);
-  return (
-    <Cfo>
-      {!r ? (
-        <p className="flex items-center gap-2 text-ink-2"><Loader2 className="size-4 animate-spin" /> {t("Testing myself on your past weeks…")}</p>
-      ) : r.status !== "ok" ? (
-        <p className="text-ink-2">{r.message}</p>
-      ) : (
-        <>
-          <p className="serif text-xl font-semibold">{t("I tested myself on your last {n} weeks.", { n: r.weeks })}</p>
-          <p className="mt-1 text-ink-2">{t("Each week I rewound your books, forecast the next 30 days, and compared with what really happened.")}</p>
-          <div className="mt-3 grid grid-cols-3 gap-2">
-            {[
-              { v: r.low_better_than_flat_pct != null ? pct(r.low_better_than_flat_pct) : "—", l: t("closer on the tightest day than guessing") },
-              { v: r.dips ? `${r.dips_flagged}/${r.dips}` : "—", l: t("real dips flagged in advance") },
-              { v: r.brier.toFixed(2), l: t("odds score (0 = perfect)") },
-            ].map((s) => (
-              <div key={s.l} className="rounded-2xl border border-line bg-surface p-3">
-                <p className="serif text-3xl font-semibold text-brand">{s.v}</p>
-                <p className="text-xs leading-snug text-ink-2">{s.l}</p>
-              </div>
-            ))}
-          </div>
-          <Link href="/proof/" className="mt-3 inline-block text-sm font-semibold text-brand">{t("See the full track record")} →</Link>
-        </>
       )}
     </Cfo>
   );
